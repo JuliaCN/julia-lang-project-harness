@@ -58,7 +58,14 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
         root,
         project_facts.path,
         project_facts.package_name,
+        project_facts.package_uuid,
         package_entry_path(root, project_facts.package_name),
+        project_facts.direct_dependencies,
+        project_facts.weak_dependencies,
+        project_facts.extra_dependencies,
+        project_facts.targets,
+        project_facts.compat,
+        project_facts.sources,
         source_paths,
         test_paths,
         String[],
@@ -80,6 +87,13 @@ struct JuliaProjectTomlFacts
     project_root::String
     path::Union{Nothing,String}
     package_name::Union{Nothing,String}
+    package_uuid::Union{Nothing,String}
+    direct_dependencies::Dict{String,String}
+    weak_dependencies::Dict{String,String}
+    extra_dependencies::Dict{String,String}
+    targets::Dict{String,Vector{String}}
+    compat::Dict{String,String}
+    sources::Dict{String,Dict{String,String}}
 end
 
 function parse_project_toml_facts(project_path::AbstractString)
@@ -87,15 +101,70 @@ function parse_project_toml_facts(project_path::AbstractString)
     project_toml = Base.current_project(start)
     if isnothing(project_toml)
         root = abspath(start)
-        return JuliaProjectTomlFacts(root, joinpath(root, "Project.toml"), nothing)
+        return empty_project_toml_facts(root, joinpath(root, "Project.toml"))
     end
     root = dirname(project_toml)
     project = try
         Pkg.Types.read_project(project_toml)
     catch
-        return JuliaProjectTomlFacts(root, project_toml, nothing)
+        return empty_project_toml_facts(root, project_toml)
     end
-    JuliaProjectTomlFacts(root, project_toml, isnothing(project.name) ? nothing : String(project.name))
+    JuliaProjectTomlFacts(
+        root,
+        project_toml,
+        isnothing(project.name) ? nothing : String(project.name),
+        isnothing(project.uuid) ? nothing : string(project.uuid),
+        string_uuid_dict(project.deps),
+        string_uuid_dict(project.weakdeps),
+        string_uuid_dict(project.extras),
+        string_vector_dict(project.targets),
+        string_value_dict(project.compat),
+        string_source_dict(project.sources),
+    )
+end
+
+function empty_project_toml_facts(project_root::AbstractString, project_toml::Union{Nothing,String})
+    JuliaProjectTomlFacts(
+        String(project_root),
+        project_toml,
+        nothing,
+        nothing,
+        Dict{String,String}(),
+        Dict{String,String}(),
+        Dict{String,String}(),
+        Dict{String,Vector{String}}(),
+        Dict{String,String}(),
+        Dict{String,Dict{String,String}}(),
+    )
+end
+
+function string_uuid_dict(values)
+    Dict(String(name) => string(uuid) for (name, uuid) in values)
+end
+
+function string_value_dict(values)
+    Dict(String(name) => project_value_string(value) for (name, value) in values)
+end
+
+function project_value_string(value)
+    :str in fieldnames(typeof(value)) ? string(getfield(value, :str)) : string(value)
+end
+
+function string_vector_dict(values)
+    Dict(String(name) => String[string(item) for item in items] for (name, items) in values)
+end
+
+function string_source_dict(values)
+    sources = Dict{String,Dict{String,String}}()
+    for (name, source) in values
+        source_name = String(name)
+        if source isa AbstractDict
+            sources[source_name] = Dict(String(key) => string(value) for (key, value) in source)
+        else
+            sources[source_name] = Dict("value" => string(source))
+        end
+    end
+    sources
 end
 
 function project_search_start(project_path::AbstractString)

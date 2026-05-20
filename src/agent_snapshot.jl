@@ -26,10 +26,16 @@ function render_julia_package_snapshot(
         parsed -> any(test_path -> is_path_under(parsed.report.path, test_path), scope.test_paths),
         parsed_files,
     )
-    rendered = "Package: $(something(scope.package_name, "<unknown>"))\n"
+    uuid_suffix = isnothing(scope.package_uuid) ? "" : " uuid=$(scope.package_uuid)"
+    rendered = "Package: $(something(scope.package_name, "<unknown>"))$(uuid_suffix)\n"
     rendered *= "Files: source=$(source_count) test=$(test_count)\n"
     if !isnothing(scope.package_entry_path)
         rendered *= "Entry: $(display_project_path(scope, scope.package_entry_path))\n"
+    end
+    project_lines = snapshot_project_lines(scope)
+    if !isempty(project_lines)
+        rendered *= "Project:\n"
+        rendered *= join(project_lines, "\n") * "\n"
     end
     module_lines = snapshot_module_lines(scope, parsed_files)
     if !isempty(module_lines)
@@ -77,6 +83,46 @@ function render_julia_package_snapshot(
         rendered *= join(finding_lines, "\n") * "\n"
     end
     rendered
+end
+
+function snapshot_project_lines(scope::JuliaProjectHarnessScope)
+    lines = String[]
+    dependency_line = compact_project_dependency_line(scope)
+    !isempty(dependency_line) && push!(lines, "- $(dependency_line)")
+    target_line = compact_project_targets_line(scope)
+    !isempty(target_line) && push!(lines, "- $(target_line)")
+    source_line = compact_project_sources_line(scope)
+    !isempty(source_line) && push!(lines, "- $(source_line)")
+    lines
+end
+
+function compact_project_dependency_line(scope::JuliaProjectHarnessScope)
+    segments = String[]
+    !isempty(scope.direct_dependencies) &&
+        push!(segments, "deps=$(join(sort!(collect(keys(scope.direct_dependencies))), ","))")
+    !isempty(scope.weak_dependencies) &&
+        push!(segments, "weakdeps=$(join(sort!(collect(keys(scope.weak_dependencies))), ","))")
+    !isempty(scope.extra_dependencies) &&
+        push!(segments, "extras=$(join(sort!(collect(keys(scope.extra_dependencies))), ","))")
+    join(segments, " ")
+end
+
+function compact_project_targets_line(scope::JuliaProjectHarnessScope)
+    isempty(scope.targets) && return ""
+    target_segments = [
+        "$(target)=$(join(sort!(copy(names)), ","))" for (target, names) in sort!(collect(scope.targets))
+    ]
+    "targets=$(join(target_segments, ";"))"
+end
+
+function compact_project_sources_line(scope::JuliaProjectHarnessScope)
+    isempty(scope.sources) && return ""
+    source_segments = String[]
+    for (name, source) in sort!(collect(scope.sources))
+        attrs = ["$(key)=$(value)" for (key, value) in sort!(collect(source))]
+        push!(source_segments, "$(name)($(join(attrs, ",")))")
+    end
+    "sources=$(join(source_segments, ";"))"
 end
 
 function snapshot_module_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

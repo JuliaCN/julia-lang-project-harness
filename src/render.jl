@@ -103,8 +103,15 @@ function project_scope_dict(scope::JuliaProjectHarnessScope)
         "project_toml_path" => isnothing(scope.project_toml_path) ? nothing :
                                slash_path(scope.project_toml_path),
         "package_name" => scope.package_name,
+        "package_uuid" => scope.package_uuid,
         "package_entry_path" => isnothing(scope.package_entry_path) ? nothing :
                                 slash_path(scope.package_entry_path),
+        "direct_dependencies" => scope.direct_dependencies,
+        "weak_dependencies" => scope.weak_dependencies,
+        "extra_dependencies" => scope.extra_dependencies,
+        "targets" => scope.targets,
+        "compat" => scope.compat,
+        "sources" => scope.sources,
         "source_paths" => slash_path.(scope.source_paths),
         "test_paths" => slash_path.(scope.test_paths),
         "package_paths" => slash_path.(scope.package_paths),

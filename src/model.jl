@@ -50,7 +50,14 @@ struct JuliaProjectHarnessScope
     project_root::String
     project_toml_path::Union{Nothing,String}
     package_name::Union{Nothing,String}
+    package_uuid::Union{Nothing,String}
     package_entry_path::Union{Nothing,String}
+    direct_dependencies::Dict{String,String}
+    weak_dependencies::Dict{String,String}
+    extra_dependencies::Dict{String,String}
+    targets::Dict{String,Vector{String}}
+    compat::Dict{String,String}
+    sources::Dict{String,Dict{String,String}}
     source_paths::Vector{String}
     test_paths::Vector{String}
     package_paths::Vector{String}

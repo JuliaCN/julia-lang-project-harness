@@ -5,6 +5,12 @@ function write_project(root::AbstractString, name::AbstractString)
         name = "$(name)"
         uuid = "11111111-1111-1111-1111-111111111111"
         version = "0.1.0"
+
+        [extras]
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["Test"]
         """,
     )
 end
@@ -38,6 +44,52 @@ end
     @test report.project_scope.project_root == root
     @test report.project_scope.project_toml_path == joinpath(root, "Project.toml")
     @test report.project_scope.package_entry_path == joinpath(root, "src", "Example.jl")
+end
+
+@testset "project runner captures Project.toml dependency facts" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+        JuliaSyntax = "70703baa-626e-46a2-a12c-08ffd08c73b4"
+
+        [weakdeps]
+        WeakThing = "22222222-2222-2222-2222-222222222222"
+
+        [extras]
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["Test"]
+
+        [compat]
+        JSON3 = "1"
+
+        [sources]
+        JuliaSyntax = {url = "https://github.com/JuliaLang/JuliaSyntax.jl", rev = "main"}
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+
+    report = run_julia_project_harness(root)
+    scope = report.project_scope
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test scope.package_uuid == "11111111-1111-1111-1111-111111111111"
+    @test scope.direct_dependencies["JSON3"] == "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+    @test scope.direct_dependencies["JuliaSyntax"] == "70703baa-626e-46a2-a12c-08ffd08c73b4"
+    @test scope.weak_dependencies["WeakThing"] == "22222222-2222-2222-2222-222222222222"
+    @test scope.extra_dependencies["Test"] == "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+    @test scope.targets["test"] == ["Test"]
+    @test scope.compat["JSON3"] == "1"
+    @test scope.sources["JuliaSyntax"]["rev"] == "main"
 end
 
 @testset "project runner reports package policy facts" begin

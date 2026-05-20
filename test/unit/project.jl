@@ -185,6 +185,39 @@ end
     @test occursin("ext/ExampleJSONExt.jl module=ExampleJSONExt", snapshot)
 end
 
+@testset "project runner reports weakdep imports outside extensions" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+
+        [compat]
+        JSON3 = "1"
+
+        [extensions]
+        ExampleJSONExt = "JSON3"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nusing JSON3\nend\n")
+    write(joinpath(root, "ext", "ExampleJSONExt.jl"), "module ExampleJSONExt\nusing JSON3\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R008", rendered)
+    @test occursin("Imported package is missing from Project.toml", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
+end
+
 @testset "project runner captures workspace member scopes" begin
     root = mktempdir()
     write(
@@ -246,6 +279,34 @@ end
     @test occursin("JULIA-PROJ-R008", rendered)
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
     @test occursin("packages/Member/src/Member.jl", rendered)
+end
+
+@testset "project runner reports undeclared package extension dependencies" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [extensions]
+        ExampleJSONExt = "JSON3"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(joinpath(root, "ext", "ExampleJSONExt.jl"), "module ExampleJSONExt\nusing JSON3\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R012", rendered)
+    @test occursin("Project extension dependency is undeclared", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R012", report.findings) == 1
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 0
 end
 
 @testset "project runner reports missing package extension entrypoint" begin

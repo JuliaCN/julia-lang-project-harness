@@ -50,6 +50,7 @@ function evaluate_project_policy_rules(
     append!(findings, thin_runtests_findings(scope, parsed_files, rules))
     append!(findings, source_rev_lock_findings(scope, rules))
     append!(findings, dependency_contract_findings(scope, rules))
+    append!(findings, extension_dependency_findings(scope, rules))
     append!(findings, extension_entrypoint_findings(scope, rules))
     append!(findings, undeclared_import_findings(scope, parsed_files, rules))
     findings
@@ -299,34 +300,6 @@ function dependency_contract_findings(
     findings
 end
 
-function extension_entrypoint_findings(
-    scope::JuliaProjectHarnessScope,
-    rules::Dict{String,JuliaHarnessRule},
-)
-    findings = JuliaHarnessFinding[]
-    for name in sort!(collect(keys(scope.extensions)))
-        any(isfile, extension_entrypoint_candidates(scope.project_root, name)) && continue
-        push!(
-            findings,
-            finding_from_rule(
-                rules[JULIA_PROJ_R011];
-                summary="Project extension `$(name)` is declared but no extension entrypoint exists.",
-                location=SourceLocation(scope.project_toml_path, 1, 0),
-                label="add the extension module file under ext/ using the Pkg extension name",
-            ),
-        )
-    end
-    findings
-end
-
-function extension_entrypoint_candidates(project_root::AbstractString, name::AbstractString)
-    extension_root = joinpath(project_root, "ext")
-    [
-        joinpath(extension_root, "$(name).jl"),
-        joinpath(extension_root, String(name), "$(name).jl"),
-    ]
-end
-
 function undeclared_import_findings(
     scope::JuliaProjectHarnessScope,
     parsed_files::Vector{ParsedJuliaFile},
@@ -364,9 +337,9 @@ function allowed_import_roots(
         Set(["Base", "Core", "Main"]),
         stdlib_roots,
         Set(keys(scope.direct_dependencies)),
-        Set(keys(scope.weak_dependencies)),
     )
     !isnothing(scope.package_name) && push!(allowed, scope.package_name)
+    union!(allowed, extension_import_roots(scope, path))
     if is_test_path(scope, path)
         union!(allowed, keys(scope.extra_dependencies))
     end

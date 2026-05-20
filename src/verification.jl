@@ -62,6 +62,7 @@ function verification_task_records_for_scope(
     end
     append!(records, inferred_verification_task_records(scope, parsed_files))
     append!(records, extension_verification_tasks(scope))
+    append!(records, docs_verification_tasks(scope))
     filter(!isnothing, records)
 end
 
@@ -183,6 +184,45 @@ function extension_verification_tasks(scope::JuliaProjectHarnessScope)
         )
     end
     records
+end
+
+function docs_verification_tasks(scope::JuliaProjectHarnessScope)
+    docs_root = joinpath(scope.project_root, "docs")
+    docs_project = joinpath(docs_root, "Project.toml")
+    docs_make = joinpath(docs_root, "make.jl")
+    isfile(docs_project) || return JuliaVerificationTaskRecord[]
+    isfile(docs_make) || return JuliaVerificationTaskRecord[]
+    docs_facts = parse_project_toml_facts(docs_project)
+    haskey(docs_facts.direct_dependencies, "Documenter") ||
+        haskey(docs_facts.extra_dependencies, "Documenter") ||
+        return JuliaVerificationTaskRecord[]
+    [
+        JuliaVerificationTaskRecord(
+            verification_fingerprint(
+                "docs_build",
+                verification_scope_fingerprint(scope),
+                verification_owner_fingerprint_part(scope, docs_make),
+            ),
+            "docs_build",
+            "pending",
+            "after_unit_tests_pass",
+            scope.project_root,
+            docs_make,
+            nothing,
+            [
+                "julia",
+                "--project=$(docs_root)",
+                "-e",
+                "cd($(repr(docs_root))) do; include(\"make.jl\"); end",
+            ],
+            verification_evidence(
+                "tool" => "Documenter",
+                "docs_project" => verification_owner_fingerprint_part(scope, docs_project),
+                "make" => verification_owner_fingerprint_part(scope, docs_make),
+            ),
+            "Build Documenter docs and run doctests from the docs project.",
+        ),
+    ]
 end
 
 const JULIA_AGENT_VERIFICATION_TASK_KINDS = Set([

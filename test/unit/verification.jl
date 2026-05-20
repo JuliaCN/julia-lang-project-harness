@@ -94,6 +94,55 @@ function write_responsibility_project(root::AbstractString)
     )
 end
 
+function write_documenter_project(root::AbstractString)
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "DocsExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [compat]
+        Documenter = "1"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    mkpath(joinpath(root, "docs", "src"))
+    write(
+        joinpath(root, "src", "DocsExample.jl"),
+        """
+        module DocsExample
+        export run
+        \"\"\"Run the docs fixture value.\"\"\"
+        run(value) = value
+        end
+        """,
+    )
+    write(joinpath(root, "test", "runtests.jl"), "using Test\n@test true\n")
+    write(
+        joinpath(root, "docs", "Project.toml"),
+        """
+        [deps]
+        Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+        DocsExample = "11111111-1111-1111-1111-111111111111"
+
+        [compat]
+        Documenter = "1"
+        """,
+    )
+    write(
+        joinpath(root, "docs", "make.jl"),
+        """
+        using Documenter
+        using DocsExample
+
+        makedocs(sitename = "DocsExample")
+        """,
+    )
+    write(joinpath(root, "docs", "src", "index.md"), "# DocsExample\n")
+end
+
 @testset "verification task index" begin
     root = mktempdir()
     write_verification_project(root)
@@ -157,6 +206,30 @@ end
     @test occursin("\"profile_index\"", profile_json)
     @test occursin("\"receipt_reviews\"", profile_json)
     @test occursin("extension_boundary", profile_json)
+end
+
+@testset "verification task index includes Documenter docs build" begin
+    root = mktempdir()
+    write_documenter_project(root)
+
+    index = build_julia_verification_task_index(root)
+    rendered = render_julia_verification_task_index(index)
+    docs_task = only(record for record in index.records if record.kind == "docs_build")
+
+    @test [record.kind for record in index.records] == ["docs_build", "pkg_test", "stress"]
+    @test docs_task.owner_path == joinpath(root, "docs", "make.jl")
+    @test docs_task.command == [
+        "julia",
+        "--project=$(joinpath(root, "docs"))",
+        "-e",
+        "cd($(repr(joinpath(root, "docs")))) do; include(\"make.jl\"); end",
+    ]
+    @test docs_task.evidence["tool"] == "Documenter"
+    @test docs_task.evidence["docs_project"] == "docs/Project.toml"
+    @test docs_task.evidence["make"] == "docs/make.jl"
+    @test occursin("kind=docs_build", rendered)
+    @test occursin("owner=docs/make.jl", rendered)
+    @test occursin("Build Documenter docs and run doctests", rendered)
 end
 
 @testset "verification profile infers agent responsibilities from project facts" begin

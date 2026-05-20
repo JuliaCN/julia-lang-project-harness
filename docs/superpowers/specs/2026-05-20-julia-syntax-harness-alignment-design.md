@@ -334,6 +334,8 @@ The first Julia-native task families are:
   is available in the project;
 - `extension_boundary`: run package tests with package extension weakdeps in
   scope.
+- `docs_build`: run a Documenter docs build, including doctests, when
+  `docs/Project.toml` depends on Documenter and `docs/make.jl` exists.
 
 Each task should carry a stable fingerprint, kind, state, phase, project root,
 owner path, command, compact evidence, and short reason. This is intentionally

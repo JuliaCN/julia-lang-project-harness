@@ -21,6 +21,20 @@ function write_cli_project(root::AbstractString)
     )
 end
 
+function write_cli_docs_project(root::AbstractString)
+    write_cli_project(root)
+    mkpath(joinpath(root, "docs", "src"))
+    write(
+        joinpath(root, "docs", "Project.toml"),
+        """
+        [deps]
+        Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+        """,
+    )
+    write(joinpath(root, "docs", "make.jl"), "using Documenter\nmakedocs()\n")
+    write(joinpath(root, "docs", "src", "index.md"), "# CliExample\n")
+end
+
 @testset "cli compact report" begin
     root = mktempdir()
     write_cli_project(root)
@@ -143,6 +157,20 @@ end
     @test occursin("\"reviews\"", String(take!(receipt_json_out)))
     @test bad_receipt_status == 1
     @test occursin("missing=load_steps,p50_ms,p99_ms,threshold,result", String(take!(bad_receipt_out)))
+end
+
+@testset "cli verification task output includes docs build" begin
+    root = mktempdir()
+    write_cli_docs_project(root)
+    out = IOBuffer()
+
+    status = run_julia_project_harness_cli(["--verification-tasks", root]; out)
+    rendered = String(take!(out))
+
+    @test status == 0
+    @test occursin("kind=docs_build", rendered)
+    @test occursin("owner=docs/make.jl", rendered)
+    @test occursin("tool=Documenter", rendered)
 end
 
 @testset "cli rejects conflicting modes" begin

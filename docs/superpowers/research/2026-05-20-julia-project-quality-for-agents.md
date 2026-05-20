@@ -253,12 +253,12 @@ Already implemented or designed:
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.
+- Documenter docs projects with `docs/Project.toml` and `docs/make.jl` produce
+  a `docs_build` verification task so agents can run docs and doctest checks as
+  part of project verification.
 
 Useful next policy slices:
 
-- Package extensions should have a verification task when `[weakdeps]` and
-  `[extensions]` are present.
-- Docs projects using Documenter should expose a doctest or docs-build task.
 - Unsafe constructs such as `eval`, external process execution, `ccall`,
   `@inbounds`, and unchecked bounds removal should require a reason and focused
   evidence in non-test code.

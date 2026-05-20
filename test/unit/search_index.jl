@@ -45,6 +45,17 @@
             helper(value)
         end
         helper(value) = string(value)
+        function scan(groups)
+            total = 0
+            for group in groups
+                for item in group
+                    if item > 0
+                        total += item
+                    end
+                end
+            end
+            total
+        end
         """,
     )
     write(
@@ -124,6 +135,25 @@
         entries,
     )
     @test any(
+        entry -> entry.kind == "function" &&
+                 entry.name == "run" &&
+                 "control-flow" in entry.tags &&
+                 "if" in entry.tags &&
+                 "for" in entry.tags &&
+                 "branch" in entry.tags &&
+                 "loop" in entry.tags &&
+                 "macro" in entry.tags,
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "function" &&
+                 entry.name == "scan" &&
+                 "control-flow" in entry.tags &&
+                 "loop" in entry.tags &&
+                 "nested-loop" in entry.tags,
+        entries,
+    )
+    @test any(
         entry -> entry.kind == "argument" &&
                  entry.name == "run.value" &&
                  "argument" in entry.tags &&
@@ -191,6 +221,10 @@
     binding_results = search_julia_project(root, "DEFAULT_LIMIT"; tags=["binding"], limit=1)
     @test length(binding_results) == 1
     @test only(binding_results).entry.kind == "const"
+    shape_results = search_julia_project(root, "scan"; tags=["nested-loop"], limit=1)
+    @test length(shape_results) == 1
+    @test only(shape_results).entry.kind == "function"
+    @test only(shape_results).entry.name == "scan"
     owner_results = search_julia_project(root, "helper run"; tags=["owner"], limit=1)
     @test length(owner_results) == 1
     @test only(owner_results).entry.kind == "owner"

@@ -209,7 +209,7 @@ function function_search_entries(parsed::ParsedJuliaFile)
             function_fact.kind,
             function_fact.name;
             detail=display_function_search_detail(function_fact),
-            tags=["method", function_fact.kind, function_fact.terminal_name],
+            tags=function_search_tags(function_fact),
         ) for function_fact in parsed.syntax_facts.functions
     ]
 end

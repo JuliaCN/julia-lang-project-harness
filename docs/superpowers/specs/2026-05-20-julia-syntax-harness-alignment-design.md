@@ -287,7 +287,7 @@ Each search entry should carry:
 - detail text for disambiguation;
 - combined search text;
 - tags for filtering, such as `owner`, `reasoning-tree`, `public`, `method`,
-  `call`, `dependency`, and `test`.
+  `control-flow`, `nested-loop`, `call`, `dependency`, and `test`.
 
 The public search API should also provide deterministic local query helpers over
 this index. Query helpers should return scored results, apply tag filters as hard

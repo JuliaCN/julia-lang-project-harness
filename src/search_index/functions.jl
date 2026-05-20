@@ -38,6 +38,22 @@ function function_argument_search_tags(
     tags
 end
 
+function function_search_tags(function_fact::JuliaFunctionSyntax)
+    tags = ["method", function_fact.kind, function_fact.terminal_name]
+    if function_fact.control_flow_depth > 0
+        push!(tags, "control-flow")
+        append!(tags, function_fact.control_flow_kinds)
+    end
+    function_fact.branch_count > 0 && push!(tags, "branch")
+    function_fact.branch_count >= 2 && push!(tags, "branchy")
+    function_fact.loop_count > 0 && push!(tags, "loop")
+    function_fact.loop_nesting_depth >= 2 && push!(tags, "nested-loop")
+    function_fact.macro_invocation_count > 0 && push!(tags, "macro")
+    function_fact.body_statement_count >= 8 && push!(tags, "broad-body")
+    length(function_fact.body_named_calls) >= 3 && push!(tags, "pipeline")
+    unique(tags)
+end
+
 function display_function_argument_search_detail(
     function_fact::JuliaFunctionSyntax,
     argument_fact::JuliaFunctionArgumentSyntax,

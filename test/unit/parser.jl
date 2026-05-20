@@ -78,6 +78,43 @@ end
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end
 
+@testset "parser macro and test facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "tests.jl")
+    write(
+        source,
+        """
+        using Test
+        @testset "core" begin
+            @test 1 == 1
+            @test_throws ErrorException error("boom")
+        end
+        Test.@testset "qualified" begin
+            Test.@test true
+        end
+        @time run()
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test [(item.name, item.terminal_name) for item in parsed.syntax_facts.macro_invocations] == [
+        ("@testset", "testset"),
+        ("@test", "test"),
+        ("@test_throws", "test_throws"),
+        ("Test.@testset", "testset"),
+        ("Test.@test", "test"),
+        ("@time", "time"),
+    ]
+    @test [(item.kind, item.name, item.label) for item in parsed.syntax_facts.tests] == [
+        ("testset", "@testset", "core"),
+        ("test", "@test", nothing),
+        ("test_throws", "@test_throws", nothing),
+        ("testset", "Test.@testset", "qualified"),
+        ("test", "Test.@test", nothing),
+    ]
+end
+
 @testset "parser include facts" begin
     temp = mktempdir()
     source = joinpath(temp, "entry.jl")

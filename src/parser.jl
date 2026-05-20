@@ -44,6 +44,23 @@ struct JuliaFunctionSyntax
     expression::String
 end
 
+struct JuliaMacroInvocationSyntax
+    line::Int
+    column::Int
+    name::String
+    terminal_name::String
+    expression::String
+end
+
+struct JuliaTestSyntax
+    line::Int
+    column::Int
+    kind::String
+    name::String
+    label::Union{Nothing,String}
+    expression::String
+end
+
 struct JuliaNativeSyntaxFacts
     has_syntax_tree::Bool
     modules::Vector{JuliaModuleSyntax}
@@ -51,6 +68,8 @@ struct JuliaNativeSyntaxFacts
     imports::Vector{JuliaImportSyntax}
     exports::Vector{JuliaExportSyntax}
     functions::Vector{JuliaFunctionSyntax}
+    macro_invocations::Vector{JuliaMacroInvocationSyntax}
+    tests::Vector{JuliaTestSyntax}
 end
 
 struct ParsedJuliaFile
@@ -100,6 +119,8 @@ function empty_julia_native_syntax_facts()
         JuliaImportSyntax[],
         JuliaExportSyntax[],
         JuliaFunctionSyntax[],
+        JuliaMacroInvocationSyntax[],
+        JuliaTestSyntax[],
     )
 end
 
@@ -110,6 +131,8 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaImportSyntax[],
         JuliaExportSyntax[],
         JuliaFunctionSyntax[],
+        JuliaMacroInvocationSyntax[],
+        JuliaTestSyntax[],
     )
     collect_julia_syntax_facts!(collector, syntax, source_path)
     JuliaNativeSyntaxFacts(
@@ -119,6 +142,8 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.imports,
         collector.exports,
         collector.functions,
+        collector.macro_invocations,
+        collector.tests,
     )
 end
 
@@ -128,6 +153,8 @@ mutable struct JuliaSyntaxFactCollector
     imports::Vector{JuliaImportSyntax}
     exports::Vector{JuliaExportSyntax}
     functions::Vector{JuliaFunctionSyntax}
+    macro_invocations::Vector{JuliaMacroInvocationSyntax}
+    tests::Vector{JuliaTestSyntax}
 end
 
 function collect_julia_syntax_facts!(
@@ -146,6 +173,13 @@ function collect_julia_syntax_facts!(
     elseif syntax_kind(node) in ("function", "macro")
         function_fact = function_syntax_from_node(node)
         !isnothing(function_fact) && push!(collector.functions, function_fact)
+    elseif syntax_kind(node) == "macrocall"
+        macro_invocation = macro_invocation_syntax_from_node(node)
+        if !isnothing(macro_invocation)
+            push!(collector.macro_invocations, macro_invocation)
+            test_fact = test_syntax_from_macro_invocation(node, macro_invocation)
+            !isnothing(test_fact) && push!(collector.tests, test_fact)
+        end
     end
     for child in syntax_children(node)
         collect_julia_syntax_facts!(collector, child, source_path)
@@ -239,6 +273,73 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         function_keyword_args(signature),
         String(JuliaSyntax.sourcetext(node)),
     )
+end
+
+function macro_invocation_syntax_from_node(node::JuliaSyntax.SyntaxNode)
+    children = syntax_children(node)
+    isempty(children) && return nothing
+    name_node = first(children)
+    terminal_name = terminal_macro_name(name_node)
+    isnothing(terminal_name) && return nothing
+    location = JuliaSyntax.source_location(node)
+    JuliaMacroInvocationSyntax(
+        location[1],
+        location[2] - 1,
+        compact_syntax_text(name_node),
+        terminal_name,
+        String(JuliaSyntax.sourcetext(node)),
+    )
+end
+
+function test_syntax_from_macro_invocation(
+    node::JuliaSyntax.SyntaxNode,
+    invocation::JuliaMacroInvocationSyntax,
+)
+    invocation.terminal_name in TEST_MACRO_NAMES || return nothing
+    location = JuliaSyntax.source_location(node)
+    JuliaTestSyntax(
+        location[1],
+        location[2] - 1,
+        invocation.terminal_name,
+        invocation.name,
+        first_string_literal_argument(node),
+        invocation.expression,
+    )
+end
+
+const TEST_MACRO_NAMES = Set([
+    "inferred",
+    "test",
+    "test_broken",
+    "test_deprecated",
+    "test_logs",
+    "test_nowarn",
+    "test_skip",
+    "test_throws",
+    "test_warn",
+    "testset",
+])
+
+function terminal_macro_name(node::JuliaSyntax.SyntaxNode)
+    names = identifier_texts(node)
+    isempty(names) ? nothing : last(names)
+end
+
+function first_string_literal_argument(node::JuliaSyntax.SyntaxNode)
+    for argument in macro_arguments(node)
+        label = string_literal_value(argument)
+        !isnothing(label) && return label
+    end
+    nothing
+end
+
+function macro_arguments(node::JuliaSyntax.SyntaxNode)
+    children = syntax_children(node)
+    length(children) <= 1 ? JuliaSyntax.SyntaxNode[] : children[2:end]
+end
+
+function compact_syntax_text(node::JuliaSyntax.SyntaxNode)
+    replace(String(JuliaSyntax.sourcetext(node)), r"\s+" => "")
 end
 
 function first_call_child(node::JuliaSyntax.SyntaxNode)

@@ -1,5 +1,6 @@
 const MAX_AGENT_SNAPSHOT_INCLUDE_LINES = 24
 const MAX_AGENT_SNAPSHOT_METHODS_PER_FILE = 12
+const MAX_AGENT_SNAPSHOT_TESTSETS_PER_FILE = 8
 
 function render_julia_project_harness_agent_snapshot(
     project_root::AbstractString;
@@ -49,6 +50,11 @@ function render_julia_package_snapshot(
     if !isempty(method_lines)
         rendered *= "Methods:\n"
         rendered *= join(method_lines, "\n") * "\n"
+    end
+    test_lines = snapshot_test_lines(scope, parsed_files)
+    if !isempty(test_lines)
+        rendered *= "Tests:\n"
+        rendered *= join(test_lines, "\n") * "\n"
     end
     include_lines = compact_include_lines(scope, parsed_files)
     if !isempty(include_lines)
@@ -131,6 +137,48 @@ function display_function_syntax(function_fact::JuliaFunctionSyntax)
     keyword_suffix = isempty(function_fact.keyword_args) ? "" :
                      ";kw=$(length(function_fact.keyword_args))"
     "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)"
+end
+
+function snapshot_test_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})
+    lines = String[]
+    for parsed in parsed_files
+        isempty(parsed.syntax_facts.tests) && continue
+        testsets = compact_snapshot_testsets(String[
+            test_fact.label for test_fact in parsed.syntax_facts.tests
+            if test_fact.kind == "testset" && !isnothing(test_fact.label)
+        ])
+        counts = test_counts(parsed.syntax_facts.tests)
+        segments = String[]
+        if !isempty(testsets)
+            push!(segments, "testsets=$(join(display_test_label.(testsets), ","))")
+        end
+        for (kind, count) in sort!(collect(counts))
+            kind == "testset" && continue
+            push!(segments, "$(kind)=$(count)")
+        end
+        isempty(segments) && push!(segments, "testset=$(get(counts, "testset", 0))")
+        push!(lines, "- $(display_project_path(scope, parsed.report.path)) $(join(segments, " "))")
+    end
+    lines
+end
+
+function compact_snapshot_testsets(testsets::Vector{String})
+    length(testsets) <= MAX_AGENT_SNAPSHOT_TESTSETS_PER_FILE && return testsets
+    kept = testsets[1:MAX_AGENT_SNAPSHOT_TESTSETS_PER_FILE]
+    push!(kept, "... $(length(testsets) - MAX_AGENT_SNAPSHOT_TESTSETS_PER_FILE) more testsets")
+    kept
+end
+
+function test_counts(tests::Vector{JuliaTestSyntax})
+    counts = Dict{String,Int}()
+    for test_fact in tests
+        counts[test_fact.kind] = get(counts, test_fact.kind, 0) + 1
+    end
+    counts
+end
+
+function display_test_label(label::AbstractString)
+    "\"$(replace(String(label), "\"" => "\\\"", "\n" => " "))\""
 end
 
 function compact_include_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

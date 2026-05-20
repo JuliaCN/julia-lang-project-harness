@@ -607,6 +607,9 @@ remain incomplete. Waivers are allowed only when the receipt records a concrete
 explanation, so an Agent cannot silently skip expensive verification by adding a
 lightweight config escape. The CLI review mode should return success only when
 every required external receipt is accepted or concretely waived.
+If a receipt includes task metadata such as `kind` or `owner_path`, those fields
+must match the fingerprint-bound task. This keeps copied or stale receipt
+templates from silently certifying the wrong owner.
 
 The harness should also emit a JSON receipt template from the same task index.
 Template values are intentionally blank: they help the Agent fill the required

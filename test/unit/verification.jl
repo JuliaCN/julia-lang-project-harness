@@ -248,6 +248,8 @@ end
 
     good_receipt = Dict(
         "fingerprint" => stress.fingerprint,
+        "kind" => stress.kind,
+        "owner_path" => relpath(stress.owner_path, root),
         "scenario" => "public API smoke under generated load",
         "load_steps" => "1,10,25",
         "p50_ms" => "1.2",
@@ -264,6 +266,22 @@ end
     accepted_reviews = assert_julia_verification_receipts_accepted(index, [good_receipt])
     @test length(accepted_reviews) == 1
     @test only(accepted_reviews).status == :accepted
+
+    mismatched_binding = merge(
+        good_receipt,
+        Dict("kind" => "performance", "owner_path" => "src/OtherOwner.jl"),
+    )
+    mismatched_review = only(review_julia_verification_receipts(index, [mismatched_binding]))
+    mismatched_rendered = render_julia_verification_receipt_reviews(
+        [mismatched_review];
+        project_root=root,
+    )
+    @test mismatched_review.status == :incomplete
+    @test isempty(mismatched_review.missing_evidence)
+    @test isempty(mismatched_review.weak_evidence)
+    @test "receipt kind does not match task kind" in mismatched_review.problems
+    @test "receipt owner_path does not match task owner" in mismatched_review.problems
+    @test occursin("receipt kind does not match task kind", mismatched_rendered)
 
     bad_receipt = Dict(
         "fingerprint" => stress.fingerprint,

@@ -102,8 +102,37 @@ function review_julia_verification_receipt(
     receipt_fingerprint = receipt_value(receipt, "fingerprint"; default=record.fingerprint)
     receipt_fingerprint == record.fingerprint ||
         push!(problems, "receipt fingerprint does not match task fingerprint")
+    append!(problems, receipt_binding_problems(record, receipt))
     status = isempty(missing) && isempty(weak) && isempty(problems) ? "accepted" : "incomplete"
     verification_receipt_review(record, status, missing, weak, problems)
+end
+
+function receipt_binding_problems(
+    record::JuliaVerificationTaskRecord,
+    receipt::AbstractDict,
+)
+    problems = String[]
+    if has_receipt_key(receipt, "kind")
+        kind = receipt_value(receipt, "kind")
+        !isempty(kind) && kind != record.kind &&
+            push!(problems, "receipt kind does not match task kind")
+    end
+    if has_receipt_key(receipt, "owner_path")
+        owner_path = receipt_value(receipt, "owner_path")
+        !isempty(owner_path) && !receipt_owner_path_matches(record, owner_path) &&
+            push!(problems, "receipt owner_path does not match task owner")
+    end
+    problems
+end
+
+function receipt_owner_path_matches(
+    record::JuliaVerificationTaskRecord,
+    receipt_owner_path::AbstractString,
+)
+    normalized = slash_path(normpath(String(receipt_owner_path)))
+    absolute_owner = slash_path(normpath(record.owner_path))
+    relative_owner = slash_path(normpath(relpath(record.owner_path, record.project_root)))
+    normalized == absolute_owner || normalized == relative_owner
 end
 
 function verification_receipt_review(

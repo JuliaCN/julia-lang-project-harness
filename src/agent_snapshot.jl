@@ -29,6 +29,21 @@ function render_julia_package_snapshot(
     if !isnothing(scope.package_entry_path)
         rendered *= "Entry: $(display_project_path(scope, scope.package_entry_path))\n"
     end
+    module_lines = snapshot_module_lines(scope, parsed_files)
+    if !isempty(module_lines)
+        rendered *= "Modules:\n"
+        rendered *= join(module_lines, "\n") * "\n"
+    end
+    public_lines = snapshot_public_lines(scope, parsed_files)
+    if !isempty(public_lines)
+        rendered *= "Public:\n"
+        rendered *= join(public_lines, "\n") * "\n"
+    end
+    import_lines = snapshot_import_lines(scope, parsed_files)
+    if !isempty(import_lines)
+        rendered *= "Imports:\n"
+        rendered *= join(import_lines, "\n") * "\n"
+    end
     include_lines = compact_include_lines(scope, parsed_files)
     if !isempty(include_lines)
         rendered *= "Includes:\n"
@@ -45,6 +60,46 @@ function render_julia_package_snapshot(
         rendered *= join(finding_lines, "\n") * "\n"
     end
     rendered
+end
+
+function snapshot_module_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})
+    lines = String[]
+    for parsed in parsed_files
+        isempty(parsed.syntax_facts.modules) && continue
+        labels = [
+            mod.is_bare ? "baremodule=$(mod.name)" : "module=$(mod.name)"
+            for mod in parsed.syntax_facts.modules
+        ]
+        push!(lines, "- $(display_project_path(scope, parsed.report.path)) $(join(labels, ", "))")
+    end
+    lines
+end
+
+function snapshot_public_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})
+    lines = String[]
+    for parsed in parsed_files
+        isempty(parsed.syntax_facts.exports) && continue
+        groups = [
+            "$(exported.kind)=$(join(exported.names, ","))" for exported in parsed.syntax_facts.exports
+        ]
+        push!(lines, "- $(display_project_path(scope, parsed.report.path)) $(join(groups, " "))")
+    end
+    lines
+end
+
+function snapshot_import_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})
+    lines = String[]
+    for parsed in parsed_files
+        isempty(parsed.syntax_facts.imports) && continue
+        imports = [display_import_syntax(imported) for imported in parsed.syntax_facts.imports]
+        push!(lines, "- $(display_project_path(scope, parsed.report.path)) $(join(imports, "; "))")
+    end
+    lines
+end
+
+function display_import_syntax(imported::JuliaImportSyntax)
+    suffix = isempty(imported.names) ? "" : ":$(join(imported.names, ","))"
+    "$(imported.kind)=$(imported.root)$(suffix)"
 end
 
 function compact_include_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

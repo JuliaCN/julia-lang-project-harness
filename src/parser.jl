@@ -9,9 +9,36 @@ struct JuliaIncludeSyntax
     is_literal::Bool
 end
 
+struct JuliaModuleSyntax
+    line::Int
+    column::Int
+    name::String
+    is_bare::Bool
+end
+
+struct JuliaImportSyntax
+    line::Int
+    column::Int
+    kind::String
+    root::String
+    names::Vector{String}
+    expression::String
+end
+
+struct JuliaExportSyntax
+    line::Int
+    column::Int
+    kind::String
+    names::Vector{String}
+    expression::String
+end
+
 struct JuliaNativeSyntaxFacts
     has_syntax_tree::Bool
+    modules::Vector{JuliaModuleSyntax}
     includes::Vector{JuliaIncludeSyntax}
+    imports::Vector{JuliaImportSyntax}
+    exports::Vector{JuliaExportSyntax}
 end
 
 struct ParsedJuliaFile
@@ -28,7 +55,7 @@ function parse_julia_file(path::AbstractString)
         return ParsedJuliaFile(
             JuliaFileReport(path_string, false, "failed to read Julia source: $(err)"),
             "",
-            JuliaNativeSyntaxFacts(false, JuliaIncludeSyntax[]),
+            empty_julia_native_syntax_facts(),
         )
     end
 
@@ -37,13 +64,13 @@ function parse_julia_file(path::AbstractString)
         ParsedJuliaFile(
             JuliaFileReport(path_string, true, nothing),
             source,
-            JuliaNativeSyntaxFacts(true, include_syntax_facts(syntax, path_string)),
+            julia_native_syntax_facts(syntax, path_string),
         )
     catch err
         ParsedJuliaFile(
             JuliaFileReport(path_string, false, sprint(showerror, err)),
             source,
-            JuliaNativeSyntaxFacts(false, JuliaIncludeSyntax[]),
+            empty_julia_native_syntax_facts(),
         )
     end
 end
@@ -53,23 +80,72 @@ function source_line(source::AbstractString, line::Int)
     1 <= line <= length(lines) ? lines[line] : nothing
 end
 
-function include_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::AbstractString)
-    includes = JuliaIncludeSyntax[]
-    collect_include_syntax!(includes, syntax, source_path)
-    includes
+function empty_julia_native_syntax_facts()
+    JuliaNativeSyntaxFacts(
+        false,
+        JuliaModuleSyntax[],
+        JuliaIncludeSyntax[],
+        JuliaImportSyntax[],
+        JuliaExportSyntax[],
+    )
 end
 
-function collect_include_syntax!(
-    includes::Vector{JuliaIncludeSyntax},
+function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::AbstractString)
+    collector = JuliaSyntaxFactCollector(
+        JuliaModuleSyntax[],
+        JuliaIncludeSyntax[],
+        JuliaImportSyntax[],
+        JuliaExportSyntax[],
+    )
+    collect_julia_syntax_facts!(collector, syntax, source_path)
+    JuliaNativeSyntaxFacts(
+        true,
+        collector.modules,
+        collector.includes,
+        collector.imports,
+        collector.exports,
+    )
+end
+
+mutable struct JuliaSyntaxFactCollector
+    modules::Vector{JuliaModuleSyntax}
+    includes::Vector{JuliaIncludeSyntax}
+    imports::Vector{JuliaImportSyntax}
+    exports::Vector{JuliaExportSyntax}
+end
+
+function collect_julia_syntax_facts!(
+    collector::JuliaSyntaxFactCollector,
     node::JuliaSyntax.SyntaxNode,
     source_path::AbstractString,
 )
-    if is_call_named(node, "include")
-        push!(includes, include_syntax_from_call(node, source_path))
+    if is_module_node(node)
+        push!(collector.modules, module_syntax_from_node(node))
+    elseif is_call_named(node, "include")
+        push!(collector.includes, include_syntax_from_call(node, source_path))
+    elseif syntax_kind(node) in ("using", "import")
+        append!(collector.imports, import_syntax_from_node(node))
+    elseif syntax_kind(node) in ("export", "public")
+        push!(collector.exports, export_syntax_from_node(node))
     end
     for child in syntax_children(node)
-        collect_include_syntax!(includes, child, source_path)
+        collect_julia_syntax_facts!(collector, child, source_path)
     end
+end
+
+function is_module_node(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "module"
+end
+
+function module_syntax_from_node(node::JuliaSyntax.SyntaxNode)
+    location = JuliaSyntax.source_location(node)
+    name = first_identifier_text(node)
+    JuliaModuleSyntax(
+        location[1],
+        location[2] - 1,
+        something(name, "<anonymous>"),
+        JuliaSyntax.has_flags(node, JuliaSyntax.BARE_MODULE_FLAG),
+    )
 end
 
 function include_syntax_from_call(node::JuliaSyntax.SyntaxNode, source_path::AbstractString)
@@ -84,6 +160,46 @@ function include_syntax_from_call(node::JuliaSyntax.SyntaxNode, source_path::Abs
         target,
         resolved_target,
         !isnothing(target),
+    )
+end
+
+function import_syntax_from_node(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    location = JuliaSyntax.source_location(node)
+    import_paths = import_path_names(node)
+    isempty(import_paths) && return JuliaImportSyntax[]
+    if length(import_paths) == 1
+        return [
+            JuliaImportSyntax(
+                location[1],
+                location[2] - 1,
+                kind,
+                only(import_paths),
+                String[],
+                String(JuliaSyntax.sourcetext(node)),
+            ),
+        ]
+    end
+    [
+        JuliaImportSyntax(
+            location[1],
+            location[2] - 1,
+            kind,
+            first(import_paths),
+            import_paths[2:end],
+            String(JuliaSyntax.sourcetext(node)),
+        ),
+    ]
+end
+
+function export_syntax_from_node(node::JuliaSyntax.SyntaxNode)
+    location = JuliaSyntax.source_location(node)
+    JuliaExportSyntax(
+        location[1],
+        location[2] - 1,
+        syntax_kind(node),
+        identifier_texts(node),
+        String(JuliaSyntax.sourcetext(node)),
     )
 end
 
@@ -107,6 +223,45 @@ function string_literal_value(node::JuliaSyntax.SyntaxNode)
     ]
     length(string_children) == 1 || return nothing
     String(JuliaSyntax.sourcetext(only(string_children)))
+end
+
+function import_path_names(node::JuliaSyntax.SyntaxNode)
+    paths = String[]
+    collect_import_path_names!(paths, node)
+    paths
+end
+
+function collect_import_path_names!(paths::Vector{String}, node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "importpath"
+        push!(paths, join(identifier_texts(node), "."))
+        return
+    end
+    for child in syntax_children(node)
+        collect_import_path_names!(paths, child)
+    end
+end
+
+function first_identifier_text(node::JuliaSyntax.SyntaxNode)
+    for child in syntax_children(node)
+        syntax_kind(child) == "Identifier" && return String(JuliaSyntax.sourcetext(child))
+    end
+    nothing
+end
+
+function identifier_texts(node::JuliaSyntax.SyntaxNode)
+    names = String[]
+    collect_identifier_texts!(names, node)
+    names
+end
+
+function collect_identifier_texts!(names::Vector{String}, node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "Identifier"
+        push!(names, String(JuliaSyntax.sourcetext(node)))
+        return
+    end
+    for child in syntax_children(node)
+        collect_identifier_texts!(names, child)
+    end
 end
 
 function is_call_named(node::JuliaSyntax.SyntaxNode, name::AbstractString)

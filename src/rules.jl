@@ -5,6 +5,7 @@ const JULIA_AGENT_POLICY_PACK_ID = "julia.agent_policy"
 const JULIA_SYN_R001 = "JULIA-SYN-R001"
 const JULIA_PROJ_R001 = "JULIA-PROJ-R001"
 const JULIA_PROJ_R002 = "JULIA-PROJ-R002"
+const JULIA_PROJ_R007 = "JULIA-PROJ-R007"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
 const JULIA_MOD_R004 = "JULIA-MOD-R004"
 const JULIA_MOD_R005 = "JULIA-MOD-R005"
@@ -56,6 +57,14 @@ julia_project_policy_rules() = [
         Warning,
         "Package entry module is missing",
         "Julia packages should expose a parser-stable entry file at `src/<PackageName>.jl`, unless project config records a reason.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R007,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Package entry file lacks package module declaration",
+        "The package entry file should declare a top-level module matching the `Project.toml` package name.",
         labels("project-policy"),
     ),
 ]
@@ -203,6 +212,24 @@ function evaluate_project_policy_rules(
                 label="add the package entry module or configure an explicit source-scope exception",
             ),
         )
+    else
+        entry = findfirst(parsed -> parsed.report.path == scope.package_entry_path, parsed_files)
+        if !isnothing(entry)
+            parsed = parsed_files[entry]
+            module_names = [mod.name for mod in parsed.syntax_facts.modules]
+            if !(scope.package_name in module_names)
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[JULIA_PROJ_R007];
+                        summary="`$(scope.package_entry_path)` does not declare module `$(scope.package_name)`.",
+                        location=SourceLocation(scope.package_entry_path, 1, 0),
+                        source_line=source_line(parsed.source, 1),
+                        label="declare the package module in the entry file so Pkg and syntax facts agree",
+                    ),
+                )
+            end
+        end
     end
     findings
 end

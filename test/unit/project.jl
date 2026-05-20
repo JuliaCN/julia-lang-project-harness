@@ -54,6 +54,20 @@ end
     @test occursin("Project.toml lacks a package name", rendered)
 end
 
+@testset "project runner reports entry module mismatch" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Different\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R007", rendered)
+    @test occursin("Package entry file lacks package module declaration", rendered)
+end
+
 @testset "project runner reports include graph findings" begin
     root = mktempdir()
     write_project(root, "Example")

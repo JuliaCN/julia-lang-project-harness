@@ -2,7 +2,10 @@
     root = mktempdir()
     write_project(root, "Example")
     mkpath(joinpath(root, "src"))
-    write(joinpath(root, "src", "Example.jl"), "module Example\ninclude(\"api.jl\")\nend\n")
+    write(
+        joinpath(root, "src", "Example.jl"),
+        "module Example\nexport run\nusing JSON3\ninclude(\"api.jl\")\nend\n",
+    )
     write(joinpath(root, "src", "api.jl"), "run() = 1\n")
 
     rendered = render_julia_project_harness_agent_snapshot(root)
@@ -10,6 +13,12 @@
     @test occursin("Package: Example", rendered)
     @test occursin("Files: source=2 test=0", rendered)
     @test occursin("Entry: src/Example.jl", rendered)
+    @test occursin("Modules:", rendered)
+    @test occursin("src/Example.jl module=Example", rendered)
+    @test occursin("Public:", rendered)
+    @test occursin("export=run", rendered)
+    @test occursin("Imports:", rendered)
+    @test occursin("using=JSON3", rendered)
     @test occursin("Includes:", rendered)
     @test occursin("src/Example.jl -> src/api.jl", rendered)
     @test !occursin("FindingGroups:", rendered)

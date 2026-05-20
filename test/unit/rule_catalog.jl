@@ -14,6 +14,7 @@
     @test [rule.rule_id for rule in julia_project_policy_rules()] == [
         "JULIA-PROJ-R001",
         "JULIA-PROJ-R002",
+        "JULIA-PROJ-R007",
     ]
     @test [rule.rule_id for rule in julia_modularity_rules()] == [
         "JULIA-MOD-R003",

@@ -12,6 +12,40 @@ using JuliaLangProjectHarness: parse_julia_file
     @test parsed.syntax_facts.has_syntax_tree
 end
 
+@testset "parser namespace and api facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "entry.jl")
+    write(
+        source,
+        """
+        baremodule Example
+        export run, Config
+        public internal_api
+        using JSON3
+        using JSON3: read, write
+        import Base: show
+        import Dates
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test length(parsed.syntax_facts.modules) == 1
+    @test only(parsed.syntax_facts.modules).name == "Example"
+    @test only(parsed.syntax_facts.modules).is_bare
+    @test [(item.kind, item.names) for item in parsed.syntax_facts.exports] == [
+        ("export", ["run", "Config"]),
+        ("public", ["internal_api"]),
+    ]
+    @test [(item.kind, item.root, item.names) for item in parsed.syntax_facts.imports] == [
+        ("using", "JSON3", String[]),
+        ("using", "JSON3", ["read", "write"]),
+        ("import", "Base", ["show"]),
+        ("import", "Dates", String[]),
+    ]
+end
+
 @testset "parser include facts" begin
     temp = mktempdir()
     source = joinpath(temp, "entry.jl")

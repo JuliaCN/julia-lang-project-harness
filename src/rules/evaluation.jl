@@ -42,6 +42,13 @@ function evaluate_agent_policy_rules(
     function_docs_by_name = package_function_docstrings_by_public_name(parsed_files)
     append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
     append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
+    append!(findings, public_method_family_scattering_findings(
+        scope,
+        parsed_files,
+        public_names,
+        function_docs_by_name,
+        rules,
+    ))
     append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
     for parsed in parsed_files
         parsed.report.is_valid || continue
@@ -196,6 +203,7 @@ function public_api_owner_conflict_findings(
     for (name, definitions) in sort(collect(records); by=first)
         owner_paths = sort(unique(definition.path for definition in definitions))
         syntax_families = sort(unique(definition.kind for definition in definitions))
+        syntax_families == ["function"] && continue
         length(owner_paths) > 1 || length(syntax_families) > 1 || continue
         first_definition = first(sort(definitions; by=definition -> (
             definition.path,

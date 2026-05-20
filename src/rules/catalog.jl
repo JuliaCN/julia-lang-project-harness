@@ -31,6 +31,7 @@ const AGENT_JL_R005 = "AGENT-JL-R005"
 const AGENT_JL_R006 = "AGENT-JL-R006"
 const AGENT_JL_R007 = "AGENT-JL-R007"
 const AGENT_JL_R008 = "AGENT-JL-R008"
+const AGENT_JL_R009 = "AGENT-JL-R009"
 const AGENT_JL_R010 = "AGENT-JL-R010"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
@@ -303,6 +304,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public method body lacks named pipeline steps",
         "Split broad exported Julia methods into named pipeline steps when the public body has many top-level statements.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R009,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public method family is scattered across owners",
+        "Document an explicit Julia dispatch or extension pattern when an exported method family is implemented across multiple owner files.",
         labels("agent-policy"),
     ),
     JuliaHarnessRule(

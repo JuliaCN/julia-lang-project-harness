@@ -711,7 +711,7 @@ end
         joinpath(root, "src", "Example.jl"),
         """
         module Example
-        export run
+        export Payload
         include("api.jl")
         include("fallbacks.jl")
         end
@@ -720,11 +720,16 @@ end
     write(
         joinpath(root, "src", "api.jl"),
         """
-        \"\"\"Run the public value.\"\"\"
-        run(value::Int) = value
+        \"\"\"Public payload type.\"\"\"
+        struct Payload
+            value::Int
+        end
         """,
     )
-    write(joinpath(root, "src", "fallbacks.jl"), "run(value::String) = value\n")
+    write(
+        joinpath(root, "src", "fallbacks.jl"),
+        "Payload(value::String) = Payload(length(value))\n",
+    )
 
     report = run_julia_project_harness(root)
     rendered = render_julia_project_harness(report)
@@ -735,6 +740,71 @@ end
     @test occursin("src/api.jl", rendered)
     @test occursin("src/fallbacks.jl", rendered)
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner reports scattered public method family advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        include("api.jl")
+        include("fallbacks.jl")
+        end
+        """,
+    )
+    write(
+        joinpath(root, "src", "api.jl"),
+        """
+        \"\"\"Run public values.\"\"\"
+        run(value::Int) = value
+        """,
+    )
+    write(joinpath(root, "src", "fallbacks.jl"), "run(value::String) = value\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R009", rendered)
+    @test occursin("Public method family is scattered across owners", rendered)
+    @test occursin("documented dispatch pattern", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts documented public method family extension pattern" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        include("api.jl")
+        include("fallbacks.jl")
+        end
+        """,
+    )
+    write(
+        joinpath(root, "src", "api.jl"),
+        """
+        \"\"\"Run public values.
+
+        Dispatch extension pattern: fallback owner files add supported value methods.
+        \"\"\"
+        run(value::Int) = value
+        """,
+    )
+    write(joinpath(root, "src", "fallbacks.jl"), "run(value::String) = value\n")
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
 @testset "project runner reports undocumented module owner fanout" begin

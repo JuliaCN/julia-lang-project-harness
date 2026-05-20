@@ -1197,6 +1197,48 @@ end
     @test occursin("AGENT-JL-R007", rendered)
     @test occursin("Public method hides deep control flow", rendered)
     @test occursin("control-flow depth 4", rendered)
+    @test occursin("branches=2, loops=2, loop_depth=2", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner reports nested internal traversal advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        \"\"\"Run values through the public API.\"\"\"
+        run(values) = _scan_values(values)
+
+        function _scan_values(groups)
+            total = 0
+            for group in groups
+                for item in group
+                    if item.active
+                        try
+                            total += item.value
+                        catch
+                            total += 0
+                        end
+                    end
+                end
+            end
+            total
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R015", rendered)
+    @test occursin("Internal method nests traversal scaffolding", rendered)
+    @test occursin("branches=2, loops=2, loop_depth=2", rendered)
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
 end
 

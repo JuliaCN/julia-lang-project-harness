@@ -38,6 +38,7 @@ const AGENT_JL_R011 = "AGENT-JL-R011"
 const AGENT_JL_R012 = "AGENT-JL-R012"
 const AGENT_JL_R013 = "AGENT-JL-R013"
 const AGENT_JL_R014 = "AGENT-JL-R014"
+const AGENT_JL_R015 = "AGENT-JL-R015"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -365,6 +366,14 @@ julia_agent_policy_rules() = [
         Info,
         "Pkg.test lacks the harness verification profile",
         "Projects that depend on JuliaLangProjectHarness should mount `assert_julia_project_harness_test_profile_clean` inside package tests so agents receive policy, search, and verification feedback during `Pkg.test`.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R015,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Internal method nests traversal scaffolding",
+        "Extract internal traversal bodies with nested loops and guard branches into named iterators, predicates, or data-processing helpers so agents can repair algorithm steps without untangling scaffolding.",
         labels("agent-policy"),
     ),
 ]

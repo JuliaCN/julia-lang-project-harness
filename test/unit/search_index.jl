@@ -37,7 +37,12 @@
         """
         \"\"\"Run a value through the public API.\"\"\"
         function run(value::T; verbose=false)::String where {T<:Integer}
-            @alpha helper(value)
+            if verbose
+                for item in value:value
+                    @alpha helper(item)
+                end
+            end
+            helper(value)
         end
         helper(value) = string(value)
         """,
@@ -82,6 +87,10 @@
                  occursin("typed=value::T", entry.detail) &&
                  occursin("returns=String", entry.detail) &&
                  occursin("where=T<:Integer", entry.detail) &&
+                 occursin("flow=2:if,for", entry.detail) &&
+                 occursin("branches=1", entry.detail) &&
+                 occursin("loops=1", entry.detail) &&
+                 occursin("loop_depth=1", entry.detail) &&
                  occursin("macros=1:alpha", entry.detail) &&
                  "method" in entry.tags,
         entries,

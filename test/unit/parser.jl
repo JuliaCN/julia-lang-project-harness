@@ -188,6 +188,9 @@ end
     function_fact = only(parsed.syntax_facts.functions)
 
     @test function_fact.control_flow_depth == 4
+    @test function_fact.branch_count == 2
+    @test function_fact.loop_count == 2
+    @test function_fact.loop_nesting_depth == 2
     @test function_fact.control_flow_kinds == ["if", "for", "while", "try"]
 end
 

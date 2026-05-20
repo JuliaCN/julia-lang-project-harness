@@ -145,6 +145,8 @@ The parser layer should classify these constructs in the first slice:
   annotations, and `where` parameters
 - function argument facts for positional and keyword arguments, including type
   annotations, defaults, boolean flags, and stringly domain arguments
+- function algorithm-shape facts for control-flow depth, branch count, loop
+  count, loop nesting depth, and encountered control-flow kinds
 - argument-level search entries for Julia method signatures
 - function and constructor call references, excluding definition signatures
 - docstring bindings through JuliaSyntax `doc` nodes for named modules,
@@ -422,9 +424,12 @@ Initial advisory rules:
 - `AGENT-JL-R013`: public mutable struct lacks a mutation contract note.
 - `AGENT-JL-R014`: package tests omit the in-test harness verification profile
   hook.
+- `AGENT-JL-R015`: internal implementation function nests traversal loops and
+  guard branches instead of exposing named iterator, predicate, or data
+  processing helpers for agent repair.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R014`. Later advisory rules can land only after the needed
+`AGENT-JL-R015`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

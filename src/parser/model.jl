@@ -59,6 +59,9 @@ struct JuliaFunctionSyntax
     return_type::Union{Nothing,String}
     where_parameters::Vector{String}
     control_flow_depth::Int
+    branch_count::Int
+    loop_count::Int
+    loop_nesting_depth::Int
     control_flow_kinds::Vector{String}
     body_statement_count::Int
     body_named_calls::Vector{String}

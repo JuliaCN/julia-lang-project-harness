@@ -1,4 +1,6 @@
 const CONTROL_FLOW_KINDS = Set(["for", "if", "let", "try", "while"])
+const LOOP_FLOW_KINDS = Set(["for", "while"])
+const BRANCH_FLOW_KINDS = Set(["if", "elseif", "try"])
 
 function function_control_flow_depth(node::JuliaSyntax.SyntaxNode)
     max_depth = 0
@@ -15,6 +17,30 @@ function function_control_flow_kinds(node::JuliaSyntax.SyntaxNode)
         collect_control_flow_kinds!(kinds, seen, child)
     end
     kinds
+end
+
+function function_branch_count(node::JuliaSyntax.SyntaxNode)
+    count = 0
+    for child in function_body_nodes(node)
+        count += control_flow_kind_count(child, BRANCH_FLOW_KINDS)
+    end
+    count
+end
+
+function function_loop_count(node::JuliaSyntax.SyntaxNode)
+    count = 0
+    for child in function_body_nodes(node)
+        count += control_flow_kind_count(child, LOOP_FLOW_KINDS)
+    end
+    count
+end
+
+function function_loop_nesting_depth(node::JuliaSyntax.SyntaxNode)
+    max_depth = 0
+    for child in function_body_nodes(node)
+        max_depth = max(max_depth, loop_nesting_depth_from_node(child, 0))
+    end
+    max_depth
 end
 
 function function_body_nodes(node::JuliaSyntax.SyntaxNode)
@@ -112,6 +138,30 @@ function control_flow_depth_from_node(node::JuliaSyntax.SyntaxNode, depth::Int)
         max_depth = max(max_depth, control_flow_depth_from_node(child, next_depth))
     end
     max_depth
+end
+
+function loop_nesting_depth_from_node(node::JuliaSyntax.SyntaxNode, depth::Int)
+    kind = syntax_kind(node)
+    kind in ("function", "macro") && return depth
+    next_depth = kind in LOOP_FLOW_KINDS ? depth + 1 : depth
+    max_depth = next_depth
+    for child in syntax_children(node)
+        max_depth = max(max_depth, loop_nesting_depth_from_node(child, next_depth))
+    end
+    max_depth
+end
+
+function control_flow_kind_count(
+    node::JuliaSyntax.SyntaxNode,
+    counted_kinds::Set{String},
+)
+    kind = syntax_kind(node)
+    kind in ("function", "macro") && return 0
+    count = kind in counted_kinds ? 1 : 0
+    for child in syntax_children(node)
+        count += control_flow_kind_count(child, counted_kinds)
+    end
+    count
 end
 
 function collect_control_flow_kinds!(

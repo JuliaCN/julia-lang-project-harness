@@ -37,27 +37,29 @@ function evaluate_agent_policy_rules(
     rules = rules_by_id()
     findings = verification_test_profile_findings(scope, parsed_files, rules)
     public_names = package_public_names(parsed_files)
-    isempty(public_names) && return findings
-    documented_names = package_documented_public_names(parsed_files)
-    function_docs_by_name = package_function_docstrings_by_public_name(parsed_files)
-    type_docs_by_name = package_type_docstrings_by_public_name(parsed_files)
-    append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
-    append!(findings, public_type_field_shape_findings(parsed_files, public_names, rules))
-    append!(findings, public_type_stringly_field_findings(parsed_files, public_names, rules))
-    append!(findings, public_mutable_type_contract_findings(
-        parsed_files,
-        public_names,
-        type_docs_by_name,
-        rules,
-    ))
-    append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
-    append!(findings, public_method_family_scattering_findings(
-        scope,
-        parsed_files,
-        public_names,
-        function_docs_by_name,
-        rules,
-    ))
+    function_docs_by_name = Dict{String,Vector{String}}()
+    if !isempty(public_names)
+        documented_names = package_documented_public_names(parsed_files)
+        function_docs_by_name = package_function_docstrings_by_public_name(parsed_files)
+        type_docs_by_name = package_type_docstrings_by_public_name(parsed_files)
+        append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
+        append!(findings, public_type_field_shape_findings(parsed_files, public_names, rules))
+        append!(findings, public_type_stringly_field_findings(parsed_files, public_names, rules))
+        append!(findings, public_mutable_type_contract_findings(
+            parsed_files,
+            public_names,
+            type_docs_by_name,
+            rules,
+        ))
+        append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
+        append!(findings, public_method_family_scattering_findings(
+            scope,
+            parsed_files,
+            public_names,
+            function_docs_by_name,
+            rules,
+        ))
+    end
     append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
     for parsed in parsed_files
         parsed.report.is_valid || continue
@@ -105,7 +107,7 @@ function evaluate_agent_policy_rules(
                     findings,
                     finding_from_rule(
                         rules[AGENT_JL_R007];
-                        summary="Exported/public method `$(function_fact.terminal_name)` has control-flow depth $(function_fact.control_flow_depth): $(join(function_fact.control_flow_kinds, ", ")).",
+                        summary="Exported/public method `$(function_fact.terminal_name)` has control-flow depth $(function_fact.control_flow_depth): $(join(function_fact.control_flow_kinds, ", ")). $(julia_algorithm_shape_summary(function_fact))",
                         location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
                         source_line=source_line(parsed.source, function_fact.line),
                         label="extract nested branches and loops into named pipeline steps",
@@ -143,6 +145,7 @@ function evaluate_agent_policy_rules(
             end
         end
     end
+    append!(findings, internal_traversal_shape_findings(scope, parsed_files, public_names, rules))
     findings
 end
 
@@ -196,7 +199,49 @@ const MAX_PUBLIC_METHOD_CONTROL_FLOW_DEPTH = 4
 const MAX_PUBLIC_METHOD_BODY_STATEMENTS = 8
 const MIN_PUBLIC_METHOD_PIPELINE_STEPS = 3
 const MAX_PUBLIC_METHOD_MACRO_INVOCATIONS = 3
+const MAX_INTERNAL_TRAVERSAL_CONTROL_FLOW_DEPTH = 4
+const MAX_INTERNAL_TRAVERSAL_LOOP_NESTING_DEPTH = 2
+const MIN_INTERNAL_TRAVERSAL_BRANCH_COUNT = 2
 const MAX_UNDOCUMENTED_MODULE_OWNER_INCLUDES = 4
+
+function internal_traversal_shape_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        is_test_path(scope, parsed.report.path) && continue
+        for function_fact in parsed.syntax_facts.functions
+            function_fact.kind == "function" || continue
+            function_fact.terminal_name in public_names && continue
+            is_nested_internal_traversal(function_fact) || continue
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[AGENT_JL_R015];
+                    summary="Internal method `$(function_fact.terminal_name)` nests traversal shape: $(julia_algorithm_shape_summary(function_fact))",
+                    location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                    source_line=source_line(parsed.source, function_fact.line),
+                    label="extract traversal into named iterator, predicate, or data-processing helpers",
+                ),
+            )
+        end
+    end
+    findings
+end
+
+function is_nested_internal_traversal(function_fact::JuliaFunctionSyntax)
+    function_fact.control_flow_depth >= MAX_INTERNAL_TRAVERSAL_CONTROL_FLOW_DEPTH &&
+        function_fact.loop_nesting_depth >= MAX_INTERNAL_TRAVERSAL_LOOP_NESTING_DEPTH &&
+        function_fact.branch_count >= MIN_INTERNAL_TRAVERSAL_BRANCH_COUNT
+end
+
+function julia_algorithm_shape_summary(function_fact::JuliaFunctionSyntax)
+    "branches=$(function_fact.branch_count), loops=$(function_fact.loop_count), loop_depth=$(function_fact.loop_nesting_depth)"
+end
 
 function module_owner_fanout_findings(
     scope::JuliaProjectHarnessScope,

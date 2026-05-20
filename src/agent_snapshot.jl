@@ -322,11 +322,17 @@ function display_function_syntax(function_fact::JuliaFunctionSyntax)
                       ";stringly=$(length(function_fact.stringly_domain_args))"
     flow_suffix = function_fact.control_flow_depth == 0 ? "" :
                   ";flow=$(function_fact.control_flow_depth)"
+    branch_suffix = function_fact.branch_count == 0 ? "" :
+                    ";branches=$(function_fact.branch_count)"
+    loop_suffix = function_fact.loop_count == 0 ? "" :
+                  ";loops=$(function_fact.loop_count)"
+    loop_depth_suffix = function_fact.loop_nesting_depth == 0 ? "" :
+                        ";loop_depth=$(function_fact.loop_nesting_depth)"
     body_suffix = function_fact.body_statement_count == 0 ? "" :
                   ";body=$(function_fact.body_statement_count)"
     macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
                    ";macros=$(function_fact.macro_invocation_count)"
-    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(macro_suffix)"
+    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(branch_suffix)$(loop_suffix)$(loop_depth_suffix)$(body_suffix)$(macro_suffix)"
 end
 
 function snapshot_test_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

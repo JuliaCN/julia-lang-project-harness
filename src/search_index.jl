@@ -375,13 +375,19 @@ function display_function_search_detail(function_fact::JuliaFunctionSyntax)
                       " stringly=$(join(function_fact.stringly_domain_args, ","))"
     flow_suffix = function_fact.control_flow_depth == 0 ? "" :
                   " flow=$(function_fact.control_flow_depth):$(join(function_fact.control_flow_kinds, ","))"
+    branch_suffix = function_fact.branch_count == 0 ? "" :
+                    " branches=$(function_fact.branch_count)"
+    loop_suffix = function_fact.loop_count == 0 ? "" :
+                  " loops=$(function_fact.loop_count)"
+    loop_depth_suffix = function_fact.loop_nesting_depth == 0 ? "" :
+                        " loop_depth=$(function_fact.loop_nesting_depth)"
     body_suffix = function_fact.body_statement_count == 0 ? "" :
                   " body=$(function_fact.body_statement_count)"
     step_suffix = isempty(function_fact.body_named_calls) ? "" :
                   " steps=$(join(function_fact.body_named_calls, ","))"
     macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
                    " macros=$(function_fact.macro_invocation_count):$(join(function_fact.macro_invocation_names, ","))"
-    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(step_suffix)$(macro_suffix)"
+    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(branch_suffix)$(loop_suffix)$(loop_depth_suffix)$(body_suffix)$(step_suffix)$(macro_suffix)"
 end
 
 function display_call_search_detail(call_fact::JuliaCallSyntax)

@@ -55,6 +55,11 @@ struct JuliaSearchIndexEntry
     tags::Vector{String}
 end
 
+struct JuliaSearchResult
+    entry::JuliaSearchIndexEntry
+    score::Int
+end
+
 struct JuliaProjectHarnessScope
     project_root::String
     project_toml_path::Union{Nothing,String}

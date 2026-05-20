@@ -24,6 +24,57 @@ function julia_project_search_index(
     julia_search_index(parsed_files)
 end
 
+function search_julia_lang(
+    paths::Vector{<:AbstractString},
+    query::AbstractString;
+    config=default_julia_harness_config(),
+    tags::Vector{<:AbstractString}=String[],
+    limit::Int=25,
+)
+    entries = julia_lang_search_index(paths; config)
+    search_julia_index(entries, query; tags, limit)
+end
+
+function search_julia_project(
+    project_root::AbstractString,
+    query::AbstractString;
+    config=default_julia_harness_config(),
+    tags::Vector{<:AbstractString}=String[],
+    limit::Int=25,
+)
+    entries = julia_project_search_index(project_root; config)
+    search_julia_index(entries, query; tags, limit)
+end
+
+function search_julia_index(
+    entries::Vector{JuliaSearchIndexEntry},
+    query::AbstractString;
+    tags::Vector{<:AbstractString}=String[],
+    limit::Int=25,
+)
+    limit >= 0 || error("search limit must be non-negative")
+    limit == 0 && return JuliaSearchResult[]
+    requested_tags = normalize_search_terms(tags)
+    tokens = search_query_tokens(query)
+    has_tag_filter = !isempty(requested_tags)
+    results = JuliaSearchResult[]
+    for entry in entries
+        search_entry_matches_tags(entry, requested_tags) || continue
+        score = search_entry_score(entry, tokens, has_tag_filter)
+        score > 0 || continue
+        push!(results, JuliaSearchResult(entry, score))
+    end
+    sort!(results; by=result -> (
+        -result.score,
+        something(result.entry.location.path, ""),
+        result.entry.location.line,
+        result.entry.location.column,
+        result.entry.kind,
+        result.entry.name,
+    ))
+    results[1:min(limit, length(results))]
+end
+
 function julia_search_index(parsed_files::Vector{ParsedJuliaFile})
     entries = JuliaSearchIndexEntry[]
     for parsed in parsed_files
@@ -224,6 +275,48 @@ function search_index_entry(
         search_text,
         copy(tags),
     )
+end
+
+function normalize_search_terms(terms::Vector{<:AbstractString})
+    [normalize_search_text(term) for term in terms if !isempty(normalize_search_text(term))]
+end
+
+function normalize_search_text(text::AbstractString)
+    lowercase(strip(String(text)))
+end
+
+function search_query_tokens(query::AbstractString)
+    normalized_query = normalize_search_text(query)
+    isempty(normalized_query) && return String[]
+    tokens = split(normalized_query, r"[^a-z0-9_!.]+")
+    unique([String(token) for token in tokens if !isempty(token)])
+end
+
+function search_entry_matches_tags(entry::JuliaSearchIndexEntry, requested_tags::Vector{String})
+    isempty(requested_tags) && return true
+    entry_tags = Set(normalize_search_terms(vcat(entry.tags, [entry.kind])))
+    all(tag -> tag in entry_tags, requested_tags)
+end
+
+function search_entry_score(
+    entry::JuliaSearchIndexEntry,
+    tokens::Vector{String},
+    has_tag_filter::Bool,
+)
+    isempty(tokens) && return has_tag_filter ? 1 : 0
+    name = normalize_search_text(entry.name)
+    detail = normalize_search_text(entry.detail)
+    search_text = normalize_search_text(entry.search_text)
+    tags = normalize_search_terms(vcat(entry.tags, [entry.kind]))
+    score = 0
+    for token in tokens
+        name == token && (score += 100)
+        occursin(token, name) && (score += 40)
+        any(tag -> tag == token, tags) && (score += 30)
+        occursin(token, detail) && (score += 20)
+        occursin(token, search_text) && (score += 10)
+    end
+    score
 end
 
 function display_type_search_detail(type_fact::JuliaTypeSyntax)

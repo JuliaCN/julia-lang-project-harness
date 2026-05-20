@@ -15,6 +15,7 @@ export JuliaDiagnosticSeverity,
     JuliaHarnessRule,
     JuliaFileReport,
     JuliaSearchIndexEntry,
+    JuliaSearchResult,
     RulePackDescriptor,
     SourceLocation,
     assert_julia_lang_harness_clean,
@@ -33,6 +34,9 @@ export JuliaDiagnosticSeverity,
     render_julia_project_harness_agent_snapshot,
     render_julia_project_harness_json,
     run_julia_lang_harness,
-    run_julia_project_harness
+    run_julia_project_harness,
+    search_julia_index,
+    search_julia_lang,
+    search_julia_project
 
 end

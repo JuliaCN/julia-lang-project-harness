@@ -74,6 +74,24 @@
     )
     @test any(entry -> entry.kind == "testset" && entry.name == "search", entries)
     @test all(entry -> !isnothing(entry.location.path), entries)
+
+    doc_results = search_julia_index(entries, "public API"; tags=["doc"], limit=3)
+    @test !isempty(doc_results)
+    @test first(doc_results).entry.kind == "doc"
+    @test first(doc_results).entry.name == "run"
+    @test first(doc_results).score > 0
+
+    call_results = search_julia_project(root, "helper"; tags=["call"], limit=2)
+    @test any(
+        result -> result.entry.kind == "call" && result.entry.name == "helper",
+        call_results,
+    )
+    @test all(result -> "call" in result.entry.tags, call_results)
+
+    type_results = search_julia_project(root, "Config"; tags=["type"], limit=1)
+    @test length(type_results) == 1
+    @test only(type_results).entry.kind == "struct"
+    @test isempty(search_julia_index(entries, "run"; limit=0))
 end
 
 @testset "path search index" begin
@@ -85,4 +103,9 @@ end
 
     @test any(entry -> entry.kind == "module" && entry.name == "Standalone", entries)
     @test any(entry -> entry.kind == "function" && entry.name == "answer", entries)
+
+    results = search_julia_lang([root], "answer"; tags=["method"], limit=1)
+
+    @test length(results) == 1
+    @test only(results).entry.name == "answer"
 end

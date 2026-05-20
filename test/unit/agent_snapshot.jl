@@ -1,6 +1,16 @@
 @testset "agent snapshot" begin
     root = mktempdir()
     write_project(root, "Example")
+    open(joinpath(root, "Project.toml"), "a") do io
+        write(
+            io,
+            """
+
+            [deps]
+            JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+            """,
+        )
+    end
     mkpath(joinpath(root, "src"))
     mkpath(joinpath(root, "test"))
     write(

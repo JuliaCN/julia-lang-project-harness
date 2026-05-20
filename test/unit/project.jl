@@ -92,6 +92,30 @@ end
     @test scope.sources["JuliaSyntax"]["rev"] == "main"
 end
 
+@testset "project runner reports undeclared source imports" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        using JSON3
+        using .Local
+        import Base: show
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R008", rendered)
+    @test occursin("Imported package is missing from Project.toml", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
+end
+
 @testset "project runner reports package policy facts" begin
     root = mktempdir()
     mkpath(joinpath(root, "src"))

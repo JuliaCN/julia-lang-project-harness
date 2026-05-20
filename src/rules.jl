@@ -1,3 +1,5 @@
+using Pkg
+
 const JULIA_SYNTAX_PACK_ID = "julia.syntax"
 const JULIA_PROJECT_POLICY_PACK_ID = "julia.project_policy"
 const JULIA_MODULARITY_PACK_ID = "julia.modularity"
@@ -6,6 +8,7 @@ const JULIA_SYN_R001 = "JULIA-SYN-R001"
 const JULIA_PROJ_R001 = "JULIA-PROJ-R001"
 const JULIA_PROJ_R002 = "JULIA-PROJ-R002"
 const JULIA_PROJ_R007 = "JULIA-PROJ-R007"
+const JULIA_PROJ_R008 = "JULIA-PROJ-R008"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
 const JULIA_MOD_R004 = "JULIA-MOD-R004"
 const JULIA_MOD_R005 = "JULIA-MOD-R005"
@@ -66,6 +69,14 @@ julia_project_policy_rules() = [
         Warning,
         "Package entry file lacks package module declaration",
         "The package entry file should declare a top-level module matching the `Project.toml` package name.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R008,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Imported package is missing from Project.toml",
+        "External Julia package imports should be declared in `Project.toml` as deps, weakdeps, or test extras according to their source scope.",
         labels("project-policy"),
     ),
 ]
@@ -241,7 +252,71 @@ function evaluate_project_policy_rules(
             end
         end
     end
+    append!(findings, undeclared_import_findings(scope, parsed_files, rules))
     findings
+end
+
+function undeclared_import_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    stdlib_roots = julia_stdlib_import_roots()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        allowed = allowed_import_roots(scope, parsed.report.path, stdlib_roots)
+        for imported in parsed.syntax_facts.imports
+            is_relative_import(imported) && continue
+            imported.root in allowed && continue
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[JULIA_PROJ_R008];
+                    summary="`$(imported.expression)` imports `$(imported.root)`, but `$(imported.root)` is not declared for this project scope.",
+                    location=SourceLocation(parsed.report.path, imported.line, imported.column),
+                    source_line=source_line(parsed.source, imported.line),
+                    label="add the package to Project.toml or make the import relative if it is project-local",
+                ),
+            )
+        end
+    end
+    findings
+end
+
+function allowed_import_roots(
+    scope::JuliaProjectHarnessScope,
+    path::AbstractString,
+    stdlib_roots::Set{String},
+)
+    allowed = union(
+        Set(["Base", "Core", "Main"]),
+        stdlib_roots,
+        Set(keys(scope.direct_dependencies)),
+        Set(keys(scope.weak_dependencies)),
+    )
+    !isnothing(scope.package_name) && push!(allowed, scope.package_name)
+    if is_test_path(scope, path)
+        union!(allowed, keys(scope.extra_dependencies))
+    end
+    allowed
+end
+
+function is_relative_import(imported::JuliaImportSyntax)
+    expression = strip(imported.expression)
+    startswith(expression, "using .") || startswith(expression, "import .")
+end
+
+function is_test_path(scope::JuliaProjectHarnessScope, path::AbstractString)
+    any(test_path -> is_path_under(path, test_path), scope.test_paths)
+end
+
+function julia_stdlib_import_roots()
+    roots = Set{String}()
+    for (_, info) in Pkg.Types.stdlibs()
+        push!(roots, String(info[1]))
+    end
+    roots
 end
 
 function evaluate_modularity_rules(

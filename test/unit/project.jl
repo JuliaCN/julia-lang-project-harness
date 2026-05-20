@@ -158,6 +158,52 @@ end
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R003", report.findings) == 1
 end
 
+@testset "project runner reports custom source scope without explanation" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "lib"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    config = default_julia_harness_config()
+    push!(config.source_dir_names, "lib")
+
+    report = run_julia_project_harness(root; config)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R005", rendered)
+    @test occursin("Custom source or test scope lacks explanation", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R005", report.findings) == 1
+end
+
+@testset "project runner reports conventional source scope exclusion" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+        entryfile = "lib/Example.jl"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "lib"))
+    write(joinpath(root, "lib", "Example.jl"), "module Example\nend\n")
+    config = default_julia_harness_config()
+    empty!(config.source_dir_names)
+    push!(config.source_dir_names, "lib")
+    config.source_path_explanations["lib"] = "project uses a package-local lib source root"
+
+    report = run_julia_project_harness(root; config)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R006", rendered)
+    @test occursin("Conventional source or test scope was excluded", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R006", report.findings) == 1
+end
+
 @testset "project runner reports package policy facts" begin
     root = mktempdir()
     mkpath(joinpath(root, "src"))

@@ -8,6 +8,8 @@ const JULIA_SYN_R001 = "JULIA-SYN-R001"
 const JULIA_PROJ_R001 = "JULIA-PROJ-R001"
 const JULIA_PROJ_R002 = "JULIA-PROJ-R002"
 const JULIA_PROJ_R003 = "JULIA-PROJ-R003"
+const JULIA_PROJ_R005 = "JULIA-PROJ-R005"
+const JULIA_PROJ_R006 = "JULIA-PROJ-R006"
 const JULIA_PROJ_R007 = "JULIA-PROJ-R007"
 const JULIA_PROJ_R008 = "JULIA-PROJ-R008"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
@@ -70,6 +72,22 @@ julia_project_policy_rules() = [
         Warning,
         "Pkg.test entrypoint is missing",
         "Julia package test scopes should mount the `Pkg.test` entrypoint at `test/runtests.jl`.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R005,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Custom source or test scope lacks explanation",
+        "Custom Julia source or test scope paths must carry a non-empty project-local explanation.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R006,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Conventional source or test scope was excluded",
+        "Excluding conventional Julia `src` or `test` scopes must carry a non-empty project-local explanation.",
         labels("project-policy"),
     ),
     JuliaHarnessRule(
@@ -218,6 +236,7 @@ end
 function evaluate_project_policy_rules(
     scope::Union{Nothing,JuliaProjectHarnessScope},
     parsed_files::Vector{ParsedJuliaFile},
+    config::JuliaHarnessConfig,
 )
     isnothing(scope) && return JuliaHarnessFinding[]
     rules = rules_by_id()
@@ -261,6 +280,7 @@ function evaluate_project_policy_rules(
             end
         end
     end
+    append!(findings, scope_explanation_findings(scope, config, rules))
     append!(findings, test_entrypoint_findings(scope, rules))
     append!(findings, undeclared_import_findings(scope, parsed_files, rules))
     findings
@@ -271,6 +291,123 @@ function expected_entry_file(scope::JuliaProjectHarnessScope)
         return scope.project_entryfile
     end
     isnothing(scope.package_name) ? "src/<PackageName>.jl" : "src/$(scope.package_name).jl"
+end
+
+function scope_explanation_findings(
+    scope::JuliaProjectHarnessScope,
+    config::JuliaHarnessConfig,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    append!(
+        findings,
+        custom_scope_explanation_findings(
+            scope,
+            config.source_dir_names,
+            config.source_path_explanations,
+            Set(["src"]),
+            "source",
+            rules,
+        ),
+    )
+    if config.include_tests
+        append!(
+            findings,
+            custom_scope_explanation_findings(
+                scope,
+                config.test_dir_names,
+                config.test_path_explanations,
+                Set(["test"]),
+                "test",
+                rules,
+            ),
+        )
+    end
+    append!(
+        findings,
+        conventional_scope_exclusion_findings(
+            scope,
+            config.source_dir_names,
+            config.source_path_exclusion_explanations,
+            "src",
+            "source",
+            rules,
+        ),
+    )
+    append!(
+        findings,
+        conventional_scope_exclusion_findings(
+            scope,
+            config.include_tests ? config.test_dir_names : String[],
+            config.test_path_exclusion_explanations,
+            "test",
+            "test",
+            rules,
+        ),
+    )
+    findings
+end
+
+function custom_scope_explanation_findings(
+    scope::JuliaProjectHarnessScope,
+    path_names::Vector{String},
+    explanations::Dict{String,String},
+    conventional_names::Set{String},
+    label::AbstractString,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for path_name in path_names
+        path_name in conventional_names && continue
+        full_path = joinpath(scope.project_root, path_name)
+        ispath(full_path) || continue
+        has_path_explanation(explanations, scope.project_root, path_name) && continue
+        push!(
+            findings,
+            finding_from_rule(
+                rules[JULIA_PROJ_R005];
+                summary="Configured $(label) scope `$(path_name)` exists but has no explanation.",
+                location=SourceLocation(scope.project_toml_path, 1, 0),
+                label="add a non-empty scope explanation or use the conventional Julia path",
+            ),
+        )
+    end
+    findings
+end
+
+function conventional_scope_exclusion_findings(
+    scope::JuliaProjectHarnessScope,
+    configured_names::Vector{String},
+    explanations::Dict{String,String},
+    conventional_name::AbstractString,
+    label::AbstractString,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    full_path = joinpath(scope.project_root, conventional_name)
+    ispath(full_path) || return JuliaHarnessFinding[]
+    conventional_name in configured_names && return JuliaHarnessFinding[]
+    has_path_explanation(explanations, scope.project_root, conventional_name) &&
+        return JuliaHarnessFinding[]
+    [
+        finding_from_rule(
+            rules[JULIA_PROJ_R006];
+            summary="Conventional Julia $(label) scope `$(conventional_name)` exists but is not monitored.",
+            location=SourceLocation(scope.project_toml_path, 1, 0),
+            label="add a non-empty exclusion explanation or restore the conventional scope",
+        ),
+    ]
+end
+
+function has_path_explanation(
+    explanations::Dict{String,String},
+    project_root::AbstractString,
+    path_name::AbstractString,
+)
+    full_path = normpath(joinpath(project_root, path_name))
+    any(
+        key -> !isempty(strip(get(explanations, key, ""))),
+        [String(path_name), slash_path(path_name), full_path, slash_path(full_path)],
+    )
 end
 
 function test_entrypoint_findings(
@@ -526,7 +663,7 @@ function evaluate_default_rule_packs(
 )
     findings = vcat(
         evaluate_syntax_rules(parsed_files),
-        evaluate_project_policy_rules(scope, parsed_files),
+        evaluate_project_policy_rules(scope, parsed_files, config),
         evaluate_modularity_rules(scope, parsed_files),
         evaluate_agent_policy_rules(scope, parsed_files),
     )

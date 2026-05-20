@@ -19,6 +19,7 @@ const JULIA_MOD_R005 = "JULIA-MOD-R005"
 const JULIA_MOD_R006 = "JULIA-MOD-R006"
 const JULIA_MOD_R007 = "JULIA-MOD-R007"
 const AGENT_JL_R002 = "AGENT-JL-R002"
+const AGENT_JL_R003 = "AGENT-JL-R003"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -189,6 +190,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public method has a broad positional surface",
         "Prefer keyword options or a named config object when exported Julia methods need many arguments.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R003,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public method exposes positional Bool flags",
+        "Prefer keyword Bool options or a named config object when exported Julia methods need multiple flags.",
         labels("agent-policy"),
     ),
 ]

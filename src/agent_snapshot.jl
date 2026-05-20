@@ -246,7 +246,9 @@ end
 function display_function_syntax(function_fact::JuliaFunctionSyntax)
     keyword_suffix = isempty(function_fact.keyword_args) ? "" :
                      ";kw=$(length(function_fact.keyword_args))"
-    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)"
+    bool_suffix = isempty(function_fact.bool_positional_args) ? "" :
+                  ";bool=$(length(function_fact.bool_positional_args))"
+    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(bool_suffix)"
 end
 
 function snapshot_test_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

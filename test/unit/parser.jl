@@ -53,10 +53,10 @@ end
     write(
         source,
         """
-        function run(x, y::Int; verbose=false, mode=:fast)
+        function run(x, y::Int, force::Bool, dry_run=false; verbose=false, mode=:fast)
             x + y
         end
-        short(a, b=1, c::String="x") = a
+        short(a, b=1, c::String="x", enabled::Core.Bool=true) = a
         Base.show(io::IO, value::Thing) = print(io, value)
         macro demo(x)
             x
@@ -72,9 +72,11 @@ end
         ("function", "Base.show", "show"),
         ("macro", "demo", "demo"),
     ]
-    @test parsed.syntax_facts.functions[1].positional_args == ["x", "y"]
+    @test parsed.syntax_facts.functions[1].positional_args == ["x", "y", "force", "dry_run"]
+    @test parsed.syntax_facts.functions[1].bool_positional_args == ["force", "dry_run"]
     @test parsed.syntax_facts.functions[1].keyword_args == ["verbose", "mode"]
-    @test parsed.syntax_facts.functions[2].positional_args == ["a", "b", "c"]
+    @test parsed.syntax_facts.functions[2].positional_args == ["a", "b", "c", "enabled"]
+    @test parsed.syntax_facts.functions[2].bool_positional_args == ["enabled"]
     @test parsed.syntax_facts.functions[3].positional_args == ["io", "value"]
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end

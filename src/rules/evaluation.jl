@@ -42,17 +42,30 @@ function evaluate_agent_policy_rules(
         parsed.report.is_valid || continue
         for function_fact in parsed.syntax_facts.functions
             function_fact.terminal_name in public_names || continue
-            length(function_fact.positional_args) >= 5 || continue
-            push!(
-                findings,
-                finding_from_rule(
-                    rules[AGENT_JL_R002];
-                    summary="Exported/public method `$(function_fact.terminal_name)` has $(length(function_fact.positional_args)) positional arguments: $(join(function_fact.positional_args, ", ")).",
-                    location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                    source_line=source_line(parsed.source, function_fact.line),
-                    label="move optional modes into keywords or a named config surface",
-                ),
-            )
+            if length(function_fact.positional_args) >= 5
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[AGENT_JL_R002];
+                        summary="Exported/public method `$(function_fact.terminal_name)` has $(length(function_fact.positional_args)) positional arguments: $(join(function_fact.positional_args, ", ")).",
+                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                        source_line=source_line(parsed.source, function_fact.line),
+                        label="move optional modes into keywords or a named config surface",
+                    ),
+                )
+            end
+            if length(function_fact.bool_positional_args) >= 2
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[AGENT_JL_R003];
+                        summary="Exported/public method `$(function_fact.terminal_name)` has positional Bool flags: $(join(function_fact.bool_positional_args, ", ")).",
+                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                        source_line=source_line(parsed.source, function_fact.line),
+                        label="move Bool flags into keywords or a named options object",
+                    ),
+                )
+            end
         end
     end
     findings

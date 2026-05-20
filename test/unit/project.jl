@@ -336,6 +336,29 @@ end
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
 end
 
+@testset "project runner reports public positional Bool flag advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        run(force::Bool, dry_run=false; verbose=false) = force && !dry_run
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R003", rendered)
+    @test occursin("Public method exposes positional Bool flags", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
 @testset "project runner reports include graph findings" begin
     root = mktempdir()
     write_project(root, "Example")

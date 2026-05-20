@@ -87,6 +87,19 @@ struct JuliaVerificationTaskIndex
     records::Vector{JuliaVerificationTaskRecord}
 end
 
+"""Review result for one agent-submitted verification receipt."""
+struct JuliaVerificationReceiptReview
+    fingerprint::String
+    kind::String
+    status::Symbol
+    project_root::String
+    owner_path::String
+    missing_evidence::Vector{String}
+    weak_evidence::Vector{String}
+    problems::Vector{String}
+    required_receipt::String
+end
+
 """Parser-suggested verification responsibility for one Julia owner."""
 struct JuliaVerificationProfileCandidate
     project_root::String

@@ -73,6 +73,9 @@ end
     json_out = IOBuffer()
     profile_out = IOBuffer()
     profile_json_out = IOBuffer()
+    receipt_out = IOBuffer()
+    receipt_json_out = IOBuffer()
+    bad_receipt_out = IOBuffer()
 
     status = run_julia_project_harness_cli(["--verification-tasks", root]; out)
     json_status = run_julia_project_harness_cli(["--verification-tasks-json", root]; out=json_out)
@@ -80,6 +83,34 @@ end
     profile_json_status = run_julia_project_harness_cli(
         ["--verification-profile-json", root];
         out=profile_json_out,
+    )
+    index = build_julia_verification_task_index(root)
+    stress = only(record for record in index.records if record.kind == "stress")
+    receipt_path = joinpath(root, "receipts.json")
+    write(
+        receipt_path,
+        """
+        {"receipts":[{"fingerprint":"$(stress.fingerprint)","scenario":"cli public API load smoke","load_steps":"1,5","p50_ms":"1.0","p99_ms":"3.0","threshold":"p99_ms <= 10","result":"pass"}]}
+        """,
+    )
+    bad_receipt_path = joinpath(root, "bad-receipts.json")
+    write(
+        bad_receipt_path,
+        """
+        {"receipts":[{"fingerprint":"$(stress.fingerprint)","scenario":"todo"}]}
+        """,
+    )
+    receipt_status = run_julia_project_harness_cli(
+        ["--verification-receipts", receipt_path, root];
+        out=receipt_out,
+    )
+    receipt_json_status = run_julia_project_harness_cli(
+        ["--verification-receipts-json", receipt_path, root];
+        out=receipt_json_out,
+    )
+    bad_receipt_status = run_julia_project_harness_cli(
+        ["--verification-receipts", bad_receipt_path, root];
+        out=bad_receipt_out,
     )
 
     @test status == 0
@@ -97,6 +128,12 @@ end
     @test occursin("VerificationProfiles:", String(take!(profile_out)))
     @test profile_json_status == 0
     @test occursin("\"profile_index\"", String(take!(profile_json_out)))
+    @test receipt_status == 0
+    @test occursin("VerificationReceiptReview: count=1 accepted=1 incomplete=0", String(take!(receipt_out)))
+    @test receipt_json_status == 0
+    @test occursin("\"reviews\"", String(take!(receipt_json_out)))
+    @test bad_receipt_status == 1
+    @test occursin("missing=load_steps,p50_ms,p99_ms,threshold,result", String(take!(bad_receipt_out)))
 end
 
 @testset "cli rejects conflicting modes" begin

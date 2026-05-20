@@ -453,6 +453,11 @@ render_julia_verification_profile_index_json(index::JuliaVerificationProfileInde
 render_julia_verification_pending_advice(profile::JuliaVerificationProfile)
 render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
 render_julia_verification_task_index_json(index::JuliaVerificationTaskIndex)
+read_julia_verification_receipts_json(path::AbstractString)
+review_julia_verification_receipts(index::JuliaVerificationTaskIndex, receipts)
+assert_julia_verification_receipts_accepted(index::JuliaVerificationTaskIndex, receipts)
+render_julia_verification_receipt_reviews(reviews::Vector{JuliaVerificationReceiptReview})
+render_julia_verification_receipt_reviews_json(reviews::Vector{JuliaVerificationReceiptReview})
 julia_project_search_index(project_root::AbstractString; config=default_julia_harness_config())
 julia_lang_search_index(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
 search_julia_index(entries::Vector{JuliaSearchIndexEntry}, query::AbstractString; tags=String[], limit=25)
@@ -593,6 +598,15 @@ when such tasks exist. That keeps ordinary `Pkg.test` green while still putting
 the next agent actions in the test log. Programmatic callers may pass
 `advice_io=nothing` when they need a quiet assertion.
 
+Receipts are a separate Agent-facing contract. A receipt should bind to the
+task fingerprint and provide the required evidence keys for its family. The
+reviewer should classify receipts as accepted, incomplete, missing, orphan, or
+waived. Missing keys, blank values, and placeholder values such as `todo`
+remain incomplete. Waivers are allowed only when the receipt records a concrete
+explanation, so an Agent cannot silently skip expensive verification by adding a
+lightweight config escape. The CLI review mode should return success only when
+every required external receipt is accepted or concretely waived.
+
 ## Configuration
 
 Config is an escape and tuning surface, not the primary source of truth. It
@@ -702,11 +716,11 @@ Stage 4: Julia API shape advice.
 
 Stage 5: Reserved verification planning slice.
 
-- Add a lightweight verification policy field only after the core harness is
-  stable.
 - Do not port the Rust verification subsystem wholesale.
 - Design Julia verification around `Pkg.test`, benchmarks, examples, and
   package-specific evidence.
+- Keep task contracts, required evidence, and receipt review as compact
+  Agent-facing surfaces.
 
 ## Approval Criteria
 

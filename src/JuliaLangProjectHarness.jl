@@ -14,6 +14,7 @@ include("agent_snapshot.jl")
 include("verification.jl")
 include("verification/responsibility_inference.jl")
 include("verification/contracts.jl")
+include("verification/receipts.jl")
 include("verification/advice.jl")
 include("verification/profile_index.jl")
 include("cli.jl")
@@ -28,6 +29,7 @@ export JuliaDiagnosticSeverity,
     JuliaSearchResult,
     JuliaVerificationProfileCandidate,
     JuliaVerificationProfileIndex,
+    JuliaVerificationReceiptReview,
     JuliaVerificationTaskIndex,
     JuliaVerificationTaskRecord,
     JuliaVerificationProfile,
@@ -37,6 +39,7 @@ export JuliaDiagnosticSeverity,
     assert_julia_project_harness_clean,
     assert_julia_project_harness_pkg_test_clean,
     assert_julia_project_harness_test_profile_clean,
+    assert_julia_verification_receipts_accepted,
     build_julia_project_verification_profile,
     build_julia_verification_profile_index,
     build_julia_verification_task_index,
@@ -48,6 +51,7 @@ export JuliaDiagnosticSeverity,
     julia_rule_pack_descriptors,
     julia_syntax_rules,
     julia_lang_search_index,
+    read_julia_verification_receipts_json,
     render_julia_project_harness,
     render_julia_project_harness_advice,
     render_julia_project_harness_agent_snapshot,
@@ -58,8 +62,11 @@ export JuliaDiagnosticSeverity,
     render_julia_verification_profile_index,
     render_julia_verification_profile_index_json,
     render_julia_verification_profile_json,
+    render_julia_verification_receipt_reviews,
+    render_julia_verification_receipt_reviews_json,
     render_julia_verification_task_index,
     render_julia_verification_task_index_json,
+    review_julia_verification_receipts,
     run_julia_project_harness_cli,
     run_julia_lang_harness,
     run_julia_project_harness,

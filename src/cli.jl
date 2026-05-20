@@ -7,6 +7,8 @@ mutable struct JuliaHarnessCliOptions
     verification_tasks_json::Bool
     verification_profile::Bool
     verification_profile_json::Bool
+    verification_receipts_path::Union{Nothing,String}
+    verification_receipts_json::Bool
     search_query::Union{Nothing,String}
     tags::Vector{String}
     limit::Int
@@ -22,6 +24,8 @@ function default_julia_harness_cli_options()
         false,
         false,
         false,
+        false,
+        nothing,
         false,
         nothing,
         String[],
@@ -74,6 +78,23 @@ function run_julia_project_harness_cli_checked(args::Vector{String}; out=stdout,
         print(out, render_julia_verification_profile_json(profile))
         print(out, "\n")
         return 0
+    elseif !isnothing(options.verification_receipts_path)
+        index = build_julia_verification_task_index(options.project_root)
+        receipts = read_julia_verification_receipts_json(options.verification_receipts_path)
+        reviews = review_julia_verification_receipts(index, receipts)
+        if options.verification_receipts_json
+            print(out, render_julia_verification_receipt_reviews_json(reviews))
+            print(out, "\n")
+        else
+            print(
+                out,
+                render_julia_verification_receipt_reviews(
+                    reviews;
+                    project_root=index.project_root,
+                ),
+            )
+        end
+        return all(is_julia_verification_receipt_review_clean, reviews) ? 0 : 1
     elseif options.agent_snapshot
         print(out, render_julia_project_harness_agent_snapshot(options.project_root))
         return 0
@@ -113,6 +134,15 @@ function parse_julia_harness_cli_args(args::Vector{String})
             options.verification_profile = true
         elseif arg == "--verification-profile-json"
             options.verification_profile_json = true
+        elseif arg == "--verification-receipts"
+            index += 1
+            index <= length(args) || error("--verification-receipts requires a JSON file")
+            options.verification_receipts_path = args[index]
+        elseif arg == "--verification-receipts-json"
+            index += 1
+            index <= length(args) || error("--verification-receipts-json requires a JSON file")
+            options.verification_receipts_path = args[index]
+            options.verification_receipts_json = true
         elseif arg == "--search"
             index += 1
             index <= length(args) || error("--search requires a query")
@@ -146,6 +176,7 @@ function validate_julia_harness_cli_options(options::JuliaHarnessCliOptions)
         options.verification_tasks_json,
         options.verification_profile,
         options.verification_profile_json,
+        !isnothing(options.verification_receipts_path),
         !isnothing(options.search_query),
     ])
     modes <= 1 || error("expected only one output mode")
@@ -159,11 +190,12 @@ end
 
 function julia_harness_cli_usage()
     """
-    julia-project-harness [--json | --agent-snapshot | --advice | --verification-tasks | --verification-tasks-json | --verification-profile | --verification-profile-json | --search QUERY] [options] [PROJECT_ROOT]
+    julia-project-harness [--json | --agent-snapshot | --advice | --verification-tasks | --verification-tasks-json | --verification-profile | --verification-profile-json | --verification-receipts FILE | --verification-receipts-json FILE | --search QUERY] [options] [PROJECT_ROOT]
 
     Compact text is the default agent-facing repair surface.
     Use --agent-snapshot to emit a low-noise project summary.
     Use --verification-tasks to emit agent-runnable verification duties.
+    Use --verification-receipts FILE to review agent-submitted verification receipts.
     Use --verification-profile to emit the in-test verification profile.
     Use --search QUERY with --tag TAG and --limit N to query JuliaSyntax facts.
     """

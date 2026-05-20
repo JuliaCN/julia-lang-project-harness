@@ -116,7 +116,7 @@ julia_project_policy_rules() = [
         JULIA_PROJECT_POLICY_PACK_ID,
         Warning,
         "Custom source or test scope lacks explanation",
-        "Custom Julia source or test scope paths must carry a non-empty project-local explanation.",
+        "Custom Julia source or test scope paths must carry a concrete project-local explanation.",
         labels("project-policy"),
     ),
     JuliaHarnessRule(
@@ -124,7 +124,7 @@ julia_project_policy_rules() = [
         JULIA_PROJECT_POLICY_PACK_ID,
         Warning,
         "Conventional source or test scope was excluded",
-        "Excluding conventional Julia `src` or `test` scopes must carry a non-empty project-local explanation.",
+        "Excluding conventional Julia `src` or `test` scopes must carry a concrete project-local explanation.",
         labels("project-policy"),
     ),
     JuliaHarnessRule(
@@ -188,7 +188,7 @@ julia_project_policy_rules() = [
         JULIA_PROJECT_POLICY_PACK_ID,
         Warning,
         "Harness config escape lacks explanation",
-        "Harness config that disables rules, downgrades severity, shrinks blocking severities, or allows advisory findings must carry a non-empty explanation.",
+        "Harness config that disables rules, downgrades severity, shrinks blocking severities, or allows advisory findings must carry a concrete explanation.",
         labels("project-policy"),
     ),
 ]

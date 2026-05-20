@@ -362,11 +362,11 @@ Initial rules:
   `Pkg.test` gate from `test/runtests.jl`.
 - `JULIA-PROJ-R004`: `test/runtests.jl` should stay a thin test aggregate when
   it grows beyond small package scale.
-- `JULIA-PROJ-R005`: custom source or test scope paths need non-empty
+- `JULIA-PROJ-R005`: custom source or test scope paths need concrete
   explanations.
 - `JULIA-PROJ-R006`: removing conventional source or test scope needs a
-  non-empty explanation.
-- `JULIA-PROJ-R014`: harness config escape surfaces need non-empty
+  concrete explanation.
+- `JULIA-PROJ-R014`: harness config escape surfaces need concrete
   explanations.
 
 The first implementation can keep `JULIA-PROJ-R003` narrow: if the package
@@ -570,15 +570,16 @@ Config should support:
 - syntax version when JuliaSyntax supports version-sensitive parsing;
 - reserved verification policy field for a later design slice.
 
-Custom scope additions and removals should require non-empty explanations.
+Custom scope additions and removals should require concrete explanations.
 This is a direct adaptation of the Rust harness lesson: exceptions are allowed,
 but silent scope shrinkage is not.
 
-Config surfaces that let an agent escape policy must also require non-empty
-explanations. Disabling a rule, lowering a rule severity, removing a default
-blocking severity, or allowing advisory findings is valid only when the config
-records why. The escape guard must be appended after config filtering so the
-same config cannot silently suppress the finding that reports the escape.
+Config surfaces that let an agent escape policy must also require concrete
+explanations, not placeholders such as `todo` or `n/a`. Disabling a rule,
+lowering a rule severity, removing a default blocking severity, or allowing
+advisory findings is valid only when the config records why. The escape guard
+must be appended after config filtering so the same config cannot silently
+suppress the finding that reports the escape.
 
 ## Self-Apply Contract
 

@@ -579,6 +579,12 @@ end
     @test occursin("JULIA-PROJ-R005", rendered)
     @test occursin("Custom source or test scope lacks explanation", rendered)
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R005", report.findings) == 1
+
+    config.source_path_explanations["lib"] = "todo"
+    placeholder_report = run_julia_project_harness(root; config)
+
+    @test !JuliaLangProjectHarness.is_clean(placeholder_report)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R005", placeholder_report.findings) == 1
 end
 
 @testset "project runner reports conventional source scope exclusion" begin

@@ -66,8 +66,8 @@ function disabled_rule_escape_findings(
     [
         config_escape_finding(
             rule,
-            "Rule `$(rule_id)` is disabled without a non-empty explanation.",
-            "add `config.disabled_rule_explanations[\"$(rule_id)\"] = \"...\"` or remove the disabled rule",
+            "Rule `$(rule_id)` is disabled without a concrete explanation.",
+            "add a concrete `config.disabled_rule_explanations[\"$(rule_id)\"]` or remove the disabled rule",
         ) for rule_id in sort(collect(config.disabled_rules)) if !has_config_explanation(
             config.disabled_rule_explanations,
             rule_id,
@@ -89,8 +89,8 @@ function severity_override_escape_findings(
             findings,
             config_escape_finding(
                 rule,
-                "Rule `$(rule_id)` severity is overridden to `$(severity_label(severity))` without a non-empty explanation.",
-                "add `config.rule_severity_override_explanations[\"$(rule_id)\"] = \"...\"` or remove the severity override",
+                "Rule `$(rule_id)` severity is overridden to `$(severity_label(severity))` without a concrete explanation.",
+                "add a concrete `config.rule_severity_override_explanations[\"$(rule_id)\"]` or remove the severity override",
             ),
         )
     end
@@ -110,8 +110,8 @@ function blocking_severity_escape_findings(
             findings,
             config_escape_finding(
                 rule,
-                "Blocking severity `$(label)` is removed without a non-empty explanation.",
-                "add `config.blocking_severity_explanations[\"$(label)\"] = \"...\"` or keep `$(label)` blocking",
+                "Blocking severity `$(label)` is removed without a concrete explanation.",
+                "add a concrete `config.blocking_severity_explanations[\"$(label)\"]` or keep `$(label)` blocking",
             ),
         )
     end
@@ -127,7 +127,7 @@ function advisory_allow_escape_findings(
     [
         config_escape_finding(
             rule,
-            "`agent_advice_allow_explanation` is set but empty after trimming whitespace.",
+            "`agent_advice_allow_explanation` is set without a concrete explanation.",
             "write a concrete `agent_advice_allow_explanation` or leave it unset",
         ),
     ]
@@ -156,9 +156,46 @@ function has_config_explanation(
     explanations::Dict{String,String},
     key::AbstractString,
 )
-    !isempty(strip(get(explanations, String(key), "")))
+    has_concrete_explanation(get(explanations, String(key), ""))
 end
 
 function has_agent_advice_allow_explanation(config::JuliaHarnessConfig)
-    !isempty(strip(something(config.agent_advice_allow_explanation, "")))
+    has_concrete_explanation(config.agent_advice_allow_explanation)
+end
+
+const MIN_CONCRETE_EXPLANATION_CHARS = 24
+const PLACEHOLDER_EXPLANATIONS = Set([
+    ".",
+    "...",
+    "fix later",
+    "fixme",
+    "later",
+    "n/a",
+    "na",
+    "none",
+    "tbd",
+    "todo",
+])
+const PLACEHOLDER_EXPLANATION_PREFIXES = (
+    "fix later",
+    "fixme",
+    "later",
+    "tbd",
+    "todo",
+)
+
+function has_concrete_explanation(explanation::Union{Nothing,AbstractString})
+    normalized = lowercase(strip(something(explanation, "")))
+    length(normalized) >= MIN_CONCRETE_EXPLANATION_CHARS || return false
+    !is_placeholder_explanation(normalized)
+end
+
+function is_placeholder_explanation(normalized::AbstractString)
+    normalized in PLACEHOLDER_EXPLANATIONS && return true
+    any(
+        prefix -> startswith(normalized, prefix * " ") ||
+                  startswith(normalized, prefix * ":") ||
+                  startswith(normalized, prefix * "-"),
+        PLACEHOLDER_EXPLANATION_PREFIXES,
+    )
 end

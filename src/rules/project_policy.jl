@@ -148,9 +148,9 @@ function custom_scope_explanation_findings(
             findings,
             finding_from_rule(
                 rules[JULIA_PROJ_R005];
-                summary="Configured $(label) scope `$(path_name)` exists but has no explanation.",
+                summary="Configured $(label) scope `$(path_name)` exists but has no concrete explanation.",
                 location=SourceLocation(scope.project_toml_path, 1, 0),
-                label="add a non-empty scope explanation or use the conventional Julia path",
+                label="add a concrete scope explanation or use the conventional Julia path",
             ),
         )
     end
@@ -175,7 +175,7 @@ function conventional_scope_exclusion_findings(
             rules[JULIA_PROJ_R006];
             summary="Conventional Julia $(label) scope `$(conventional_name)` exists but is not monitored.",
             location=SourceLocation(scope.project_toml_path, 1, 0),
-            label="add a non-empty exclusion explanation or restore the conventional scope",
+            label="add a concrete exclusion explanation or restore the conventional scope",
         ),
     ]
 end
@@ -187,7 +187,7 @@ function has_path_explanation(
 )
     full_path = normpath(joinpath(project_root, path_name))
     any(
-        key -> !isempty(strip(get(explanations, key, ""))),
+        key -> has_concrete_explanation(get(explanations, key, "")),
         [String(path_name), slash_path(path_name), full_path, slash_path(full_path)],
     )
 end

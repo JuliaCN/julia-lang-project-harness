@@ -43,7 +43,12 @@ end
 
     @test !JuliaLangProjectHarness.is_clean(report)
     @test occursin("JULIA-PROJ-R014", rendered)
-    @test occursin("disabled without a non-empty explanation", rendered)
+    @test occursin("disabled without a concrete explanation", rendered)
+
+    config.disabled_rule_explanations["JULIA-PROJ-R014"] =
+        "todo add real explanation after the migration"
+    placeholder_report = run_julia_project_harness(root; config)
+    @test !JuliaLangProjectHarness.is_clean(placeholder_report)
 
     config.disabled_rule_explanations["JULIA-PROJ-R014"] = "local policy migration under review"
     clean_report = run_julia_project_harness(root; config)
@@ -63,6 +68,10 @@ end
     @test !JuliaLangProjectHarness.is_clean(report)
     @test occursin("JULIA-PROJ-R014", rendered)
     @test occursin("severity is overridden", rendered)
+
+    config.rule_severity_override_explanations["JULIA-PROJ-R002"] = "later"
+    placeholder_report = run_julia_project_harness(root; config)
+    @test !JuliaLangProjectHarness.is_clean(placeholder_report)
 
     config.rule_severity_override_explanations["JULIA-PROJ-R002"] =
         "temporary package layout migration"
@@ -84,6 +93,10 @@ end
     @test occursin("JULIA-PROJ-R014", rendered)
     @test occursin("Blocking severity `warning` is removed", rendered)
 
+    config.blocking_severity_explanations["warning"] = "n/a"
+    placeholder_report = run_julia_project_harness(root; config)
+    @test !JuliaLangProjectHarness.is_clean(placeholder_report)
+
     config.blocking_severity_explanations["warning"] = "collect warnings during staged rollout"
     clean_report = run_julia_project_harness(root; config)
 
@@ -100,5 +113,20 @@ end
 
     @test !JuliaLangProjectHarness.is_clean(report)
     @test occursin("JULIA-PROJ-R014", rendered)
-    @test occursin("empty after trimming whitespace", rendered)
+    @test occursin("without a concrete explanation", rendered)
+end
+
+@testset "config escape rejects placeholder advisory allow explanation" begin
+    root = mktempdir()
+    write_config_project(root)
+    config = config_with_agent_advice_allow_explanation(
+        "todo add real advisory exception explanation after release",
+    )
+
+    report = run_julia_project_harness(root; config)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R014", rendered)
+    @test occursin("without a concrete explanation", rendered)
 end

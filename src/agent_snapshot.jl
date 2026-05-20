@@ -69,6 +69,11 @@ function render_julia_package_snapshot(
         rendered *= "Workspace:\n"
         rendered *= join(workspace_lines, "\n") * "\n"
     end
+    reasoning_tree_lines = snapshot_reasoning_tree_lines(scope, parsed_files)
+    if !isempty(reasoning_tree_lines)
+        rendered *= "ReasoningTree:\n"
+        rendered *= join(reasoning_tree_lines, "\n") * "\n"
+    end
     module_lines = snapshot_module_lines(scope, parsed_files)
     if !isempty(module_lines)
         rendered *= "Modules:\n"
@@ -420,3 +425,5 @@ end
 function display_project_path(scope::JuliaProjectHarnessScope, path::AbstractString)
     slash_path(relpath(path, scope.project_root))
 end
+
+include("agent_snapshot/reasoning_tree.jl")

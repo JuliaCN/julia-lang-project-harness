@@ -246,9 +246,10 @@ The snapshot renderer should stay compact. A clean small package might render:
 ```text
 Package: Example
 Files: source=5 test=2
-Owners:
-- src/Example.jl [entry, facade] includes=api.jl, parser.jl exports=run
-- src/parser.jl [owner] includes=syntax.jl methods=7
+ReasoningTree:
+- root package=Example entry=src/Example.jl
+- owner src/Example.jl role=entry modules=Example public=run includes=src/api.jl,src/parser.jl
+- owner src/parser.jl role=source includes=src/syntax.jl methods=parse_file,parse_project
 Imports:
 - Test only in test/runtests.jl
 ```

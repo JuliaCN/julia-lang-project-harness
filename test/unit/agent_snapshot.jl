@@ -35,6 +35,14 @@
     @test occursin("extras=Test", rendered)
     @test occursin("targets=test=Test", rendered)
     @test occursin("compat=JSON3=1", rendered)
+    @test occursin("ReasoningTree:", rendered)
+    @test occursin("- root package=Example entry=src/Example.jl", rendered)
+    @test occursin(
+        "- owner src/Example.jl role=entry modules=Example public=Config,DEFAULT_LIMIT,run imports=JSON3 includes=src/api.jl types=Config bindings=DEFAULT_LIMIT methods=run",
+        rendered,
+    )
+    @test occursin("- owner src/api.jl role=source methods=internal_api", rendered)
+    @test occursin("- owner test/runtests.jl role=test imports=Test tests=\"core\",direct=1", rendered)
     @test occursin("Modules:", rendered)
     @test occursin("src/Example.jl module=Example", rendered)
     @test occursin("Public:", rendered)

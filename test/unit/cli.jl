@@ -66,6 +66,21 @@ end
     @test occursin("src/CliExample.jl", rendered)
 end
 
+@testset "cli verification task output" begin
+    root = mktempdir()
+    write_cli_project(root)
+    out = IOBuffer()
+    json_out = IOBuffer()
+
+    status = run_julia_project_harness_cli(["--verification-tasks", root]; out)
+    json_status = run_julia_project_harness_cli(["--verification-tasks-json", root]; out=json_out)
+
+    @test status == 0
+    @test occursin("VerificationTasks: count=1", String(take!(out)))
+    @test json_status == 0
+    @test occursin("\"records\"", String(take!(json_out)))
+end
+
 @testset "cli rejects conflicting modes" begin
     root = mktempdir()
     write_cli_project(root)

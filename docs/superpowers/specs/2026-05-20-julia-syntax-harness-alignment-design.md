@@ -292,9 +292,31 @@ harness CLI while staying Julia-native:
 - `--search QUERY` renders scored search results from JuliaSyntax-derived
   index entries;
 - `--tag TAG` and `--limit N` constrain search output.
+- `--verification-tasks` renders agent-runnable verification duties;
+- `--verification-tasks-json` renders the same duties as structured JSON.
 
 The CLI is a thin wrapper over public library functions. It should not own
 policy, parsing, or search behavior.
+
+## Verification Task Index
+
+The Julia harness should expose a compact verification task index so agents can
+plan the next validation step without inferring it from policy text.
+
+The first Julia-native task families are:
+
+- `pkg_test`: run `Pkg.test()` from the discovered `Project.toml` root;
+- `harness_policy`: run the package harness self-policy gate when the package
+  depends on this harness;
+- `syntax_search`: smoke the JuliaSyntax-derived search index when this harness
+  is available in the project;
+- `extension_boundary`: run package tests with package extension weakdeps in
+  scope.
+
+Each task should carry a stable fingerprint, kind, state, phase, project root,
+owner path, command, compact evidence, and short reason. This is intentionally
+lighter than the Rust verification subsystem until Julia projects have their
+own configured-skill contracts.
 
 ## Rule Packs
 
@@ -402,6 +424,9 @@ render_julia_project_harness_json(report)
 render_julia_project_harness_advice(report)
 render_julia_project_harness_agent_snapshot(project_root::AbstractString; config=default_julia_harness_config())
 render_julia_search_results(results::Vector{JuliaSearchResult}; project_root=nothing)
+build_julia_verification_task_index(project_root::AbstractString; config=default_julia_harness_config())
+render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
+render_julia_verification_task_index_json(index::JuliaVerificationTaskIndex)
 julia_project_search_index(project_root::AbstractString; config=default_julia_harness_config())
 julia_lang_search_index(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
 search_julia_index(entries::Vector{JuliaSearchIndexEntry}, query::AbstractString; tags=String[], limit=25)
@@ -441,6 +466,8 @@ The report model should be serializable and compact:
 - `JuliaFileReport`
 - `JuliaSearchIndexEntry`
 - `JuliaSearchResult`
+- `JuliaVerificationTaskRecord`
+- `JuliaVerificationTaskIndex`
 - `JuliaProjectHarnessScope`
 - `JuliaHarnessConfig`
 - `JuliaHarnessReport`

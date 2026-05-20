@@ -60,6 +60,24 @@ struct JuliaSearchResult
     score::Int
 end
 
+struct JuliaVerificationTaskRecord
+    fingerprint::String
+    kind::String
+    state::String
+    phase::String
+    project_root::String
+    owner_path::String
+    line::Union{Nothing,Int}
+    command::Vector{String}
+    evidence::Dict{String,String}
+    reason::String
+end
+
+struct JuliaVerificationTaskIndex
+    project_root::String
+    records::Vector{JuliaVerificationTaskRecord}
+end
+
 struct JuliaProjectHarnessScope
     project_root::String
     project_toml_path::Union{Nothing,String}

@@ -3,6 +3,8 @@ mutable struct JuliaHarnessCliOptions
     json::Bool
     agent_snapshot::Bool
     advice::Bool
+    verification_tasks::Bool
+    verification_tasks_json::Bool
     search_query::Union{Nothing,String}
     tags::Vector{String}
     limit::Int
@@ -10,7 +12,7 @@ mutable struct JuliaHarnessCliOptions
 end
 
 function default_julia_harness_cli_options()
-    JuliaHarnessCliOptions(pwd(), false, false, false, nothing, String[], 25, false)
+    JuliaHarnessCliOptions(pwd(), false, false, false, false, false, nothing, String[], 25, false)
 end
 
 function run_julia_project_harness_cli(args=ARGS; out=stdout, err=stderr)
@@ -37,6 +39,15 @@ function run_julia_project_harness_cli_checked(args::Vector{String}; out=stdout,
             limit=options.limit,
         )
         print(out, render_julia_search_results(results; project_root=options.project_root))
+        return 0
+    elseif options.verification_tasks
+        index = build_julia_verification_task_index(options.project_root)
+        print(out, render_julia_verification_task_index(index))
+        return 0
+    elseif options.verification_tasks_json
+        index = build_julia_verification_task_index(options.project_root)
+        print(out, render_julia_verification_task_index_json(index))
+        print(out, "\n")
         return 0
     elseif options.agent_snapshot
         print(out, render_julia_project_harness_agent_snapshot(options.project_root))
@@ -69,6 +80,10 @@ function parse_julia_harness_cli_args(args::Vector{String})
             options.agent_snapshot = true
         elseif arg == "--advice"
             options.advice = true
+        elseif arg == "--verification-tasks"
+            options.verification_tasks = true
+        elseif arg == "--verification-tasks-json"
+            options.verification_tasks_json = true
         elseif arg == "--search"
             index += 1
             index <= length(args) || error("--search requires a query")
@@ -98,6 +113,8 @@ function validate_julia_harness_cli_options(options::JuliaHarnessCliOptions)
         options.json,
         options.agent_snapshot,
         options.advice,
+        options.verification_tasks,
+        options.verification_tasks_json,
         !isnothing(options.search_query),
     ])
     modes <= 1 || error("expected only one output mode")
@@ -111,10 +128,11 @@ end
 
 function julia_harness_cli_usage()
     """
-    julia-project-harness [--json | --agent-snapshot | --advice | --search QUERY] [options] [PROJECT_ROOT]
+    julia-project-harness [--json | --agent-snapshot | --advice | --verification-tasks | --verification-tasks-json | --search QUERY] [options] [PROJECT_ROOT]
 
     Compact text is the default agent-facing repair surface.
     Use --agent-snapshot to emit a low-noise project summary.
+    Use --verification-tasks to emit agent-runnable verification duties.
     Use --search QUERY with --tag TAG and --limit N to query JuliaSyntax facts.
     """
 end

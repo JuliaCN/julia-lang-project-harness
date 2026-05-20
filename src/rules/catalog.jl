@@ -33,6 +33,7 @@ const AGENT_JL_R007 = "AGENT-JL-R007"
 const AGENT_JL_R008 = "AGENT-JL-R008"
 const AGENT_JL_R009 = "AGENT-JL-R009"
 const AGENT_JL_R010 = "AGENT-JL-R010"
+const AGENT_JL_R011 = "AGENT-JL-R011"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -320,6 +321,14 @@ julia_agent_policy_rules() = [
         Info,
         "Macro-heavy public API lacks a syntax contract",
         "Document macro-heavy exported Julia methods with a syntax, macro expansion, or generated-code contract so agents can preserve parser-visible behavior.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R011,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public type has untyped fields",
+        "Give exported Julia struct fields explicit type annotations so agents can understand public data shape without inferring `Any` from implementation details.",
         labels("agent-policy"),
     ),
 ]

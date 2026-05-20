@@ -411,9 +411,10 @@ Initial advisory rules:
 - `AGENT-JL-R009`: method family is scattered across unrelated owner files
   without a clear extension pattern.
 - `AGENT-JL-R010`: macro-heavy public API lacks a syntax-level contract note.
+- `AGENT-JL-R011`: public struct fields omit explicit type annotations.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R010`. Later advisory rules can land only after the needed
+`AGENT-JL-R011`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

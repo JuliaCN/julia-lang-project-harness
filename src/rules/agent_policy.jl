@@ -68,6 +68,49 @@ function public_method_family_scattering_findings(
     findings
 end
 
+function public_type_field_shape_findings(
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        append!(findings, public_type_field_shape_findings(parsed, public_names, rules))
+    end
+    findings
+end
+
+function public_type_field_shape_findings(
+    parsed::ParsedJuliaFile,
+    public_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for type_fact in parsed.syntax_facts.types
+        type_fact.kind == "struct" || continue
+        name = terminal_public_name(type_fact.name)
+        name in public_names || continue
+        untyped_fields = [
+            field for field in type_fact.field_facts if isnothing(field.type_annotation)
+        ]
+        isempty(untyped_fields) && continue
+        first_field = first(untyped_fields)
+        field_names = join([field.name for field in untyped_fields], ", ")
+        push!(
+            findings,
+            finding_from_rule(
+                rules[AGENT_JL_R011];
+                summary="Exported/public struct `$(name)` has fields without type annotations: $(field_names).",
+                location=SourceLocation(parsed.report.path, first_field.line, first_field.column),
+                source_line=source_line(parsed.source, first_field.line),
+                label="add explicit field type annotations to the public struct",
+            ),
+        )
+    end
+    findings
+end
+
 function has_extension_pattern_doc(
     docs_by_name::Dict{String,Vector{String}},
     name::AbstractString,

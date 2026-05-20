@@ -41,6 +41,7 @@ function evaluate_agent_policy_rules(
     documented_names = package_documented_public_names(parsed_files)
     function_docs_by_name = package_function_docstrings_by_public_name(parsed_files)
     append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
+    append!(findings, public_type_field_shape_findings(parsed_files, public_names, rules))
     append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
     append!(findings, public_method_family_scattering_findings(
         scope,

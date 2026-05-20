@@ -7,6 +7,7 @@ const JULIA_AGENT_POLICY_PACK_ID = "julia.agent_policy"
 const JULIA_SYN_R001 = "JULIA-SYN-R001"
 const JULIA_PROJ_R001 = "JULIA-PROJ-R001"
 const JULIA_PROJ_R002 = "JULIA-PROJ-R002"
+const JULIA_PROJ_R003 = "JULIA-PROJ-R003"
 const JULIA_PROJ_R007 = "JULIA-PROJ-R007"
 const JULIA_PROJ_R008 = "JULIA-PROJ-R008"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
@@ -61,6 +62,14 @@ julia_project_policy_rules() = [
         Warning,
         "Package entry module is missing",
         "Julia packages should expose a parser-stable entry file at `src/<PackageName>.jl`, unless project config records a reason.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R003,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Pkg.test entrypoint is missing",
+        "Julia package test scopes should mount the `Pkg.test` entrypoint at `test/runtests.jl`.",
         labels("project-policy"),
     ),
     JuliaHarnessRule(
@@ -252,6 +261,7 @@ function evaluate_project_policy_rules(
             end
         end
     end
+    append!(findings, test_entrypoint_findings(scope, rules))
     append!(findings, undeclared_import_findings(scope, parsed_files, rules))
     findings
 end
@@ -261,6 +271,28 @@ function expected_entry_file(scope::JuliaProjectHarnessScope)
         return scope.project_entryfile
     end
     isnothing(scope.package_name) ? "src/<PackageName>.jl" : "src/$(scope.package_name).jl"
+end
+
+function test_entrypoint_findings(
+    scope::JuliaProjectHarnessScope,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for test_path in scope.test_paths
+        isdir(test_path) || continue
+        entrypoint = joinpath(test_path, "runtests.jl")
+        isfile(entrypoint) && continue
+        push!(
+            findings,
+            finding_from_rule(
+                rules[JULIA_PROJ_R003];
+                summary="Test scope `$(test_path)` exists, but `$(entrypoint)` is missing.",
+                location=SourceLocation(entrypoint, 1, 0),
+                label="add test/runtests.jl so Pkg.test has a stable package test entrypoint",
+            ),
+        )
+    end
+    findings
 end
 
 function undeclared_import_findings(

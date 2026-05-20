@@ -140,6 +140,24 @@ end
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
 end
 
+@testset "project runner reports missing Pkg.test entrypoint" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(joinpath(root, "test", "helpers.jl"), "value = 1\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R003", rendered)
+    @test occursin("Pkg.test entrypoint is missing", rendered)
+    @test occursin("test/runtests.jl", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R003", report.findings) == 1
+end
+
 @testset "project runner reports package policy facts" begin
     root = mktempdir()
     mkpath(joinpath(root, "src"))

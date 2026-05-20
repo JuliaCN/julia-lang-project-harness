@@ -49,6 +49,7 @@ end
 struct JuliaProjectHarnessScope
     project_root::String
     project_toml_path::Union{Nothing,String}
+    project_parse_error::Union{Nothing,String}
     package_name::Union{Nothing,String}
     package_uuid::Union{Nothing,String}
     project_entryfile::Union{Nothing,String}

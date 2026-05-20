@@ -102,6 +102,7 @@ function project_scope_dict(scope::JuliaProjectHarnessScope)
         "project_root" => slash_path(scope.project_root),
         "project_toml_path" => isnothing(scope.project_toml_path) ? nothing :
                                slash_path(scope.project_toml_path),
+        "project_parse_error" => scope.project_parse_error,
         "package_name" => scope.package_name,
         "package_uuid" => scope.package_uuid,
         "project_entryfile" => scope.project_entryfile,

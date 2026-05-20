@@ -70,6 +70,7 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
     JuliaProjectHarnessScope(
         root,
         project_facts.path,
+        project_facts.parse_error,
         project_facts.package_name,
         project_facts.package_uuid,
         project_facts.entryfile,
@@ -126,6 +127,7 @@ end
 struct JuliaProjectTomlFacts
     project_root::String
     path::Union{Nothing,String}
+    parse_error::Union{Nothing,String}
     package_name::Union{Nothing,String}
     package_uuid::Union{Nothing,String}
     entryfile::Union{Nothing,String}
@@ -149,12 +151,13 @@ function parse_project_toml_facts(project_path::AbstractString)
     root = dirname(project_toml)
     project = try
         Pkg.Types.read_project(project_toml)
-    catch
-        return empty_project_toml_facts(root, project_toml)
+    catch err
+        return empty_project_toml_facts(root, project_toml; parse_error=compact_error_message(err))
     end
     JuliaProjectTomlFacts(
         root,
         project_toml,
+        nothing,
         isnothing(project.name) ? nothing : String(project.name),
         isnothing(project.uuid) ? nothing : string(project.uuid),
         isnothing(project.entryfile) ? nothing : String(project.entryfile),
@@ -169,10 +172,15 @@ function parse_project_toml_facts(project_path::AbstractString)
     )
 end
 
-function empty_project_toml_facts(project_root::AbstractString, project_toml::Union{Nothing,String})
+function empty_project_toml_facts(
+    project_root::AbstractString,
+    project_toml::Union{Nothing,String};
+    parse_error=nothing,
+)
     JuliaProjectTomlFacts(
         String(project_root),
         project_toml,
+        parse_error,
         nothing,
         nothing,
         nothing,
@@ -185,6 +193,10 @@ function empty_project_toml_facts(project_root::AbstractString, project_toml::Un
         Dict{String,Vector{String}}(),
         String[],
     )
+end
+
+function compact_error_message(err)
+    replace(sprint(showerror, err), r"\s+" => " ")
 end
 
 function string_uuid_dict(values)

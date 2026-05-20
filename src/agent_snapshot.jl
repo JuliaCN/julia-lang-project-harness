@@ -117,6 +117,8 @@ end
 
 function snapshot_project_lines(scope::JuliaProjectHarnessScope)
     lines = String[]
+    !isnothing(scope.project_parse_error) &&
+        push!(lines, "- project_error=$(scope.project_parse_error)")
     !isnothing(scope.project_entryfile) && push!(lines, "- entryfile=$(scope.project_entryfile)")
     !isempty(scope.workspace_projects) &&
         push!(lines, "- workspace=$(join(scope.workspace_projects, ","))")

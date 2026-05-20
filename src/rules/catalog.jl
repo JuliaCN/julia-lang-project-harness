@@ -15,6 +15,7 @@ const JULIA_PROJ_R009 = "JULIA-PROJ-R009"
 const JULIA_PROJ_R010 = "JULIA-PROJ-R010"
 const JULIA_PROJ_R011 = "JULIA-PROJ-R011"
 const JULIA_PROJ_R012 = "JULIA-PROJ-R012"
+const JULIA_PROJ_R013 = "JULIA-PROJ-R013"
 const JULIA_MOD_R001 = "JULIA-MOD-R001"
 const JULIA_MOD_R002 = "JULIA-MOD-R002"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
@@ -156,6 +157,14 @@ julia_project_policy_rules() = [
         Warning,
         "Project extension dependency is undeclared",
         "Every Julia `[extensions]` trigger dependency should be declared in `[weakdeps]` or `[deps]` unless it is a stdlib.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R013,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Project.toml is not readable by Pkg",
+        "Julia project policy should run from a `Project.toml` that `Pkg.Types.read_project` can read.",
         labels("project-policy"),
     ),
 ]

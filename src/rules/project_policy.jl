@@ -6,6 +6,18 @@ function evaluate_project_policy_rules(
     isnothing(scope) && return JuliaHarnessFinding[]
     rules = rules_by_id()
     findings = JuliaHarnessFinding[]
+    if !isnothing(scope.project_parse_error)
+        push!(
+            findings,
+            finding_from_rule(
+                rules[JULIA_PROJ_R013];
+                summary="Pkg could not read `$(scope.project_toml_path)`: $(scope.project_parse_error)",
+                location=SourceLocation(scope.project_toml_path, 1, 0),
+                label="repair Project.toml until Pkg.Types.read_project can load it",
+            ),
+        )
+        return findings
+    end
     if isnothing(scope.package_name)
         push!(
             findings,

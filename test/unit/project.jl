@@ -27,6 +27,7 @@ end
     @test JuliaLangProjectHarness.is_clean(report)
     @test !isnothing(report.project_scope)
     @test report.project_scope.package_name == "Example"
+    @test isnothing(report.project_scope.project_parse_error)
     @test report.project_scope.package_entry_path == joinpath(root, "src", "Example.jl")
     @test render_julia_project_harness(report) == "[ok] julia\n"
 end
@@ -542,6 +543,34 @@ end
     @test !JuliaLangProjectHarness.is_clean(report)
     @test occursin("JULIA-PROJ-R001", rendered)
     @test occursin("Project.toml lacks a package name", rendered)
+end
+
+@testset "project runner reports Project.toml read errors" begin
+    root = mktempdir()
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [targets]
+        test = ["Missing"]
+        """,
+    )
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test !isnothing(report.project_scope.project_parse_error)
+    @test occursin("JULIA-PROJ-R013", rendered)
+    @test occursin("Project.toml is not readable by Pkg", rendered)
+    @test occursin("Missing", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R013", report.findings) == 1
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R001", report.findings) == 0
 end
 
 @testset "project runner reports entry module mismatch" begin

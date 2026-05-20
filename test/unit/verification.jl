@@ -129,10 +129,15 @@ end
     @test occursin("\"records\"", json)
     @test occursin("VerifyJSONExt", json)
 
-    profile = assert_julia_project_harness_test_profile_clean(root)
+    advice_out = IOBuffer()
+    profile = assert_julia_project_harness_test_profile_clean(root; advice_io=advice_out)
+    advice = String(take!(advice_out))
     @test profile.report.project_scope.project_root == root
     @test [record.kind for record in profile.task_index.records] == kinds
     @test length(profile.profile_index.candidates) == 3
+    @test occursin("[verify-advice] pending=1", advice)
+    @test occursin("kind=stress", advice)
+    @test occursin("fingerprint=stress", advice)
 
     profile_rendered = render_julia_verification_profile(profile)
     profile_json = render_julia_verification_profile_json(profile)
@@ -187,4 +192,13 @@ end
     @test occursin("fingerprint=performance", task_rendered)
     @test occursin("responsibilities=public_api,external_dependency", task_rendered)
     @test occursin("Agent should add or run Julia-native performance evidence", task_rendered)
+
+    profile = build_julia_project_verification_profile(root)
+    advice = render_julia_verification_pending_advice(profile)
+
+    @test occursin("[verify-advice] pending=4", advice)
+    @test occursin("kind=performance", advice)
+    @test occursin("kind=security", advice)
+    @test occursin("evidence=responsibilities=public_api,external_dependency", advice)
+    @test !occursin("exports=", advice)
 end

@@ -439,7 +439,7 @@ assert_julia_project_harness_clean(project_root::AbstractString; config=default_
 assert_julia_project_harness_pkg_test_clean(project_root::AbstractString; config=default_julia_harness_config())
 build_julia_project_verification_profile(project_root::AbstractString=pwd(); config=default_julia_harness_config())
 build_julia_verification_profile_index(project_root::AbstractString; config=default_julia_harness_config())
-assert_julia_project_harness_test_profile_clean(project_root::AbstractString=pwd(); config=default_julia_harness_config())
+assert_julia_project_harness_test_profile_clean(project_root::AbstractString=pwd(); config=default_julia_harness_config(), advice_io=stdout)
 render_julia_project_harness(report)
 render_julia_project_harness_json(report)
 render_julia_project_harness_advice(report)
@@ -450,6 +450,7 @@ render_julia_verification_profile(profile::JuliaVerificationProfile)
 render_julia_verification_profile_json(profile::JuliaVerificationProfile)
 render_julia_verification_profile_index(index::JuliaVerificationProfileIndex)
 render_julia_verification_profile_index_json(index::JuliaVerificationProfileIndex)
+render_julia_verification_pending_advice(profile::JuliaVerificationProfile)
 render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
 render_julia_verification_task_index_json(index::JuliaVerificationTaskIndex)
 julia_project_search_index(project_root::AbstractString; config=default_julia_harness_config())
@@ -580,6 +581,12 @@ what the agent should add or run next. Compact text renders should include the
 fingerprint so future receipts or waivers can bind evidence to the exact inferred
 obligation. The harness must not pretend those tasks are satisfied merely
 because package tests pass.
+
+The package-test assertion should stay non-blocking for pending external
+evidence, but it should emit a compact `[verify-advice]` section by default
+when such tasks exist. That keeps ordinary `Pkg.test` green while still putting
+the next agent actions in the test log. Programmatic callers may pass
+`advice_io=nothing` when they need a quiet assertion.
 
 ## Configuration
 

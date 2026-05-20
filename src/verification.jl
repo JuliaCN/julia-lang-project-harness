@@ -29,6 +29,7 @@ end
 function assert_julia_project_harness_test_profile_clean(
     project_root::AbstractString=pwd();
     config=default_julia_harness_config(),
+    advice_io::Union{Nothing,IO}=stdout,
 )
     profile = build_julia_project_verification_profile(project_root; config)
     has_blocking = !is_clean(profile.report)
@@ -36,6 +37,9 @@ function assert_julia_project_harness_test_profile_clean(
                  !isempty(advisory_findings(profile.report))
     if has_blocking || has_advice
         error(render_julia_verification_profile(profile))
+    end
+    if !isnothing(advice_io)
+        print(advice_io, render_julia_verification_pending_advice(profile))
     end
     profile
 end

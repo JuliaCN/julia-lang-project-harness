@@ -1,7 +1,7 @@
 @testset "self apply policy" begin
     root = pkgdir(JuliaLangProjectHarness)
 
-    profile = assert_julia_project_harness_test_profile_clean(root)
+    profile = assert_julia_project_harness_test_profile_clean(root; advice_io=nothing)
     report = profile.report
 
     @test JuliaLangProjectHarness.is_clean(report)

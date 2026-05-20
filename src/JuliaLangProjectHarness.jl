@@ -13,6 +13,7 @@ include("search_render.jl")
 include("agent_snapshot.jl")
 include("verification.jl")
 include("verification/responsibility_inference.jl")
+include("verification/advice.jl")
 include("verification/profile_index.jl")
 include("cli.jl")
 
@@ -51,6 +52,7 @@ export JuliaDiagnosticSeverity,
     render_julia_project_harness_agent_snapshot,
     render_julia_project_harness_json,
     render_julia_search_results,
+    render_julia_verification_pending_advice,
     render_julia_verification_profile,
     render_julia_verification_profile_index,
     render_julia_verification_profile_index_json,

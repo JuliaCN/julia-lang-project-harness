@@ -309,6 +309,37 @@ end
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 0
 end
 
+@testset "project runner reports extras not mounted by Pkg.test target" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [extras]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["Test"]
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(joinpath(root, "test", "runtests.jl"), "using Test\nusing JSON3\n@test true\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R008", rendered)
+    @test occursin("Imported package is missing from Project.toml", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
+end
+
 @testset "project runner reports missing package extension entrypoint" begin
     root = mktempdir()
     write(

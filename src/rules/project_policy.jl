@@ -341,7 +341,7 @@ function allowed_import_roots(
     !isnothing(scope.package_name) && push!(allowed, scope.package_name)
     union!(allowed, extension_import_roots(scope, path))
     if is_test_path(scope, path)
-        union!(allowed, keys(scope.extra_dependencies))
+        union!(allowed, test_target_import_roots(scope))
     end
     allowed
 end

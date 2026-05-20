@@ -300,6 +300,39 @@ end
     @test occursin("Source file is orphaned from package entry", rendered)
 end
 
+@testset "project runner reports large package entry facade" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    body = join(["value$(index) = $(index)" for index in 1:121], "\n")
+    write(joinpath(root, "src", "Example.jl"), "module Example\n$(body)\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-MOD-R001", rendered)
+    @test occursin("Package entry file is too large for a facade", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-MOD-R001", report.findings) == 1
+end
+
+@testset "project runner reports large source owner file" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    body = join(["value$(index)() = $(index)" for index in 1:401], "\n")
+    write(joinpath(root, "src", "Example.jl"), "module Example\ninclude(\"api.jl\")\nend\n")
+    write(joinpath(root, "src", "api.jl"), "$(body)\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-MOD-R002", rendered)
+    @test occursin("Source file exceeds the owner budget", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-MOD-R002", report.findings) == 1
+end
+
 @testset "project runner reports generic source owner buckets" begin
     root = mktempdir()
     write_project(root, "Example")

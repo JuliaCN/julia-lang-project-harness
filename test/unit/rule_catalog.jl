@@ -22,6 +22,8 @@
         "JULIA-PROJ-R008",
     ]
     @test [rule.rule_id for rule in julia_modularity_rules()] == [
+        "JULIA-MOD-R001",
+        "JULIA-MOD-R002",
         "JULIA-MOD-R003",
         "JULIA-MOD-R004",
         "JULIA-MOD-R005",

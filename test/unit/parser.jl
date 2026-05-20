@@ -53,7 +53,7 @@ end
     write(
         source,
         """
-        function run(x, y::Int, force::Bool, dry_run=false; verbose=false, mode=:fast)
+        function run(x, y::Int, force::Bool, dry_run=false; verbose=false, mode::AbstractString="fast")
             x + y
         end
         short(a, b=1, c::String="x", enabled::Core.Bool=true) = a
@@ -74,9 +74,11 @@ end
     ]
     @test parsed.syntax_facts.functions[1].positional_args == ["x", "y", "force", "dry_run"]
     @test parsed.syntax_facts.functions[1].bool_positional_args == ["force", "dry_run"]
+    @test parsed.syntax_facts.functions[1].stringly_domain_args == ["mode"]
     @test parsed.syntax_facts.functions[1].keyword_args == ["verbose", "mode"]
     @test parsed.syntax_facts.functions[2].positional_args == ["a", "b", "c", "enabled"]
     @test parsed.syntax_facts.functions[2].bool_positional_args == ["enabled"]
+    @test isempty(parsed.syntax_facts.functions[2].stringly_domain_args)
     @test parsed.syntax_facts.functions[3].positional_args == ["io", "value"]
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end

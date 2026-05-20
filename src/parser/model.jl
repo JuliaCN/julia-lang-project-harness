@@ -39,6 +39,7 @@ struct JuliaFunctionSyntax
     terminal_name::String
     positional_args::Vector{String}
     bool_positional_args::Vector{String}
+    stringly_domain_args::Vector{String}
     keyword_args::Vector{String}
     expression::String
 end

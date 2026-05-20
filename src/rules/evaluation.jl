@@ -68,6 +68,18 @@ function evaluate_agent_policy_rules(
                     ),
                 )
             end
+            if !isempty(function_fact.stringly_domain_args)
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[AGENT_JL_R004];
+                        summary="Exported/public method `$(function_fact.terminal_name)` exposes stringly domain arguments: $(join(function_fact.stringly_domain_args, ", ")).",
+                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                        source_line=source_line(parsed.source, function_fact.line),
+                        label="replace stringly domain arguments with a named enum, value type, or config carrier",
+                    ),
+                )
+            end
         end
     end
     findings

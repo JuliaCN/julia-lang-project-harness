@@ -63,6 +63,16 @@ struct JuliaMacroInvocationSyntax
     expression::String
 end
 
+struct JuliaCallSyntax
+    line::Int
+    column::Int
+    name::String
+    terminal_name::String
+    argument_count::Int
+    keyword_args::Vector{String}
+    expression::String
+end
+
 struct JuliaTestSyntax
     line::Int
     column::Int
@@ -86,6 +96,7 @@ struct JuliaNativeSyntaxFacts
     functions::Vector{JuliaFunctionSyntax}
     types::Vector{JuliaTypeSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
+    calls::Vector{JuliaCallSyntax}
     tests::Vector{JuliaTestSyntax}
 end
 

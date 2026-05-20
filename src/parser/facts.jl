@@ -123,6 +123,29 @@ function macro_invocation_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     )
 end
 
+function call_syntax_from_node(
+    node::JuliaSyntax.SyntaxNode,
+    parent::Union{Nothing,JuliaSyntax.SyntaxNode},
+)
+    is_definition_signature_call(node, parent) && return nothing
+    children = syntax_children(node)
+    isempty(children) && return nothing
+    name = call_name_text(first(children))
+    isnothing(name) && return nothing
+    terminal_name = last(split(name, "."))
+    is_searchable_call_name(terminal_name) || return nothing
+    location = JuliaSyntax.source_location(node)
+    JuliaCallSyntax(
+        location[1],
+        location[2] - 1,
+        name,
+        terminal_name,
+        call_argument_count(node),
+        call_keyword_args(node),
+        String(JuliaSyntax.sourcetext(node)),
+    )
+end
+
 function test_syntax_from_macro_invocation(
     node::JuliaSyntax.SyntaxNode,
     invocation::JuliaMacroInvocationSyntax,
@@ -155,6 +178,53 @@ const TEST_MACRO_NAMES = Set([
 function terminal_macro_name(node::JuliaSyntax.SyntaxNode)
     names = identifier_texts(node)
     isempty(names) ? nothing : last(names)
+end
+
+function is_definition_signature_call(
+    node::JuliaSyntax.SyntaxNode,
+    parent::Union{Nothing,JuliaSyntax.SyntaxNode},
+)
+    isnothing(parent) && return false
+    syntax_kind(parent) in ("function", "macro") || return false
+    signature = first_call_child(parent)
+    isnothing(signature) && return false
+    signature === node
+end
+
+function call_name_text(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "Identifier"
+        return String(JuliaSyntax.sourcetext(node))
+    elseif kind == "."
+        names = identifier_texts(node)
+        isempty(names) && return nothing
+        return join(names, ".")
+    elseif kind == "curly"
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return call_name_text(first(children))
+    end
+    nothing
+end
+
+function is_searchable_call_name(name::AbstractString)
+    !isnothing(match(r"^[A-Za-z_][A-Za-z0-9_!]*$", name))
+end
+
+function call_argument_count(node::JuliaSyntax.SyntaxNode)
+    count(argument -> syntax_kind(argument) != "parameters", call_arguments(node))
+end
+
+function call_keyword_args(node::JuliaSyntax.SyntaxNode)
+    arguments = call_arguments(node)
+    keyword_index = findfirst(argument -> syntax_kind(argument) == "parameters", arguments)
+    isnothing(keyword_index) && return String[]
+    names = String[]
+    for argument in syntax_children(arguments[keyword_index])
+        name = argument_name(argument)
+        !isnothing(name) && push!(names, name)
+    end
+    names
 end
 
 function first_string_literal_argument(node::JuliaSyntax.SyntaxNode)

@@ -110,6 +110,7 @@ The parser layer should expose these internal facts:
 - `JuliaMethodSignatureSyntax`
 - `JuliaStructSyntax`
 - `JuliaMacroInvocationSyntax`
+- `JuliaCallSyntax`
 - `JuliaTestSyntax`
 
 Each fact that can trigger a finding must carry a stable source location:
@@ -134,6 +135,7 @@ The parser layer should classify these constructs in the first slice:
 - `public name` when supported by the configured Julia syntax version
 - long-form function definitions
 - short-form function definitions
+- function and constructor call references, excluding definition signatures
 - macro definitions
 - macro invocations
 - mutable and immutable struct definitions
@@ -234,6 +236,30 @@ Imports:
 
 The exact text can change during implementation, but the contract is stable:
 agents get owner and dependency shape without reading a full JSON report.
+
+## Search Index
+
+Search is a first-class consumer of parser facts, not a separate text scanner.
+
+The harness should expose a compact syntax search index that can power both
+LLM context selection and ordinary project lookup. The index must be derived
+from `JuliaSyntax` facts owned by the parser layer, so search behavior and
+policy behavior agree on source locations and syntax classification.
+
+Initial entries should cover definitions, public API declarations, imports,
+tests, includes, and call references. A call reference is a real invocation in
+code, macro arguments, or test expressions. Function and macro definition
+signatures are not call references.
+
+Each search entry should carry:
+
+- stable source location;
+- kind, such as `module`, `function`, `struct`, `call`, `include`, or `test`;
+- name;
+- detail text for disambiguation;
+- combined search text;
+- tags for filtering, such as `public`, `method`, `call`, `dependency`, and
+  `test`.
 
 ## Rule Packs
 
@@ -340,6 +366,8 @@ render_julia_project_harness(report)
 render_julia_project_harness_json(report)
 render_julia_project_harness_advice(report)
 render_julia_project_harness_agent_snapshot(project_root::AbstractString; config=default_julia_harness_config())
+julia_project_search_index(project_root::AbstractString; config=default_julia_harness_config())
+julia_lang_search_index(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
 julia_rule_pack_descriptors()
 julia_syntax_rules()
 julia_project_policy_rules()

@@ -29,7 +29,10 @@
         end
         """,
     )
-    write(joinpath(root, "src", "api.jl"), "run(value; verbose=false) = value\n")
+    write(
+        joinpath(root, "src", "api.jl"),
+        "run(value; verbose=false) = helper(value)\nhelper(value) = string(value)\n",
+    )
     write(
         joinpath(root, "test", "runtests.jl"),
         "using Test\n@testset \"search\" begin\n@test run(1) == 1\nend\n",
@@ -49,6 +52,13 @@
         entries,
     )
     @test any(entry -> entry.kind == "include" && entry.name == "api.jl", entries)
+    @test any(
+        entry -> entry.kind == "call" &&
+                 entry.name == "helper" &&
+                 "call" in entry.tags &&
+                 occursin("args=1", entry.detail),
+        entries,
+    )
     @test any(entry -> entry.kind == "testset" && entry.name == "search", entries)
     @test all(entry -> !isnothing(entry.location.path), entries)
 end

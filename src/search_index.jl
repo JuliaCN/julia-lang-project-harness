@@ -33,6 +33,7 @@ function julia_search_index(parsed_files::Vector{ParsedJuliaFile})
         append!(entries, import_search_entries(parsed))
         append!(entries, type_search_entries(parsed))
         append!(entries, function_search_entries(parsed))
+        append!(entries, call_search_entries(parsed))
         append!(entries, test_search_entries(parsed))
         append!(entries, include_search_entries(parsed))
     end
@@ -129,6 +130,20 @@ function function_search_entries(parsed::ParsedJuliaFile)
     ]
 end
 
+function call_search_entries(parsed::ParsedJuliaFile)
+    [
+        search_index_entry(
+            parsed,
+            call_fact.line,
+            call_fact.column,
+            "call",
+            call_fact.name;
+            detail=display_call_search_detail(call_fact),
+            tags=["call", call_fact.terminal_name],
+        ) for call_fact in parsed.syntax_facts.calls
+    ]
+end
+
 function test_search_entries(parsed::ParsedJuliaFile)
     [
         search_index_entry(
@@ -197,6 +212,12 @@ function display_function_search_detail(function_fact::JuliaFunctionSyntax)
     bool_suffix = isempty(function_fact.bool_positional_args) ? "" :
                   " bool=$(join(function_fact.bool_positional_args, ","))"
     "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)"
+end
+
+function display_call_search_detail(call_fact::JuliaCallSyntax)
+    keyword_suffix = isempty(call_fact.keyword_args) ? "" :
+                     ";$(join(call_fact.keyword_args, ","))"
+    "call $(call_fact.name)(args=$(call_fact.argument_count)$(keyword_suffix))"
 end
 
 function include_search_detail(include_fact::JuliaIncludeSyntax)

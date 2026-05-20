@@ -81,6 +81,38 @@ end
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end
 
+@testset "parser call facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "calls.jl")
+    write(
+        source,
+        """
+        function run(x; verbose=false)
+            JSON3.read(x; allow_inf=true)
+        end
+        short(y) = helper(y)
+        macro demo(x)
+            println(x)
+        end
+        @time run(1)
+        Test.@test run(2) == 2
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    calls = parsed.syntax_facts.calls
+
+    @test [(item.name, item.terminal_name, item.argument_count, item.keyword_args) for item in calls] == [
+        ("JSON3.read", "read", 1, ["allow_inf"]),
+        ("helper", "helper", 1, String[]),
+        ("println", "println", 1, String[]),
+        ("run", "run", 1, String[]),
+        ("run", "run", 1, String[]),
+    ]
+    @test !("short" in [item.name for item in calls])
+    @test !("demo" in [item.name for item in calls])
+end
+
 @testset "parser type facts" begin
     temp = mktempdir()
     source = joinpath(temp, "types.jl")

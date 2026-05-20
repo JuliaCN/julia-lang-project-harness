@@ -116,6 +116,69 @@ end
     @test scope.sources["JuliaSyntax"]["rev"] == "main"
 end
 
+@testset "project runner captures workspace member scopes" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Root"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [workspace]
+        projects = ["packages/Member"]
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "packages", "Member", "src"))
+    write(joinpath(root, "src", "Root.jl"), "module Root\nend\n")
+    write_project(joinpath(root, "packages", "Member"), "Member")
+    write(joinpath(root, "packages", "Member", "src", "Member.jl"), "module Member\nend\n")
+
+    report = run_julia_project_harness(root)
+    snapshot = render_julia_project_harness_agent_snapshot(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test length(report.workspace_member_scopes) == 1
+    @test only(report.workspace_member_scopes).package_name == "Member"
+    @test occursin("Workspace:", snapshot)
+    @test occursin("Member root=packages/Member entry=packages/Member/src/Member.jl", snapshot)
+end
+
+@testset "project runner evaluates workspace members with member deps" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Root"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+
+        [workspace]
+        projects = ["packages/Member"]
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "packages", "Member", "src"))
+    write(joinpath(root, "src", "Root.jl"), "module Root\nusing JSON3\nend\n")
+    write_project(joinpath(root, "packages", "Member"), "Member")
+    write(
+        joinpath(root, "packages", "Member", "src", "Member.jl"),
+        "module Member\nusing JSON3\nend\n",
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R008", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
+    @test occursin("packages/Member/src/Member.jl", rendered)
+end
+
 @testset "project runner reports undeclared source imports" begin
     root = mktempdir()
     write_project(root, "Example")

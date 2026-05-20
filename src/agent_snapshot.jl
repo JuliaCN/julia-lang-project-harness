@@ -8,15 +8,32 @@ function render_julia_project_harness_agent_snapshot(
 )
     isdir(project_root) || error("project root does not exist: $(project_root)")
     scope = julia_project_harness_scope(project_root, config)
-    parsed_files = [parse_julia_file(path) for path in discover_julia_files(scope_monitored_paths(scope), config)]
-    findings = evaluate_default_rule_packs(scope, parsed_files, config)
-    render_julia_package_snapshot(scope, parsed_files, findings)
+    workspace_member_scopes = julia_workspace_member_scopes(scope, config)
+    monitored_paths = vcat(
+        scope_monitored_paths(scope),
+        mapreduce(scope_monitored_paths, vcat, workspace_member_scopes; init=String[]),
+    )
+    parsed_files = [parse_julia_file(path) for path in discover_julia_files(monitored_paths, config)]
+    findings = evaluate_default_rule_packs(
+        scope,
+        parsed_files,
+        config;
+        workspace_member_scopes=workspace_member_scopes,
+    )
+    render_julia_package_snapshot(
+        scope,
+        parsed_files_for_scope(scope, parsed_files),
+        findings;
+        workspace_member_scopes,
+    )
 end
 
 function render_julia_package_snapshot(
     scope::JuliaProjectHarnessScope,
     parsed_files::Vector{ParsedJuliaFile},
     findings::Vector{JuliaHarnessFinding},
+    ;
+    workspace_member_scopes=JuliaProjectHarnessScope[],
 )
     source_count = count(
         parsed -> any(source_path -> is_path_under(parsed.report.path, source_path), scope.source_paths),
@@ -36,6 +53,11 @@ function render_julia_package_snapshot(
     if !isempty(project_lines)
         rendered *= "Project:\n"
         rendered *= join(project_lines, "\n") * "\n"
+    end
+    workspace_lines = snapshot_workspace_lines(scope, workspace_member_scopes)
+    if !isempty(workspace_lines)
+        rendered *= "Workspace:\n"
+        rendered *= join(workspace_lines, "\n") * "\n"
     end
     module_lines = snapshot_module_lines(scope, parsed_files)
     if !isempty(module_lines)
@@ -88,12 +110,29 @@ end
 function snapshot_project_lines(scope::JuliaProjectHarnessScope)
     lines = String[]
     !isnothing(scope.project_entryfile) && push!(lines, "- entryfile=$(scope.project_entryfile)")
+    !isempty(scope.workspace_projects) &&
+        push!(lines, "- workspace=$(join(scope.workspace_projects, ","))")
     dependency_line = compact_project_dependency_line(scope)
     !isempty(dependency_line) && push!(lines, "- $(dependency_line)")
     target_line = compact_project_targets_line(scope)
     !isempty(target_line) && push!(lines, "- $(target_line)")
     source_line = compact_project_sources_line(scope)
     !isempty(source_line) && push!(lines, "- $(source_line)")
+    lines
+end
+
+function snapshot_workspace_lines(
+    scope::JuliaProjectHarnessScope,
+    workspace_member_scopes::Vector{JuliaProjectHarnessScope},
+)
+    lines = String[]
+    for member in workspace_member_scopes
+        label = something(member.package_name, "<unknown>")
+        root = display_project_path(scope, member.project_root)
+        entry = isnothing(member.package_entry_path) ? "" :
+                " entry=$(display_project_path(scope, member.package_entry_path))"
+        push!(lines, "- $(label) root=$(root)$(entry)")
+    end
     lines
 end
 

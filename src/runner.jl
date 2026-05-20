@@ -10,7 +10,9 @@ end
 function run_julia_project_harness(project_root::AbstractString; config=default_julia_harness_config())
     ispath(project_root) || error("project path does not exist: $(project_root)")
     scope = julia_project_harness_scope(project_root, config)
-    run_paths(scope_monitored_paths(scope), config; scope)
+    workspace_member_scopes = julia_workspace_member_scopes(scope, config)
+    monitored_paths = vcat(scope_monitored_paths(scope), mapreduce(scope_monitored_paths, vcat, workspace_member_scopes; init=String[]))
+    run_paths(monitored_paths, config; scope, workspace_member_scopes)
 end
 
 function assert_julia_lang_harness_clean(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
@@ -35,16 +37,26 @@ function assert_julia_project_harness_pkg_test_clean(
     report
 end
 
-function run_paths(paths::Vector{String}, config::JuliaHarnessConfig; scope=nothing)
+function run_paths(
+    paths::Vector{String},
+    config::JuliaHarnessConfig;
+    scope=nothing,
+    workspace_member_scopes=JuliaProjectHarnessScope[],
+)
     parsed_files = [parse_julia_file(path) for path in discover_julia_files(paths, config)]
-    findings = evaluate_default_rule_packs(scope, parsed_files, config)
+    findings = evaluate_default_rule_packs(
+        scope,
+        parsed_files,
+        config;
+        workspace_member_scopes=workspace_member_scopes,
+    )
     JuliaHarnessReport(
         [parsed.report for parsed in parsed_files],
         findings,
         paths,
         copy(config.blocking_severities),
         scope,
-        JuliaProjectHarnessScope[],
+        workspace_member_scopes,
     )
 end
 
@@ -67,11 +79,30 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
         project_facts.targets,
         project_facts.compat,
         project_facts.sources,
+        project_facts.workspace_projects,
         source_paths,
         test_paths,
         String[],
         String[],
     )
+end
+
+function julia_workspace_member_scopes(
+    scope::JuliaProjectHarnessScope,
+    config::JuliaHarnessConfig,
+)
+    scopes = JuliaProjectHarnessScope[]
+    seen_roots = Set([scope.project_root])
+    for project_path in scope.workspace_projects
+        member_root = isabspath(project_path) ? normpath(project_path) :
+                      normpath(joinpath(scope.project_root, project_path))
+        isdir(member_root) || continue
+        member_scope = julia_project_harness_scope(member_root, config)
+        member_scope.project_root in seen_roots && continue
+        push!(seen_roots, member_scope.project_root)
+        push!(scopes, member_scope)
+    end
+    scopes
 end
 
 function scope_monitored_paths(scope::JuliaProjectHarnessScope)
@@ -96,6 +127,7 @@ struct JuliaProjectTomlFacts
     targets::Dict{String,Vector{String}}
     compat::Dict{String,String}
     sources::Dict{String,Dict{String,String}}
+    workspace_projects::Vector{String}
 end
 
 function parse_project_toml_facts(project_path::AbstractString)
@@ -123,6 +155,7 @@ function parse_project_toml_facts(project_path::AbstractString)
         string_vector_dict(project.targets),
         string_value_dict(project.compat),
         string_source_dict(project.sources),
+        string_workspace_projects(project.workspace),
     )
 end
 
@@ -139,6 +172,7 @@ function empty_project_toml_facts(project_root::AbstractString, project_toml::Un
         Dict{String,Vector{String}}(),
         Dict{String,String}(),
         Dict{String,Dict{String,String}}(),
+        String[],
     )
 end
 
@@ -169,6 +203,11 @@ function string_source_dict(values)
         end
     end
     sources
+end
+
+function string_workspace_projects(workspace)
+    projects = get(workspace, "projects", String[])
+    String[string(project) for project in projects]
 end
 
 function project_search_start(project_path::AbstractString)

@@ -2,14 +2,31 @@ function evaluate_default_rule_packs(
     scope::Union{Nothing,JuliaProjectHarnessScope},
     parsed_files::Vector{ParsedJuliaFile},
     config::JuliaHarnessConfig,
+    ;
+    workspace_member_scopes=JuliaProjectHarnessScope[],
 )
-    findings = vcat(
-        evaluate_syntax_rules(parsed_files),
-        evaluate_project_policy_rules(scope, parsed_files, config),
-        evaluate_modularity_rules(scope, parsed_files),
-        evaluate_agent_policy_rules(scope, parsed_files),
-    )
+    findings = evaluate_syntax_rules(parsed_files)
+    if !isnothing(scope)
+        for scoped in vcat([scope], workspace_member_scopes)
+            scoped_files = parsed_files_for_scope(scoped, parsed_files)
+            append!(findings, evaluate_project_policy_rules(scoped, scoped_files, config))
+            append!(findings, evaluate_modularity_rules(scoped, scoped_files))
+            append!(findings, evaluate_agent_policy_rules(scoped, scoped_files))
+        end
+    end
     apply_config_to_findings(findings, config)
+end
+
+function parsed_files_for_scope(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+)
+    [
+        parsed for parsed in parsed_files if any(
+            path -> is_path_under(parsed.report.path, path),
+            scope_monitored_paths(scope),
+        )
+    ]
 end
 
 function evaluate_agent_policy_rules(

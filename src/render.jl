@@ -113,6 +113,7 @@ function project_scope_dict(scope::JuliaProjectHarnessScope)
         "targets" => scope.targets,
         "compat" => scope.compat,
         "sources" => scope.sources,
+        "workspace_projects" => scope.workspace_projects,
         "source_paths" => slash_path.(scope.source_paths),
         "test_paths" => slash_path.(scope.test_paths),
         "package_paths" => slash_path.(scope.package_paths),

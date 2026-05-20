@@ -1,4 +1,4 @@
-using TOML
+using Pkg
 
 function run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
     for path in paths
@@ -8,7 +8,7 @@ function run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_
 end
 
 function run_julia_project_harness(project_root::AbstractString; config=default_julia_harness_config())
-    isdir(project_root) || error("project root does not exist: $(project_root)")
+    ispath(project_root) || error("project path does not exist: $(project_root)")
     scope = julia_project_harness_scope(project_root, config)
     run_paths(scope_monitored_paths(scope), config; scope)
 end
@@ -21,6 +21,18 @@ end
 function assert_julia_project_harness_clean(project_root::AbstractString; config=default_julia_harness_config())
     report = run_julia_project_harness(project_root; config)
     assert_clean(report)
+end
+
+function assert_julia_project_harness_pkg_test_clean(
+    project_root::AbstractString;
+    config=default_julia_harness_config(),
+)
+    report = run_julia_project_harness(project_root; config)
+    assert_clean(report)
+    if isempty(something(config.agent_advice_allow_explanation, ""))
+        assert_no_advisory_findings(report)
+    end
+    report
 end
 
 function run_paths(paths::Vector{String}, config::JuliaHarnessConfig; scope=nothing)
@@ -37,10 +49,10 @@ function run_paths(paths::Vector{String}, config::JuliaHarnessConfig; scope=noth
 end
 
 function julia_project_harness_scope(project_root::AbstractString, config::JuliaHarnessConfig)
-    root = abspath(String(project_root))
-    project_facts = parse_project_toml_facts(root)
-    source_paths = existing_configured_paths(project_root, config.source_dir_names)
-    test_paths = config.include_tests ? existing_configured_paths(project_root, config.test_dir_names) :
+    project_facts = parse_project_toml_facts(project_root)
+    root = project_facts.project_root
+    source_paths = existing_configured_paths(root, config.source_dir_names)
+    test_paths = config.include_tests ? existing_configured_paths(root, config.test_dir_names) :
                  String[]
     JuliaProjectHarnessScope(
         root,
@@ -65,20 +77,30 @@ function existing_configured_paths(project_root::AbstractString, path_names::Vec
 end
 
 struct JuliaProjectTomlFacts
+    project_root::String
     path::Union{Nothing,String}
     package_name::Union{Nothing,String}
 end
 
-function parse_project_toml_facts(project_root::AbstractString)
-    path = joinpath(project_root, "Project.toml")
-    isfile(path) || return JuliaProjectTomlFacts(path, nothing)
-    parsed = try
-        TOML.parsefile(path)
-    catch
-        return JuliaProjectTomlFacts(path, nothing)
+function parse_project_toml_facts(project_path::AbstractString)
+    start = project_search_start(project_path)
+    project_toml = Base.current_project(start)
+    if isnothing(project_toml)
+        root = abspath(start)
+        return JuliaProjectTomlFacts(root, joinpath(root, "Project.toml"), nothing)
     end
-    package_name = get(parsed, "name", nothing)
-    JuliaProjectTomlFacts(path, package_name isa AbstractString ? String(package_name) : nothing)
+    root = dirname(project_toml)
+    project = try
+        Pkg.Types.read_project(project_toml)
+    catch
+        return JuliaProjectTomlFacts(root, project_toml, nothing)
+    end
+    JuliaProjectTomlFacts(root, project_toml, isnothing(project.name) ? nothing : String(project.name))
+end
+
+function project_search_start(project_path::AbstractString)
+    path = abspath(String(project_path))
+    isfile(path) ? dirname(path) : path
 end
 
 function package_entry_path(project_root::AbstractString, package_name::Union{Nothing,String})

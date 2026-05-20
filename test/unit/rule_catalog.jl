@@ -22,3 +22,8 @@
     ]
     @test isempty(julia_agent_policy_rules())
 end
+
+@testset "self apply public api" begin
+    @test isdefined(JuliaLangProjectHarness, :assert_julia_project_harness_pkg_test_clean)
+    @test isdefined(JuliaLangProjectHarness, :render_julia_project_harness_agent_snapshot)
+end

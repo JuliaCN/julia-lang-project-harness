@@ -25,6 +25,21 @@ end
     @test render_julia_project_harness(report) == "[ok] julia\n"
 end
 
+@testset "project runner resolves root from Project.toml owner" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src", "internal"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\ninclude(\"internal/api.jl\")\nend\n")
+    write(joinpath(root, "src", "internal", "api.jl"), "run() = 1\n")
+
+    report = run_julia_project_harness(joinpath(root, "src", "internal"))
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test report.project_scope.project_root == root
+    @test report.project_scope.project_toml_path == joinpath(root, "Project.toml")
+    @test report.project_scope.package_entry_path == joinpath(root, "src", "Example.jl")
+end
+
 @testset "project runner reports package policy facts" begin
     root = mktempdir()
     mkpath(joinpath(root, "src"))

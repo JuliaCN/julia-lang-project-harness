@@ -5,6 +5,7 @@ include("parser.jl")
 include("rules.jl")
 include("render.jl")
 include("runner.jl")
+include("agent_snapshot.jl")
 
 export JuliaDiagnosticSeverity,
     JuliaHarnessConfig,
@@ -16,6 +17,7 @@ export JuliaDiagnosticSeverity,
     SourceLocation,
     assert_julia_lang_harness_clean,
     assert_julia_project_harness_clean,
+    assert_julia_project_harness_pkg_test_clean,
     default_julia_harness_config,
     julia_agent_policy_rules,
     julia_modularity_rules,
@@ -24,6 +26,7 @@ export JuliaDiagnosticSeverity,
     julia_syntax_rules,
     render_julia_project_harness,
     render_julia_project_harness_advice,
+    render_julia_project_harness_agent_snapshot,
     render_julia_project_harness_json,
     run_julia_lang_harness,
     run_julia_project_harness

@@ -76,6 +76,24 @@ end
     @test parsed.syntax_facts.functions[1].bool_positional_args == ["force", "dry_run"]
     @test parsed.syntax_facts.functions[1].stringly_domain_args == ["mode"]
     @test parsed.syntax_facts.functions[1].keyword_args == ["verbose", "mode"]
+    @test [
+        (
+            arg.owner_name,
+            arg.name,
+            arg.type_annotation,
+            arg.is_keyword,
+            arg.has_default,
+            arg.is_bool,
+            arg.is_stringly_domain,
+        ) for arg in parsed.syntax_facts.functions[1].argument_facts
+    ] == [
+        ("run", "x", nothing, false, false, false, false),
+        ("run", "y", "Int", false, false, false, false),
+        ("run", "force", "Bool", false, false, true, false),
+        ("run", "dry_run", nothing, false, true, true, false),
+        ("run", "verbose", nothing, true, true, true, false),
+        ("run", "mode", "AbstractString", true, true, false, true),
+    ]
     @test parsed.syntax_facts.functions[2].positional_args == ["a", "b", "c", "enabled"]
     @test parsed.syntax_facts.functions[2].bool_positional_args == ["enabled"]
     @test isempty(parsed.syntax_facts.functions[2].stringly_domain_args)

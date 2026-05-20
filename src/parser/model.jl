@@ -31,6 +31,19 @@ struct JuliaExportSyntax
     expression::String
 end
 
+struct JuliaFunctionArgumentSyntax
+    line::Int
+    column::Int
+    owner_name::String
+    name::String
+    type_annotation::Union{Nothing,String}
+    is_keyword::Bool
+    has_default::Bool
+    is_bool::Bool
+    is_stringly_domain::Bool
+    expression::String
+end
+
 struct JuliaFunctionSyntax
     line::Int
     column::Int
@@ -42,6 +55,7 @@ struct JuliaFunctionSyntax
     bool_positional_args::Vector{String}
     stringly_domain_args::Vector{String}
     keyword_args::Vector{String}
+    argument_facts::Vector{JuliaFunctionArgumentSyntax}
     return_type::Union{Nothing,String}
     where_parameters::Vector{String}
     control_flow_depth::Int

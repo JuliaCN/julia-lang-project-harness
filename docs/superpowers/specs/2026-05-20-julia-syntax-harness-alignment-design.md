@@ -143,6 +143,9 @@ The parser layer should classify these constructs in the first slice:
 - short-form function definitions
 - Julia dispatch signature facts for typed positional arguments, return
   annotations, and `where` parameters
+- function argument facts for positional and keyword arguments, including type
+  annotations, defaults, boolean flags, and stringly domain arguments
+- argument-level search entries for Julia method signatures
 - function and constructor call references, excluding definition signatures
 - docstring bindings through JuliaSyntax `doc` nodes for named modules,
   functions, macros, types, and constants

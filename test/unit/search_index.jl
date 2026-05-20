@@ -86,6 +86,23 @@
                  "method" in entry.tags,
         entries,
     )
+    @test any(
+        entry -> entry.kind == "argument" &&
+                 entry.name == "run.value" &&
+                 "argument" in entry.tags &&
+                 "positional" in entry.tags &&
+                 occursin("run.value positional::T", entry.detail),
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "argument" &&
+                 entry.name == "run.verbose" &&
+                 "argument" in entry.tags &&
+                 "keyword" in entry.tags &&
+                 "bool" in entry.tags &&
+                 occursin("run.verbose keyword default bool", entry.detail),
+        entries,
+    )
     @test any(entry -> entry.kind == "include" && entry.name == "api.jl", entries)
     @test any(
         entry -> entry.kind == "call" &&
@@ -130,6 +147,10 @@
     @test length(field_results) == 1
     @test only(field_results).entry.kind == "field"
     @test only(field_results).entry.name == "Config.mode"
+    argument_results = search_julia_project(root, "verbose"; tags=["argument"], limit=1)
+    @test length(argument_results) == 1
+    @test only(argument_results).entry.kind == "argument"
+    @test only(argument_results).entry.name == "run.verbose"
     binding_results = search_julia_project(root, "DEFAULT_LIMIT"; tags=["binding"], limit=1)
     @test length(binding_results) == 1
     @test only(binding_results).entry.kind == "const"

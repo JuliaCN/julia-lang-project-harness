@@ -87,6 +87,7 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         function_bool_positional_args(signature),
         function_stringly_domain_args(signature),
         function_keyword_args(signature),
+        function_argument_facts(signature, name),
         function_return_type(node),
         function_where_parameters(node),
         function_control_flow_depth(node),

@@ -55,6 +55,47 @@ function function_stringly_domain_args(signature::JuliaSyntax.SyntaxNode)
     unique(args)
 end
 
+function function_argument_facts(
+    signature::JuliaSyntax.SyntaxNode,
+    owner_name::AbstractString,
+)
+    facts = JuliaFunctionArgumentSyntax[]
+    for argument in call_arguments(signature)
+        if syntax_kind(argument) == "parameters"
+            for keyword_argument in syntax_children(argument)
+                fact = function_argument_fact(keyword_argument, owner_name; is_keyword=true)
+                !isnothing(fact) && push!(facts, fact)
+            end
+        else
+            fact = function_argument_fact(argument, owner_name; is_keyword=false)
+            !isnothing(fact) && push!(facts, fact)
+        end
+    end
+    facts
+end
+
+function function_argument_fact(
+    node::JuliaSyntax.SyntaxNode,
+    owner_name::AbstractString;
+    is_keyword::Bool,
+)
+    name = argument_name(node)
+    isnothing(name) && return nothing
+    location = JuliaSyntax.source_location(node)
+    JuliaFunctionArgumentSyntax(
+        location[1],
+        location[2] - 1,
+        String(owner_name),
+        name,
+        argument_type_annotation(node),
+        is_keyword,
+        argument_has_default(node),
+        is_bool_argument(node),
+        name in STRINGLY_DOMAIN_ARGUMENT_NAMES && is_stringly_argument(node),
+        String(JuliaSyntax.sourcetext(node)),
+    )
+end
+
 function function_argument_nodes(signature::JuliaSyntax.SyntaxNode)
     nodes = JuliaSyntax.SyntaxNode[]
     for argument in call_arguments(signature)
@@ -97,6 +138,10 @@ function is_bool_argument(node::JuliaSyntax.SyntaxNode)
         return typed_name || bool_default
     end
     false
+end
+
+function argument_has_default(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "="
 end
 
 function terminal_type_name(node::JuliaSyntax.SyntaxNode)

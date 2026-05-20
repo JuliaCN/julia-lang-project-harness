@@ -80,3 +80,20 @@ end
     @test occursin("JULIA-MOD-R006", rendered)
     @test occursin("Source file is orphaned from package entry", rendered)
 end
+
+@testset "project runner reports literal include cycles" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\ninclude(\"a.jl\")\nend\n")
+    write(joinpath(root, "src", "a.jl"), "include(\"b.jl\")\n")
+    write(joinpath(root, "src", "b.jl"), "include(\"a.jl\")\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-MOD-R005", rendered)
+    @test occursin("Literal include graph contains a cycle", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-MOD-R005", report.findings) == 1
+end

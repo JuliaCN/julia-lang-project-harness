@@ -18,6 +18,7 @@
     @test [rule.rule_id for rule in julia_modularity_rules()] == [
         "JULIA-MOD-R003",
         "JULIA-MOD-R004",
+        "JULIA-MOD-R005",
         "JULIA-MOD-R006",
     ]
     @test isempty(julia_agent_policy_rules())

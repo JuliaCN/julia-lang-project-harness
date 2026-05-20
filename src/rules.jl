@@ -7,6 +7,7 @@ const JULIA_PROJ_R001 = "JULIA-PROJ-R001"
 const JULIA_PROJ_R002 = "JULIA-PROJ-R002"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
 const JULIA_MOD_R004 = "JULIA-MOD-R004"
+const JULIA_MOD_R005 = "JULIA-MOD-R005"
 const JULIA_MOD_R006 = "JULIA-MOD-R006"
 
 function julia_rule_pack_descriptors()
@@ -74,6 +75,14 @@ julia_modularity_rules() = [
         Warning,
         "Literal include target is missing",
         "Every literal Julia `include(...)` target must resolve to an existing source file.",
+        labels("modularity"),
+    ),
+    JuliaHarnessRule(
+        JULIA_MOD_R005,
+        JULIA_MODULARITY_PACK_ID,
+        Warning,
+        "Literal include graph contains a cycle",
+        "Julia package source graphs should stay acyclic so agents can follow one repair ownership path.",
         labels("modularity"),
     ),
     JuliaHarnessRule(
@@ -234,8 +243,74 @@ function evaluate_modularity_rules(
             end
         end
     end
+    append!(findings, include_cycle_findings(parsed_by_path, rules))
     append!(findings, orphan_source_findings(scope, parsed_files, parsed_by_path, rules))
     findings
+end
+
+function include_cycle_findings(
+    parsed_by_path::Dict{String,ParsedJuliaFile},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    states = Dict{String,Symbol}()
+    reported_cycles = Set{String}()
+    for path in sort!(collect(keys(parsed_by_path)))
+        get(states, path, :unseen) == :unseen || continue
+        visit_include_graph!(
+            findings,
+            states,
+            reported_cycles,
+            String[],
+            path,
+            parsed_by_path,
+            rules,
+        )
+    end
+    findings
+end
+
+function visit_include_graph!(
+    findings::Vector{JuliaHarnessFinding},
+    states::Dict{String,Symbol},
+    reported_cycles::Set{String},
+    stack::Vector{String},
+    path::String,
+    parsed_by_path::Dict{String,ParsedJuliaFile},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    states[path] = :visiting
+    push!(stack, path)
+    parsed = parsed_by_path[path]
+    for include in parsed.syntax_facts.includes
+        include.is_literal || continue
+        target = include.resolved_target
+        isnothing(target) && continue
+        haskey(parsed_by_path, target) || continue
+        target_index = findfirst(==(target), stack)
+        if !isnothing(target_index)
+            cycle_paths = vcat(stack[target_index:end], [target])
+            cycle_key = join(sort(unique(cycle_paths)), "\0")
+            if !(cycle_key in reported_cycles)
+                push!(reported_cycles, cycle_key)
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[JULIA_MOD_R005];
+                        summary="Literal include cycle detected: $(join(cycle_paths, " -> ")).",
+                        location=SourceLocation(parsed.report.path, include.line, include.column),
+                        source_line=source_line(parsed.source, include.line),
+                        label="break the include cycle by moving shared declarations behind one acyclic owner",
+                    ),
+                )
+            end
+            continue
+        end
+        get(states, target, :unseen) == :unseen || continue
+        visit_include_graph!(findings, states, reported_cycles, stack, target, parsed_by_path, rules)
+    end
+    pop!(stack)
+    states[path] = :visited
 end
 
 function orphan_source_findings(

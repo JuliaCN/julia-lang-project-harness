@@ -737,6 +737,68 @@ end
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
 end
 
+@testset "project runner reports undocumented module owner fanout" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        include("owners/a.jl")
+        include("owners/b.jl")
+        include("owners/c.jl")
+        include("owners/d.jl")
+        \"\"\"Run the public value.\"\"\"
+        run(value) = value
+        end
+        """,
+    )
+    mkpath(joinpath(root, "src", "owners"))
+    for name in ["a", "b", "c", "d"]
+        write(joinpath(root, "src", "owners", "$(name).jl"), "$(name)() = 1\n")
+    end
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R006", rendered)
+    @test occursin("Module owner fans out without an intent doc", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts documented module owner fanout" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        \"\"\"Owns the package facade and wires parser-stable local owners.\"\"\"
+        module Example
+        export run
+        include("owners/a.jl")
+        include("owners/b.jl")
+        include("owners/c.jl")
+        include("owners/d.jl")
+        \"\"\"Run the public value.\"\"\"
+        run(value) = value
+        end
+        """,
+    )
+    mkpath(joinpath(root, "src", "owners"))
+    for name in ["a", "b", "c", "d"]
+        write(joinpath(root, "src", "owners", "$(name).jl"), "$(name)() = 1\n")
+    end
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "project runner reports include graph findings" begin
     root = mktempdir()
     write_project(root, "Example")

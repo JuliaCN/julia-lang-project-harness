@@ -28,6 +28,7 @@ const AGENT_JL_R002 = "AGENT-JL-R002"
 const AGENT_JL_R003 = "AGENT-JL-R003"
 const AGENT_JL_R004 = "AGENT-JL-R004"
 const AGENT_JL_R005 = "AGENT-JL-R005"
+const AGENT_JL_R006 = "AGENT-JL-R006"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -275,6 +276,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public API name spans multiple owners",
         "Keep exported Julia API names owned by one file or document a deliberate extension pattern when a public method family spans owners.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R006,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Module owner fans out without an intent doc",
+        "Document module owner files that fan out to many local include owners so agents can understand the aggregation boundary.",
         labels("agent-policy"),
     ),
 ]

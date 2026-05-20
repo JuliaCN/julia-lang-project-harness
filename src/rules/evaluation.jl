@@ -41,6 +41,7 @@ function evaluate_agent_policy_rules(
     documented_names = package_documented_public_names(parsed_files)
     append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
     append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
+    append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
     for parsed in parsed_files
         parsed.report.is_valid || continue
         for function_fact in parsed.syntax_facts.functions
@@ -84,6 +85,56 @@ function evaluate_agent_policy_rules(
         end
     end
     findings
+end
+
+const MAX_UNDOCUMENTED_MODULE_OWNER_INCLUDES = 4
+
+function module_owner_fanout_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        isempty(parsed.syntax_facts.modules) && continue
+        literal_local_includes = [
+            include for include in parsed.syntax_facts.includes if is_local_owner_include(scope, include)
+        ]
+        length(literal_local_includes) >= MAX_UNDOCUMENTED_MODULE_OWNER_INCLUDES || continue
+        has_module_intent_doc(parsed) && continue
+        module_fact = first(parsed.syntax_facts.modules)
+        owner_targets = [
+            display_public_owner_path(scope, include.resolved_target) for include in
+            literal_local_includes
+        ]
+        push!(
+            findings,
+            finding_from_rule(
+                rules[AGENT_JL_R006];
+                summary="Module owner `$(module_fact.name)` includes $(length(literal_local_includes)) local owners without a Julia docstring: $(join(owner_targets, ", ")).",
+                location=SourceLocation(parsed.report.path, module_fact.line, module_fact.column),
+                source_line=source_line(parsed.source, module_fact.line),
+                label="add a module docstring that explains the include owner boundary",
+            ),
+        )
+    end
+    findings
+end
+
+function is_local_owner_include(scope::JuliaProjectHarnessScope, include::JuliaIncludeSyntax)
+    include.is_literal || return false
+    isnothing(include.resolved_target) && return false
+    any(root -> is_path_under(include.resolved_target, root), scope.source_paths)
+end
+
+function has_module_intent_doc(parsed::ParsedJuliaFile)
+    module_names = Set(module_fact.name for module_fact in parsed.syntax_facts.modules)
+    any(
+        docstring_fact -> docstring_fact.target_kind == "module" &&
+                          docstring_fact.target_name in module_names,
+        parsed.syntax_facts.docstrings,
+    )
 end
 
 function public_api_owner_conflict_findings(

@@ -1,3 +1,4 @@
+"""JuliaSyntax-native project harness for Julia package policy and agent context."""
 module JuliaLangProjectHarness
 
 include("model.jl")

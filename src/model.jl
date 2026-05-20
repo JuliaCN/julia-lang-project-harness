@@ -46,6 +46,15 @@ struct JuliaFileReport
     parse_error::Union{Nothing,String}
 end
 
+struct JuliaSearchIndexEntry
+    location::SourceLocation
+    kind::String
+    name::String
+    detail::String
+    search_text::String
+    tags::Vector{String}
+end
+
 struct JuliaProjectHarnessScope
     project_root::String
     project_toml_path::Union{Nothing,String}

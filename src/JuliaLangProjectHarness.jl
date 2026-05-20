@@ -5,6 +5,7 @@ include("parser.jl")
 include("rules.jl")
 include("render.jl")
 include("runner.jl")
+include("search_index.jl")
 include("agent_snapshot.jl")
 
 export JuliaDiagnosticSeverity,
@@ -13,6 +14,7 @@ export JuliaDiagnosticSeverity,
     JuliaHarnessReport,
     JuliaHarnessRule,
     JuliaFileReport,
+    JuliaSearchIndexEntry,
     RulePackDescriptor,
     SourceLocation,
     assert_julia_lang_harness_clean,
@@ -22,8 +24,10 @@ export JuliaDiagnosticSeverity,
     julia_agent_policy_rules,
     julia_modularity_rules,
     julia_project_policy_rules,
+    julia_project_search_index,
     julia_rule_pack_descriptors,
     julia_syntax_rules,
+    julia_lang_search_index,
     render_julia_project_harness,
     render_julia_project_harness_advice,
     render_julia_project_harness_agent_snapshot,

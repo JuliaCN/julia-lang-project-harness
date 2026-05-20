@@ -54,6 +54,34 @@
 
     entries = julia_project_search_index(root)
 
+    @test any(
+        entry -> entry.kind == "owner" &&
+                 entry.name == "src/Example.jl" &&
+                 "owner" in entry.tags &&
+                 "reasoning-tree" in entry.tags &&
+                 "entry" in entry.tags &&
+                 "public" in entry.tags &&
+                 occursin("role=entry", entry.detail) &&
+                 occursin("modules=Example", entry.detail) &&
+                 occursin("public=Config,DEFAULT_LIMIT,run", entry.detail) &&
+                 occursin("includes=src/api.jl", entry.detail),
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "owner" &&
+                 entry.name == "src/api.jl" &&
+                 "source" in entry.tags &&
+                 "method" in entry.tags &&
+                 occursin("methods=helper,run", entry.detail),
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "owner" &&
+                 entry.name == "test/runtests.jl" &&
+                 "test" in entry.tags &&
+                 occursin("tests=\"search\",direct=1", entry.detail),
+        entries,
+    )
     @test any(entry -> entry.kind == "module" && entry.name == "Example", entries)
     @test any(entry -> entry.kind == "export" && entry.name == "run", entries)
     @test any(entry -> entry.kind == "using" && entry.name == "Dates", entries)
@@ -163,7 +191,55 @@
     binding_results = search_julia_project(root, "DEFAULT_LIMIT"; tags=["binding"], limit=1)
     @test length(binding_results) == 1
     @test only(binding_results).entry.kind == "const"
+    owner_results = search_julia_project(root, "helper run"; tags=["owner"], limit=1)
+    @test length(owner_results) == 1
+    @test only(owner_results).entry.kind == "owner"
+    @test only(owner_results).entry.name == "src/api.jl"
     @test isempty(search_julia_index(entries, "run"; limit=0))
+end
+
+@testset "project search index includes workspace owner entries" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Root"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [workspace]
+        projects = ["packages/Member"]
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "packages", "Member", "src"))
+    write(joinpath(root, "src", "Root.jl"), "module Root\nend\n")
+    write(
+        joinpath(root, "packages", "Member", "Project.toml"),
+        """
+        name = "Member"
+        uuid = "22222222-2222-2222-2222-222222222222"
+        version = "0.1.0"
+        """,
+    )
+    write(joinpath(root, "packages", "Member", "src", "Member.jl"), "module Member\nend\n")
+
+    entries = julia_project_search_index(root)
+
+    @test any(
+        entry -> entry.kind == "owner" &&
+                 entry.name == "src/Root.jl" &&
+                 "entry" in entry.tags &&
+                 occursin("modules=Root", entry.detail),
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "owner" &&
+                 entry.name == "src/Member.jl" &&
+                 "entry" in entry.tags &&
+                 occursin("modules=Member", entry.detail),
+        entries,
+    )
 end
 
 @testset "path search index" begin
@@ -175,6 +251,7 @@ end
 
     @test any(entry -> entry.kind == "module" && entry.name == "Standalone", entries)
     @test any(entry -> entry.kind == "function" && entry.name == "answer", entries)
+    @test !any(entry -> entry.kind == "owner", entries)
 
     results = search_julia_lang([root], "answer"; tags=["method"], limit=1)
 

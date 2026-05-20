@@ -23,7 +23,7 @@ function julia_project_search_index(
         mapreduce(scope_monitored_paths, vcat, workspace_member_scopes; init=String[]),
     )
     parsed_files = [parse_julia_file(path) for path in discover_julia_files(monitored_paths, config)]
-    julia_search_index(parsed_files)
+    julia_search_index(parsed_files; owner_scopes=vcat([scope], workspace_member_scopes))
 end
 
 """Search explicit Julia source roots with optional syntax tag filters."""
@@ -80,8 +80,17 @@ function search_julia_index(
     results[1:min(limit, length(results))]
 end
 
-function julia_search_index(parsed_files::Vector{ParsedJuliaFile})
+function julia_search_index(
+    parsed_files::Vector{ParsedJuliaFile};
+    owner_scopes::Vector{JuliaProjectHarnessScope}=JuliaProjectHarnessScope[],
+)
     entries = JuliaSearchIndexEntry[]
+    for owner_scope in owner_scopes
+        append!(
+            entries,
+            owner_search_entries(owner_scope, parsed_files_for_scope(owner_scope, parsed_files)),
+        )
+    end
     for parsed in parsed_files
         parsed.report.is_valid || continue
         append!(entries, module_search_entries(parsed))

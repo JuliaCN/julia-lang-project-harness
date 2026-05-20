@@ -59,7 +59,8 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
         project_facts.path,
         project_facts.package_name,
         project_facts.package_uuid,
-        package_entry_path(root, project_facts.package_name),
+        project_facts.entryfile,
+        package_entry_path(root, project_facts.package_name, project_facts.entryfile),
         project_facts.direct_dependencies,
         project_facts.weak_dependencies,
         project_facts.extra_dependencies,
@@ -88,6 +89,7 @@ struct JuliaProjectTomlFacts
     path::Union{Nothing,String}
     package_name::Union{Nothing,String}
     package_uuid::Union{Nothing,String}
+    entryfile::Union{Nothing,String}
     direct_dependencies::Dict{String,String}
     weak_dependencies::Dict{String,String}
     extra_dependencies::Dict{String,String}
@@ -114,6 +116,7 @@ function parse_project_toml_facts(project_path::AbstractString)
         project_toml,
         isnothing(project.name) ? nothing : String(project.name),
         isnothing(project.uuid) ? nothing : string(project.uuid),
+        isnothing(project.entryfile) ? nothing : String(project.entryfile),
         string_uuid_dict(project.deps),
         string_uuid_dict(project.weakdeps),
         string_uuid_dict(project.extras),
@@ -127,6 +130,7 @@ function empty_project_toml_facts(project_root::AbstractString, project_toml::Un
     JuliaProjectTomlFacts(
         String(project_root),
         project_toml,
+        nothing,
         nothing,
         nothing,
         Dict{String,String}(),
@@ -172,7 +176,15 @@ function project_search_start(project_path::AbstractString)
     isfile(path) ? dirname(path) : path
 end
 
-function package_entry_path(project_root::AbstractString, package_name::Union{Nothing,String})
+function package_entry_path(
+    project_root::AbstractString,
+    package_name::Union{Nothing,String},
+    entryfile::Union{Nothing,String},
+)
+    if !isnothing(entryfile)
+        path = isabspath(entryfile) ? normpath(entryfile) : normpath(joinpath(project_root, entryfile))
+        return isfile(path) ? path : nothing
+    end
     isnothing(package_name) && return nothing
     path = joinpath(project_root, "src", "$(package_name).jl")
     isfile(path) ? path : nothing

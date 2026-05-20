@@ -104,6 +104,7 @@ function project_scope_dict(scope::JuliaProjectHarnessScope)
                                slash_path(scope.project_toml_path),
         "package_name" => scope.package_name,
         "package_uuid" => scope.package_uuid,
+        "project_entryfile" => scope.project_entryfile,
         "package_entry_path" => isnothing(scope.package_entry_path) ? nothing :
                                 slash_path(scope.package_entry_path),
         "direct_dependencies" => scope.direct_dependencies,

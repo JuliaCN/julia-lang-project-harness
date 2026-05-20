@@ -46,6 +46,30 @@ end
     @test report.project_scope.package_entry_path == joinpath(root, "src", "Example.jl")
 end
 
+@testset "project runner honors Project.toml entryfile" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+        entryfile = "src/Entry.jl"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Entry.jl"), "module Example\nend\n")
+
+    report = run_julia_project_harness(root)
+    snapshot = render_julia_project_harness_agent_snapshot(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test report.project_scope.project_entryfile == "src/Entry.jl"
+    @test report.project_scope.package_entry_path == joinpath(root, "src", "Entry.jl")
+    @test occursin("Entry: src/Entry.jl", snapshot)
+    @test occursin("entryfile=src/Entry.jl", snapshot)
+end
+
 @testset "project runner captures Project.toml dependency facts" begin
     root = mktempdir()
     write(

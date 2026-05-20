@@ -51,6 +51,7 @@ struct JuliaProjectHarnessScope
     project_toml_path::Union{Nothing,String}
     package_name::Union{Nothing,String}
     package_uuid::Union{Nothing,String}
+    project_entryfile::Union{Nothing,String}
     package_entry_path::Union{Nothing,String}
     direct_dependencies::Dict{String,String}
     weak_dependencies::Dict{String,String}

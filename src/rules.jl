@@ -228,7 +228,7 @@ function evaluate_project_policy_rules(
             findings,
             finding_from_rule(
                 rules[JULIA_PROJ_R002];
-                summary="Package `$(scope.package_name)` does not expose `src/$(scope.package_name).jl`.",
+                summary="Package `$(scope.package_name)` does not expose entry file `$(expected_entry_file(scope))`.",
                 location=SourceLocation(scope.project_toml_path, 1, 0),
                 label="add the package entry module or configure an explicit source-scope exception",
             ),
@@ -254,6 +254,13 @@ function evaluate_project_policy_rules(
     end
     append!(findings, undeclared_import_findings(scope, parsed_files, rules))
     findings
+end
+
+function expected_entry_file(scope::JuliaProjectHarnessScope)
+    if !isnothing(scope.project_entryfile)
+        return scope.project_entryfile
+    end
+    isnothing(scope.package_name) ? "src/<PackageName>.jl" : "src/$(scope.package_name).jl"
 end
 
 function undeclared_import_findings(

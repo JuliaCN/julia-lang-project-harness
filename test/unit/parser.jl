@@ -153,6 +153,46 @@ end
     ]
 end
 
+@testset "parser identifier facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "identifiers.jl")
+    write(
+        source,
+        """
+        module Identifiers
+        struct Payload
+            value::Int
+        end
+        run(value::Payload) = JSON3.read(string(value))
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    identifiers = parsed.syntax_facts.identifiers
+
+    @test any(
+        item -> item.name == "Identifiers" &&
+                item.parent_kind == "module" &&
+                item.line == 1,
+        identifiers,
+    )
+    @test any(
+        item -> item.name == "Payload" && item.parent_kind == "struct",
+        identifiers,
+    )
+    @test any(
+        item -> item.name == "JSON3" &&
+                item.parent_kind == "." &&
+                item.parent_expression == "JSON3.read",
+        identifiers,
+    )
+    @test any(
+        item -> item.name == "value" && item.parent_kind == "call",
+        identifiers,
+    )
+end
+
 @testset "parser type facts" begin
     temp = mktempdir()
     source = joinpath(temp, "types.jl")

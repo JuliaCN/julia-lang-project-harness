@@ -52,6 +52,7 @@ function empty_julia_native_syntax_facts()
         JuliaMacroInvocationSyntax[],
         JuliaCallSyntax[],
         JuliaDocstringSyntax[],
+        JuliaIdentifierSyntax[],
         JuliaTestSyntax[],
     )
 end
@@ -67,6 +68,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaMacroInvocationSyntax[],
         JuliaCallSyntax[],
         JuliaDocstringSyntax[],
+        JuliaIdentifierSyntax[],
         JuliaTestSyntax[],
     )
     collect_julia_syntax_facts!(collector, syntax, source_path)
@@ -81,6 +83,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.macro_invocations,
         collector.calls,
         collector.docstrings,
+        collector.identifiers,
         collector.tests,
     )
 end
@@ -95,6 +98,7 @@ mutable struct JuliaSyntaxFactCollector
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     calls::Vector{JuliaCallSyntax}
     docstrings::Vector{JuliaDocstringSyntax}
+    identifiers::Vector{JuliaIdentifierSyntax}
     tests::Vector{JuliaTestSyntax}
 end
 
@@ -131,6 +135,9 @@ function collect_julia_syntax_facts!(
     elseif syntax_kind(node) == "call"
         call_fact = call_syntax_from_node(node, parent)
         !isnothing(call_fact) && push!(collector.calls, call_fact)
+    elseif syntax_kind(node) == "Identifier"
+        identifier_fact = identifier_syntax_from_node(node, parent)
+        !isnothing(identifier_fact) && push!(collector.identifiers, identifier_fact)
     end
     for child in syntax_children(node)
         collect_julia_syntax_facts!(collector, child, source_path, node)

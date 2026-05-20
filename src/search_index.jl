@@ -35,6 +35,7 @@ function julia_search_index(parsed_files::Vector{ParsedJuliaFile})
         append!(entries, function_search_entries(parsed))
         append!(entries, call_search_entries(parsed))
         append!(entries, docstring_search_entries(parsed))
+        append!(entries, identifier_search_entries(parsed))
         append!(entries, test_search_entries(parsed))
         append!(entries, include_search_entries(parsed))
     end
@@ -159,6 +160,20 @@ function docstring_search_entries(parsed::ParsedJuliaFile)
     ]
 end
 
+function identifier_search_entries(parsed::ParsedJuliaFile)
+    [
+        search_index_entry(
+            parsed,
+            identifier_fact.line,
+            identifier_fact.column,
+            "identifier",
+            identifier_fact.name;
+            detail=display_identifier_search_detail(identifier_fact),
+            tags=["identifier", identifier_fact.parent_kind],
+        ) for identifier_fact in parsed.syntax_facts.identifiers
+    ]
+end
+
 function test_search_entries(parsed::ParsedJuliaFile)
     [
         search_index_entry(
@@ -243,6 +258,11 @@ end
 function first_docstring_line(text::AbstractString)
     lines = split(text, '\n'; keepempty=false)
     isempty(lines) ? "" : strip(first(lines))
+end
+
+function display_identifier_search_detail(identifier_fact::JuliaIdentifierSyntax)
+    "identifier $(identifier_fact.name) in $(identifier_fact.parent_kind): " *
+    identifier_fact.parent_expression
 end
 
 function include_search_detail(include_fact::JuliaIncludeSyntax)

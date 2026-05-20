@@ -66,6 +66,12 @@
                  occursin("Run a value", entry.search_text),
         entries,
     )
+    @test any(
+        entry -> entry.kind == "identifier" &&
+                 entry.name == "helper" &&
+                 "call" in entry.tags,
+        entries,
+    )
     @test any(entry -> entry.kind == "testset" && entry.name == "search", entries)
     @test all(entry -> !isnothing(entry.location.path), entries)
 end

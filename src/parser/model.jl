@@ -82,6 +82,14 @@ struct JuliaDocstringSyntax
     expression::String
 end
 
+struct JuliaIdentifierSyntax
+    line::Int
+    column::Int
+    name::String
+    parent_kind::String
+    parent_expression::String
+end
+
 struct JuliaTestSyntax
     line::Int
     column::Int
@@ -107,6 +115,7 @@ struct JuliaNativeSyntaxFacts
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     calls::Vector{JuliaCallSyntax}
     docstrings::Vector{JuliaDocstringSyntax}
+    identifiers::Vector{JuliaIdentifierSyntax}
     tests::Vector{JuliaTestSyntax}
 end
 

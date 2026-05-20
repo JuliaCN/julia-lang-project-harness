@@ -112,6 +112,7 @@ The parser layer should expose these internal facts:
 - `JuliaMacroInvocationSyntax`
 - `JuliaCallSyntax`
 - `JuliaDocstringSyntax`
+- `JuliaIdentifierSyntax`
 - `JuliaTestSyntax`
 
 Each fact that can trigger a finding must carry a stable source location:
@@ -139,6 +140,8 @@ The parser layer should classify these constructs in the first slice:
 - function and constructor call references, excluding definition signatures
 - docstring bindings through JuliaSyntax `doc` nodes for named modules,
   functions, macros, types, and constants
+- identifier occurrences with the immediate JuliaSyntax parent context, as the
+  conservative substrate for reference search
 - macro definitions
 - macro invocations
 - mutable and immutable struct definitions
@@ -250,17 +253,20 @@ from `JuliaSyntax` facts owned by the parser layer, so search behavior and
 policy behavior agree on source locations and syntax classification.
 
 Initial entries should cover definitions, public API declarations, imports,
-tests, includes, call references, and docstrings. A call reference is a real
-invocation in code, macro arguments, or test expressions. Function and macro
-definition signatures are not call references. A docstring entry is only emitted
-from a JuliaSyntax `doc` node with a named target; ordinary string literals are
-not treated as documentation.
+tests, includes, call references, docstrings, and identifier occurrences. A call
+reference is a real invocation in code, macro arguments, or test expressions.
+Function and macro definition signatures are not call references. A docstring
+entry is only emitted from a JuliaSyntax `doc` node with a named target;
+ordinary string literals are not treated as documentation. An identifier entry
+is a syntax occurrence with its immediate parent kind; it is intentionally
+low-level so later reference classifiers can build on real syntax facts instead
+of rescanning text.
 
 Each search entry should carry:
 
 - stable source location;
-- kind, such as `module`, `function`, `struct`, `call`, `doc`, `include`, or
-  `test`;
+- kind, such as `module`, `function`, `struct`, `call`, `doc`, `identifier`,
+  `include`, or `test`;
 - name;
 - detail text for disambiguation;
 - combined search text;

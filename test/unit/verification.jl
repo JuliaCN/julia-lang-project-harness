@@ -126,7 +126,9 @@ end
     @test occursin("owner=test/runtests.jl", rendered)
     @test occursin("fingerprint=", rendered)
     @test occursin("kind=stress", rendered)
+    @test occursin("requires=scenario,load_steps,p50_ms,p99_ms,threshold,result", rendered)
     @test occursin("\"records\"", json)
+    @test occursin("\"required_evidence\"", json)
     @test occursin("VerifyJSONExt", json)
 
     advice_out = IOBuffer()
@@ -138,6 +140,7 @@ end
     @test occursin("[verify-advice] pending=1", advice)
     @test occursin("kind=stress", advice)
     @test occursin("fingerprint=stress", advice)
+    @test occursin("requires=scenario,load_steps,p50_ms,p99_ms,threshold,result", advice)
 
     profile_rendered = render_julia_verification_profile(profile)
     profile_json = render_julia_verification_profile_json(profile)
@@ -190,6 +193,11 @@ end
     @test occursin("kind=performance state=pending phase=after_unit_tests_pass", task_rendered)
     @test occursin("kind=security state=pending phase=before_release", task_rendered)
     @test occursin("fingerprint=performance", task_rendered)
+    @test occursin(
+        "requires=benchmark_command,baseline,regression_threshold,latency_or_throughput,allocation_profile,artifact",
+        task_rendered,
+    )
+    @test occursin("requires=attack_classes,authorization_boundary,result", task_rendered)
     @test occursin("responsibilities=public_api,external_dependency", task_rendered)
     @test occursin("Agent should add or run Julia-native performance evidence", task_rendered)
 
@@ -199,6 +207,7 @@ end
     @test occursin("[verify-advice] pending=4", advice)
     @test occursin("kind=performance", advice)
     @test occursin("kind=security", advice)
+    @test occursin("requires=benchmark_command,baseline,regression_threshold", advice)
     @test occursin("evidence=responsibilities=public_api,external_dependency", advice)
     @test !occursin("exports=", advice)
 end

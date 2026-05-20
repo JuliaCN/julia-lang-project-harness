@@ -328,6 +328,8 @@ function render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
             compact_evidence = join(evidence, ";")
             push!(lines, "  evidence=$(compact_evidence)")
         end
+        required_evidence = compact_required_evidence(record)
+        !isempty(required_evidence) && push!(lines, "  requires=$(required_evidence)")
         push!(lines, "  reason=$(record.reason)")
     end
     join(lines, "\n") * "\n"
@@ -362,6 +364,8 @@ function verification_task_record_dict(record::JuliaVerificationTaskRecord)
         "line" => record.line,
         "command" => record.command,
         "evidence" => record.evidence,
+        "required_evidence" => verification_task_required_evidence(record),
+        "required_receipt" => verification_task_required_receipt(record),
         "reason" => record.reason,
     )
 end

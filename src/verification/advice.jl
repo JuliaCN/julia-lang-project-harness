@@ -26,6 +26,8 @@ function render_julia_verification_pending_advice(profile::JuliaVerificationProf
         push!(lines, "  fingerprint=$(record.fingerprint)")
         advice_evidence = compact_advice_evidence(record)
         !isempty(advice_evidence) && push!(lines, "  evidence=$(advice_evidence)")
+        required_evidence = compact_required_evidence(record)
+        !isempty(required_evidence) && push!(lines, "  requires=$(required_evidence)")
         push!(lines, "  next=$(record.reason)")
     end
     join(lines, "\n") * "\n"

@@ -88,8 +88,11 @@ end
     @test occursin("kind=pkg_test", task_rendered)
     @test occursin("kind=stress", task_rendered)
     @test occursin("fingerprint=stress", task_rendered)
+    @test occursin("requires=scenario,load_steps,p50_ms,p99_ms,threshold,result", task_rendered)
     @test json_status == 0
-    @test occursin("\"records\"", String(take!(json_out)))
+    json_rendered = String(take!(json_out))
+    @test occursin("\"records\"", json_rendered)
+    @test occursin("\"required_evidence\"", json_rendered)
     @test profile_status == 0
     @test occursin("VerificationProfiles:", String(take!(profile_out)))
     @test profile_json_status == 0

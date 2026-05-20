@@ -577,10 +577,15 @@ agent obligations. Ordinary `pkg_test`, self-policy, extension, and syntax-searc
 records can carry runnable commands. External evidence families such as
 `stress`, `performance`, `chaos`, and `security` should carry owner path,
 fingerprint, lifecycle phase, compact parser/project evidence, and a reason for
-what the agent should add or run next. Compact text renders should include the
-fingerprint so future receipts or waivers can bind evidence to the exact inferred
-obligation. The harness must not pretend those tasks are satisfied merely
-because package tests pass.
+what the agent should add or run next. They should also expose required evidence
+keys. For example, performance requires benchmark command, baseline, regression
+threshold, runtime or allocation metric, and artifact; security requires scanned
+attack classes and an authorization-boundary result; chaos requires injected
+failure, degraded behavior, and recovery result; stress requires load steps,
+latency percentiles, threshold, and result. Compact text renders should include
+the fingerprint so future receipts or waivers can bind evidence to the exact
+inferred obligation. The harness must not pretend those tasks are satisfied
+merely because package tests pass.
 
 The package-test assertion should stay non-blocking for pending external
 evidence, but it should emit a compact `[verify-advice]` section by default

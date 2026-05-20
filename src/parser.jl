@@ -73,6 +73,11 @@ struct JuliaTestSyntax
     expression::String
 end
 
+struct JuliaSourceMetrics
+    line_count::Int
+    nonblank_line_count::Int
+end
+
 struct JuliaNativeSyntaxFacts
     has_syntax_tree::Bool
     modules::Vector{JuliaModuleSyntax}
@@ -88,6 +93,7 @@ end
 struct ParsedJuliaFile
     report::JuliaFileReport
     source::String
+    metrics::JuliaSourceMetrics
     syntax_facts::JuliaNativeSyntaxFacts
 end
 
@@ -99,21 +105,25 @@ function parse_julia_file(path::AbstractString)
         return ParsedJuliaFile(
             JuliaFileReport(path_string, false, "failed to read Julia source: $(err)"),
             "",
+            JuliaSourceMetrics(0, 0),
             empty_julia_native_syntax_facts(),
         )
     end
 
+    metrics = source_metrics(source)
     try
         syntax = JuliaSyntax.parseall(JuliaSyntax.SyntaxNode, source; filename=path_string)
         ParsedJuliaFile(
             JuliaFileReport(path_string, true, nothing),
             source,
+            metrics,
             julia_native_syntax_facts(syntax, path_string),
         )
     catch err
         ParsedJuliaFile(
             JuliaFileReport(path_string, false, sprint(showerror, err)),
             source,
+            metrics,
             empty_julia_native_syntax_facts(),
         )
     end
@@ -122,6 +132,11 @@ end
 function source_line(source::AbstractString, line::Int)
     lines = split(source, '\n'; keepempty=true)
     1 <= line <= length(lines) ? lines[line] : nothing
+end
+
+function source_metrics(source::AbstractString)
+    lines = split(source, '\n'; keepempty=true)
+    JuliaSourceMetrics(length(lines), count(line -> !isempty(strip(line)), lines))
 end
 
 function empty_julia_native_syntax_facts()

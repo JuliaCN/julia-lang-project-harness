@@ -9,6 +9,7 @@ using JuliaLangProjectHarness: parse_julia_file
 
     @test parsed.report.is_valid
     @test isnothing(parsed.report.parse_error)
+    @test parsed.metrics.nonblank_line_count == 4
     @test parsed.syntax_facts.has_syntax_tree
 end
 

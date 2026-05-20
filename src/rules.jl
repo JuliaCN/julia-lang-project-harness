@@ -8,6 +8,7 @@ const JULIA_SYN_R001 = "JULIA-SYN-R001"
 const JULIA_PROJ_R001 = "JULIA-PROJ-R001"
 const JULIA_PROJ_R002 = "JULIA-PROJ-R002"
 const JULIA_PROJ_R003 = "JULIA-PROJ-R003"
+const JULIA_PROJ_R004 = "JULIA-PROJ-R004"
 const JULIA_PROJ_R005 = "JULIA-PROJ-R005"
 const JULIA_PROJ_R006 = "JULIA-PROJ-R006"
 const JULIA_PROJ_R007 = "JULIA-PROJ-R007"
@@ -20,6 +21,7 @@ const JULIA_MOD_R007 = "JULIA-MOD-R007"
 const AGENT_JL_R002 = "AGENT-JL-R002"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
+const MAX_THIN_RUNTESTS_NONBLANK_LINES = 80
 
 function julia_rule_pack_descriptors()
     [
@@ -75,6 +77,14 @@ julia_project_policy_rules() = [
         Warning,
         "Pkg.test entrypoint is missing",
         "Julia package test scopes should mount the `Pkg.test` entrypoint at `test/runtests.jl`.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R004,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Pkg.test entrypoint is no longer a thin aggregate",
+        "`test/runtests.jl` should stay a compact `Pkg.test` aggregate and move larger test bodies into included test files.",
         labels("project-policy"),
     ),
     JuliaHarnessRule(
@@ -293,6 +303,7 @@ function evaluate_project_policy_rules(
     end
     append!(findings, scope_explanation_findings(scope, config, rules))
     append!(findings, test_entrypoint_findings(scope, rules))
+    append!(findings, thin_runtests_findings(scope, parsed_files, rules))
     append!(findings, undeclared_import_findings(scope, parsed_files, rules))
     findings
 end
@@ -441,6 +452,39 @@ function test_entrypoint_findings(
         )
     end
     findings
+end
+
+function thin_runtests_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        is_runtests_file(scope, parsed.report.path) || continue
+        parsed.metrics.nonblank_line_count > MAX_THIN_RUNTESTS_NONBLANK_LINES || continue
+        has_literal_includes(parsed) && continue
+        push!(
+            findings,
+            finding_from_rule(
+                rules[JULIA_PROJ_R004];
+                summary="`$(parsed.report.path)` has $(parsed.metrics.nonblank_line_count) nonblank lines and no literal included test files.",
+                location=SourceLocation(parsed.report.path, 1, 0),
+                source_line=source_line(parsed.source, 1),
+                label="move larger test bodies into included test files and keep runtests.jl as the aggregate",
+            ),
+        )
+    end
+    findings
+end
+
+function is_runtests_file(scope::JuliaProjectHarnessScope, path::AbstractString)
+    any(test_path -> normpath(path) == normpath(joinpath(test_path, "runtests.jl")), scope.test_paths)
+end
+
+function has_literal_includes(parsed::ParsedJuliaFile)
+    any(include -> include.is_literal, parsed.syntax_facts.includes)
 end
 
 function undeclared_import_findings(

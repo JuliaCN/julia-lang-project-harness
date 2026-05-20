@@ -158,6 +158,24 @@ end
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R003", report.findings) == 1
 end
 
+@testset "project runner reports large inline runtests entrypoint" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    tests = join(fill("@test true", 81), "\n")
+    write(joinpath(root, "test", "runtests.jl"), "using Test\n$(tests)\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R004", rendered)
+    @test occursin("Pkg.test entrypoint is no longer a thin aggregate", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R004", report.findings) == 1
+end
+
 @testset "project runner reports custom source scope without explanation" begin
     root = mktempdir()
     write_project(root, "Example")

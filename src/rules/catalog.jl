@@ -39,6 +39,7 @@ const AGENT_JL_R012 = "AGENT-JL-R012"
 const AGENT_JL_R013 = "AGENT-JL-R013"
 const AGENT_JL_R014 = "AGENT-JL-R014"
 const AGENT_JL_R015 = "AGENT-JL-R015"
+const AGENT_JL_R016 = "AGENT-JL-R016"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -251,130 +252,6 @@ julia_modularity_rules() = [
         "Source path uses a generic owner bucket",
         "Julia source path segments should name domain ownership instead of generic buckets such as `utils`, `common`, `helpers`, or `misc`.",
         labels("modularity"),
-    ),
-]
-
-"""Return advisory rules that shape agent-friendly Julia APIs."""
-julia_agent_policy_rules() = [
-    JuliaHarnessRule(
-        AGENT_JL_R001,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public API lacks an intent doc",
-        "Document exported or public Julia API with a JuliaSyntax docstring so agents can reason from native syntax without guessing intent.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R002,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public method has a broad positional surface",
-        "Prefer keyword options or a named config object when exported Julia methods need many arguments.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R003,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public method exposes positional Bool flags",
-        "Prefer keyword Bool options or a named config object when exported Julia methods need multiple flags.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R004,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public method exposes a stringly domain argument",
-        "Prefer a named domain carrier when exported Julia methods accept stringly state, mode, kind, phase, status, tag, or type arguments.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R005,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public API name spans multiple owners",
-        "Keep exported Julia API names owned by one file or document a deliberate extension pattern when a public method family spans owners.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R006,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Module owner fans out without an intent doc",
-        "Document module owner files that fan out to many local include owners so agents can understand the aggregation boundary.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R007,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public method hides deep control flow",
-        "Prefer named pipeline steps when exported Julia methods hide algorithm shape behind deeply nested control flow.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R008,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public method body lacks named pipeline steps",
-        "Split broad exported Julia methods into named pipeline steps when the public body has many top-level statements.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R009,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public method family is scattered across owners",
-        "Document an explicit Julia dispatch or extension pattern when an exported method family is implemented across multiple owner files.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R010,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Macro-heavy public API lacks a syntax contract",
-        "Document macro-heavy exported Julia methods with a syntax, macro expansion, or generated-code contract so agents can preserve parser-visible behavior.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R011,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public type has untyped fields",
-        "Give exported Julia struct fields explicit type annotations so agents can understand public data shape without inferring `Any` from implementation details.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R012,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public type exposes stringly domain fields",
-        "Prefer Symbol, enum, or named value carriers when exported Julia structs expose mode, status, category, or type fields.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R013,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Public mutable type lacks a mutation contract",
-        "Document mutation ownership, lifecycle, or invariants when exported Julia types are mutable.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R014,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Pkg.test lacks the harness verification profile",
-        "Projects that depend on JuliaLangProjectHarness should mount `assert_julia_project_harness_test_profile_clean` inside package tests so agents receive policy, search, and verification feedback during `Pkg.test`.",
-        labels("agent-policy"),
-    ),
-    JuliaHarnessRule(
-        AGENT_JL_R015,
-        JULIA_AGENT_POLICY_PACK_ID,
-        Info,
-        "Internal method nests traversal scaffolding",
-        "Extract internal traversal bodies with nested loops and guard branches into named iterators, predicates, or data-processing helpers so agents can repair algorithm steps without untangling scaffolding.",
-        labels("agent-policy"),
     ),
 ]
 

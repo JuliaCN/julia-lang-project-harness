@@ -248,14 +248,14 @@ Already implemented or designed:
 - Advisory rules cover public docs, bool/stringly arguments, exported-name
   conflicts, large owner fanout, public algorithm shape, scattered method
   families, macro-heavy APIs, struct field contracts, mutable-struct mutation
-  contracts, in-test verification hooks, and internal nested traversal shape.
+  contracts, mutating-method mutation contracts, in-test verification hooks, and
+  internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.
 
 Useful next policy slices:
 
-- Public mutating methods should document which arguments are mutated.
 - Package extensions should have a verification task when `[weakdeps]` and
   `[extensions]` are present.
 - Docs projects using Documenter should expose a doctest or docs-build task.

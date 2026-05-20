@@ -437,9 +437,11 @@ Initial advisory rules:
 - `AGENT-JL-R015`: internal implementation function nests traversal loops and
   guard branches instead of exposing named iterator, predicate, or data
   processing helpers for agent repair.
+- `AGENT-JL-R016`: exported mutating method lacks a mutation contract note
+  explaining which arguments or state are changed.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R015`. Later advisory rules can land only after the needed
+`AGENT-JL-R016`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

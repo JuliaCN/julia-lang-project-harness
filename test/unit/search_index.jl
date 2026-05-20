@@ -31,7 +31,13 @@
     )
     write(
         joinpath(root, "src", "api.jl"),
-        "\"\"\"Run a value through the public API.\"\"\"\nrun(value; verbose=false) = helper(value)\nhelper(value) = string(value)\n",
+        """
+        \"\"\"Run a value through the public API.\"\"\"
+        function run(value; verbose=false)
+            @alpha helper(value)
+        end
+        helper(value) = string(value)
+        """,
     )
     write(
         joinpath(root, "test", "runtests.jl"),
@@ -48,6 +54,7 @@
         entry -> entry.kind == "function" &&
                  entry.name == "run" &&
                  occursin("verbose", entry.search_text) &&
+                 occursin("macros=1:alpha", entry.detail) &&
                  "method" in entry.tags,
         entries,
     )

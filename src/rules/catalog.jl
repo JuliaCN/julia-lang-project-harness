@@ -31,6 +31,7 @@ const AGENT_JL_R005 = "AGENT-JL-R005"
 const AGENT_JL_R006 = "AGENT-JL-R006"
 const AGENT_JL_R007 = "AGENT-JL-R007"
 const AGENT_JL_R008 = "AGENT-JL-R008"
+const AGENT_JL_R010 = "AGENT-JL-R010"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -302,6 +303,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public method body lacks named pipeline steps",
         "Split broad exported Julia methods into named pipeline steps when the public body has many top-level statements.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R010,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Macro-heavy public API lacks a syntax contract",
+        "Document macro-heavy exported Julia methods with a syntax, macro expansion, or generated-code contract so agents can preserve parser-visible behavior.",
         labels("agent-policy"),
     ),
 ]

@@ -35,6 +35,16 @@ function function_body_named_calls(node::JuliaSyntax.SyntaxNode)
     names
 end
 
+function function_macro_invocation_facts(node::JuliaSyntax.SyntaxNode)
+    names = String[]
+    seen = Set{String}()
+    count = Ref(0)
+    for child in function_body_nodes(node)
+        collect_function_macro_invocation_facts!(count, names, seen, child)
+    end
+    (count=count[], names=names)
+end
+
 function function_body_statement_nodes(node::JuliaSyntax.SyntaxNode)
     statements = JuliaSyntax.SyntaxNode[]
     for child in function_body_nodes(node)
@@ -66,6 +76,30 @@ function collect_body_named_calls!(
     end
     for child in syntax_children(node)
         collect_body_named_calls!(names, seen, child)
+    end
+end
+
+function collect_function_macro_invocation_facts!(
+    count::Base.RefValue{Int},
+    names::Vector{String},
+    seen::Set{String},
+    node::JuliaSyntax.SyntaxNode,
+)
+    kind = syntax_kind(node)
+    kind in ("function", "macro") && return
+    if kind == "macrocall"
+        invocation = macro_invocation_syntax_from_node(node)
+        if !isnothing(invocation)
+            count[] += 1
+            name = invocation.terminal_name
+            if !(name in seen)
+                push!(seen, name)
+                push!(names, name)
+            end
+        end
+    end
+    for child in syntax_children(node)
+        collect_function_macro_invocation_facts!(count, names, seen, child)
     end
 end
 

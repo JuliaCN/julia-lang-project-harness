@@ -347,7 +347,9 @@ function display_function_search_detail(function_fact::JuliaFunctionSyntax)
                   " body=$(function_fact.body_statement_count)"
     step_suffix = isempty(function_fact.body_named_calls) ? "" :
                   " steps=$(join(function_fact.body_named_calls, ","))"
-    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(step_suffix)"
+    macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
+                   " macros=$(function_fact.macro_invocation_count):$(join(function_fact.macro_invocation_names, ","))"
+    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(step_suffix)$(macro_suffix)"
 end
 
 function display_call_search_detail(call_fact::JuliaCallSyntax)

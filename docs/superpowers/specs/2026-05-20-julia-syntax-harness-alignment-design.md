@@ -406,8 +406,8 @@ Initial advisory rules:
 - `AGENT-JL-R010`: macro-heavy public API lacks a syntax-level contract note.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R008`. Later advisory rules can land only after the needed
-JuliaSyntax facts are present and the tests lock the emitted advice.
+`AGENT-JL-R008`, plus `AGENT-JL-R010`. Later advisory rules can land only after
+the needed JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API
 

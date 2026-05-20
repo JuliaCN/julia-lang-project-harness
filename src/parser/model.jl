@@ -45,6 +45,8 @@ struct JuliaFunctionSyntax
     control_flow_kinds::Vector{String}
     body_statement_count::Int
     body_named_calls::Vector{String}
+    macro_invocation_count::Int
+    macro_invocation_names::Vector{String}
     expression::String
 end
 

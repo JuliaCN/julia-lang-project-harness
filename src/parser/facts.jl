@@ -75,6 +75,7 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     name_node = first(syntax_children(signature))
     name = function_name_text(name_node)
     isnothing(name) && return nothing
+    macro_facts = function_macro_invocation_facts(node)
     JuliaFunctionSyntax(
         location[1],
         location[2] - 1,
@@ -89,6 +90,8 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         function_control_flow_kinds(node),
         function_body_statement_count(node),
         function_body_named_calls(node),
+        macro_facts.count,
+        macro_facts.names,
         String(JuliaSyntax.sourcetext(node)),
     )
 end

@@ -137,6 +137,32 @@ end
     @test function_fact.body_named_calls == ["load", "normalize", "score", "render"]
 end
 
+@testset "parser function macro facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "macros.jl")
+    write(
+        source,
+        """
+        function staged(value)
+            @alpha value
+            @beta begin
+                @gamma value
+            end
+            function inner()
+                @delta value
+            end
+            value
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    function_fact = first(parsed.syntax_facts.functions)
+
+    @test function_fact.macro_invocation_count == 3
+    @test function_fact.macro_invocation_names == ["alpha", "beta", "gamma"]
+end
+
 @testset "parser call facts" begin
     temp = mktempdir()
     source = joinpath(temp, "calls.jl")

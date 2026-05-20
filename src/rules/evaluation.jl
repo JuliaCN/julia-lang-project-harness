@@ -39,6 +39,7 @@ function evaluate_agent_policy_rules(
     isempty(public_names) && return JuliaHarnessFinding[]
     findings = JuliaHarnessFinding[]
     documented_names = package_documented_public_names(parsed_files)
+    function_docs_by_name = package_function_docstrings_by_public_name(parsed_files)
     append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
     append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
     append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
@@ -109,6 +110,21 @@ function evaluate_agent_policy_rules(
                     ),
                 )
             end
+            if function_fact.kind == "function" &&
+               haskey(function_docs_by_name, function_fact.terminal_name) &&
+               function_fact.macro_invocation_count >= MAX_PUBLIC_METHOD_MACRO_INVOCATIONS &&
+               !has_syntax_contract_doc(function_docs_by_name, function_fact.terminal_name)
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[AGENT_JL_R010];
+                        summary="Exported/public method `$(function_fact.terminal_name)` uses $(function_fact.macro_invocation_count) macro invocations without a syntax contract doc: $(join(function_fact.macro_invocation_names, ", ")).",
+                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                        source_line=source_line(parsed.source, function_fact.line),
+                        label="document the syntax or macro-expansion contract for this public method",
+                    ),
+                )
+            end
         end
     end
     findings
@@ -117,7 +133,9 @@ end
 const MAX_PUBLIC_METHOD_CONTROL_FLOW_DEPTH = 4
 const MAX_PUBLIC_METHOD_BODY_STATEMENTS = 8
 const MIN_PUBLIC_METHOD_PIPELINE_STEPS = 3
+const MAX_PUBLIC_METHOD_MACRO_INVOCATIONS = 3
 const MAX_UNDOCUMENTED_MODULE_OWNER_INCLUDES = 4
+const SYNTAX_CONTRACT_DOC_TOKENS = ("syntax", "macro", "expansion", "generated", "contract")
 
 function module_owner_fanout_findings(
     scope::JuliaProjectHarnessScope,
@@ -338,6 +356,29 @@ function package_documented_public_names(parsed_files::Vector{ParsedJuliaFile})
         end
     end
     names
+end
+
+function package_function_docstrings_by_public_name(parsed_files::Vector{ParsedJuliaFile})
+    docs = Dict{String,Vector{String}}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for docstring_fact in parsed.syntax_facts.docstrings
+            docstring_fact.target_kind == "function" || continue
+            name = terminal_public_name(docstring_fact.target_name)
+            push!(get!(docs, name, String[]), docstring_fact.text)
+        end
+    end
+    docs
+end
+
+function has_syntax_contract_doc(
+    docs_by_name::Dict{String,Vector{String}},
+    name::AbstractString,
+)
+    any(get(docs_by_name, String(name), String[])) do text
+        lower_text = lowercase(text)
+        any(token -> occursin(token, lower_text), SYNTAX_CONTRACT_DOC_TOKENS)
+    end
 end
 
 terminal_public_name(name::AbstractString) = last(split(String(name), "."))

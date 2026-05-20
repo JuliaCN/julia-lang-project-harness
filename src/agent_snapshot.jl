@@ -284,7 +284,9 @@ function display_function_syntax(function_fact::JuliaFunctionSyntax)
                   ";flow=$(function_fact.control_flow_depth)"
     body_suffix = function_fact.body_statement_count == 0 ? "" :
                   ";body=$(function_fact.body_statement_count)"
-    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)"
+    macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
+                   ";macros=$(function_fact.macro_invocation_count)"
+    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(macro_suffix)"
 end
 
 function snapshot_test_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

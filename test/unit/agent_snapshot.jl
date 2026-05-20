@@ -18,7 +18,7 @@
     mkpath(joinpath(root, "test"))
     write(
         joinpath(root, "src", "Example.jl"),
-        "module Example\nexport run, Config\nusing JSON3\ninclude(\"api.jl\")\n\"\"\"Runtime configuration.\"\"\"\nstruct Config\nvalue::Int\nend\n\"\"\"Run a value.\"\"\"\nrun(value) = value\nend\n",
+        "module Example\nexport run, Config\nusing JSON3\ninclude(\"api.jl\")\n\"\"\"Runtime configuration.\"\"\"\nstruct Config\nvalue::Int\nend\n\"\"\"Run a value.\"\"\"\nfunction run(value)\n@alpha value\nend\nend\n",
     )
     write(joinpath(root, "src", "api.jl"), "internal_api() = 1\n")
     write(
@@ -45,6 +45,7 @@
     @test occursin("struct=Config fields=1", rendered)
     @test occursin("Methods:", rendered)
     @test occursin("function=run/1", rendered)
+    @test occursin("macros=1", rendered)
     @test occursin("Tests:", rendered)
     @test occursin("test/runtests.jl testsets=\"core\" test=1", rendered)
     @test occursin("Includes:", rendered)

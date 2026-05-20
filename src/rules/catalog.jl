@@ -13,6 +13,7 @@ const JULIA_PROJ_R007 = "JULIA-PROJ-R007"
 const JULIA_PROJ_R008 = "JULIA-PROJ-R008"
 const JULIA_PROJ_R009 = "JULIA-PROJ-R009"
 const JULIA_PROJ_R010 = "JULIA-PROJ-R010"
+const JULIA_PROJ_R011 = "JULIA-PROJ-R011"
 const JULIA_MOD_R001 = "JULIA-MOD-R001"
 const JULIA_MOD_R002 = "JULIA-MOD-R002"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
@@ -138,6 +139,14 @@ julia_project_policy_rules() = [
         Warning,
         "Source-tracked dependency rev is not locked",
         "URL-based Julia `[sources]` entries should lock `rev` to a commit SHA instead of a moving branch name.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R011,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Project extension entrypoint is missing",
+        "Every Julia `[extensions]` entry should resolve to `ext/<ExtensionName>.jl` or `ext/<ExtensionName>/<ExtensionName>.jl`.",
         labels("project-policy"),
     ),
 ]

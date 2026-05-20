@@ -64,6 +64,7 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
     project_facts = parse_project_toml_facts(project_root)
     root = project_facts.project_root
     source_paths = existing_configured_paths(root, config.source_dir_names)
+    extension_paths = existing_extension_paths(root)
     test_paths = config.include_tests ? existing_configured_paths(root, config.test_dir_names) :
                  String[]
     JuliaProjectHarnessScope(
@@ -79,8 +80,10 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
         project_facts.targets,
         project_facts.compat,
         project_facts.sources,
+        project_facts.extensions,
         project_facts.workspace_projects,
         source_paths,
+        extension_paths,
         test_paths,
         String[],
         String[],
@@ -106,13 +109,18 @@ function julia_workspace_member_scopes(
 end
 
 function scope_monitored_paths(scope::JuliaProjectHarnessScope)
-    selected = vcat(scope.source_paths, scope.test_paths)
+    selected = vcat(scope.source_paths, scope.extension_paths, scope.test_paths)
     isempty(selected) ? [scope.project_root] : selected
 end
 
 function existing_configured_paths(project_root::AbstractString, path_names::Vector{String})
     root = abspath(String(project_root))
     [joinpath(root, path_name) for path_name in path_names if ispath(joinpath(root, path_name))]
+end
+
+function existing_extension_paths(project_root::AbstractString)
+    extension_root = joinpath(abspath(String(project_root)), "ext")
+    isdir(extension_root) ? [extension_root] : String[]
 end
 
 struct JuliaProjectTomlFacts
@@ -127,6 +135,7 @@ struct JuliaProjectTomlFacts
     targets::Dict{String,Vector{String}}
     compat::Dict{String,String}
     sources::Dict{String,Dict{String,String}}
+    extensions::Dict{String,Vector{String}}
     workspace_projects::Vector{String}
 end
 
@@ -155,6 +164,7 @@ function parse_project_toml_facts(project_path::AbstractString)
         string_vector_dict(project.targets),
         string_value_dict(project.compat),
         string_source_dict(project.sources),
+        string_extension_dict(project.exts),
         string_workspace_projects(project.workspace),
     )
 end
@@ -172,6 +182,7 @@ function empty_project_toml_facts(project_root::AbstractString, project_toml::Un
         Dict{String,Vector{String}}(),
         Dict{String,String}(),
         Dict{String,Dict{String,String}}(),
+        Dict{String,Vector{String}}(),
         String[],
     )
 end
@@ -203,6 +214,15 @@ function string_source_dict(values)
         end
     end
     sources
+end
+
+function string_extension_dict(values)
+    Dict(String(name) => string_vector_value(value) for (name, value) in values)
+end
+
+function string_vector_value(value)
+    value isa AbstractVector && return String[string(item) for item in value]
+    String[string(value)]
 end
 
 function string_workspace_projects(workspace)

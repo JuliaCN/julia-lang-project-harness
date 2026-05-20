@@ -98,10 +98,15 @@ end
 
         [sources]
         JuliaSyntax = {url = "https://github.com/JuliaLang/JuliaSyntax.jl", rev = "a713779e3a8dbf1fe03c659009dab6eb006cbb31"}
+
+        [extensions]
+        ExampleWeakExt = "WeakThing"
         """,
     )
     mkpath(joinpath(root, "src"))
     write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    mkpath(joinpath(root, "ext"))
+    write(joinpath(root, "ext", "ExampleWeakExt.jl"), "module ExampleWeakExt\nend\n")
 
     report = run_julia_project_harness(root)
     scope = report.project_scope
@@ -116,6 +121,8 @@ end
     @test scope.compat["JSON3"] == "1"
     @test scope.compat["WeakThing"] == "1"
     @test scope.sources["JuliaSyntax"]["rev"] == "a713779e3a8dbf1fe03c659009dab6eb006cbb31"
+    @test scope.extensions["ExampleWeakExt"] == ["WeakThing"]
+    @test scope.extension_paths == [joinpath(root, "ext")]
 end
 
 @testset "project runner accepts stdlib and source-tracked deps without compat" begin
@@ -141,6 +148,41 @@ end
     report = run_julia_project_harness(root)
 
     @test JuliaLangProjectHarness.is_clean(report)
+end
+
+@testset "project runner captures and scans package extensions" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+
+        [compat]
+        JSON3 = "1"
+
+        [extensions]
+        ExampleJSONExt = "JSON3"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(joinpath(root, "ext", "ExampleJSONExt.jl"), "module ExampleJSONExt\nusing Example\nusing JSON3\nend\n")
+
+    report = run_julia_project_harness(root)
+    snapshot = render_julia_project_harness_agent_snapshot(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test any(file -> file.path == joinpath(root, "ext", "ExampleJSONExt.jl"), report.files)
+    @test report.project_scope.extensions["ExampleJSONExt"] == ["JSON3"]
+    @test occursin("Files: source=1 test=0 ext=1", snapshot)
+    @test occursin("extensions=ExampleJSONExt=JSON3", snapshot)
+    @test occursin("ext/ExampleJSONExt.jl module=ExampleJSONExt", snapshot)
 end
 
 @testset "project runner captures workspace member scopes" begin
@@ -204,6 +246,37 @@ end
     @test occursin("JULIA-PROJ-R008", rendered)
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
     @test occursin("packages/Member/src/Member.jl", rendered)
+end
+
+@testset "project runner reports missing package extension entrypoint" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+
+        [compat]
+        JSON3 = "1"
+
+        [extensions]
+        ExampleJSONExt = "JSON3"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R011", rendered)
+    @test occursin("Project extension entrypoint is missing", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R011", report.findings) == 1
 end
 
 @testset "project runner reports dependencies without compat or source override" begin

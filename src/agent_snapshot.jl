@@ -43,9 +43,17 @@ function render_julia_package_snapshot(
         parsed -> any(test_path -> is_path_under(parsed.report.path, test_path), scope.test_paths),
         parsed_files,
     )
+    extension_count = count(
+        parsed -> any(
+            extension_path -> is_path_under(parsed.report.path, extension_path),
+            scope.extension_paths,
+        ),
+        parsed_files,
+    )
     uuid_suffix = isnothing(scope.package_uuid) ? "" : " uuid=$(scope.package_uuid)"
     rendered = "Package: $(something(scope.package_name, "<unknown>"))$(uuid_suffix)\n"
-    rendered *= "Files: source=$(source_count) test=$(test_count)\n"
+    extension_suffix = extension_count == 0 ? "" : " ext=$(extension_count)"
+    rendered *= "Files: source=$(source_count) test=$(test_count)$(extension_suffix)\n"
     if !isnothing(scope.package_entry_path)
         rendered *= "Entry: $(display_project_path(scope, scope.package_entry_path))\n"
     end
@@ -120,6 +128,8 @@ function snapshot_project_lines(scope::JuliaProjectHarnessScope)
     !isempty(compat_line) && push!(lines, "- $(compat_line)")
     source_line = compact_project_sources_line(scope)
     !isempty(source_line) && push!(lines, "- $(source_line)")
+    extension_line = compact_project_extensions_line(scope)
+    !isempty(extension_line) && push!(lines, "- $(extension_line)")
     lines
 end
 
@@ -171,6 +181,15 @@ function compact_project_sources_line(scope::JuliaProjectHarnessScope)
         push!(source_segments, "$(name)($(join(attrs, ",")))")
     end
     "sources=$(join(source_segments, ";"))"
+end
+
+function compact_project_extensions_line(scope::JuliaProjectHarnessScope)
+    isempty(scope.extensions) && return ""
+    extension_segments = [
+        "$(name)=$(join(sort!(copy(dependencies)), ","))" for
+        (name, dependencies) in sort!(collect(scope.extensions))
+    ]
+    "extensions=$(join(extension_segments, ";"))"
 end
 
 function snapshot_module_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

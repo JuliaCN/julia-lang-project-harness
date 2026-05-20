@@ -59,8 +59,10 @@ struct JuliaProjectHarnessScope
     targets::Dict{String,Vector{String}}
     compat::Dict{String,String}
     sources::Dict{String,Dict{String,String}}
+    extensions::Dict{String,Vector{String}}
     workspace_projects::Vector{String}
     source_paths::Vector{String}
+    extension_paths::Vector{String}
     test_paths::Vector{String}
     package_paths::Vector{String}
     fallback_paths::Vector{String}

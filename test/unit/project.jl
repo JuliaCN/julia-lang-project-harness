@@ -485,6 +485,84 @@ end
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R004", report.findings) == 1
 end
 
+@testset "project runner advises harness test profile hook" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        JuliaLangProjectHarness = "67259778-f152-405a-bc38-ee6219bce977"
+
+        [extras]
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["Test"]
+
+        [compat]
+        JuliaLangProjectHarness = "0.1"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(joinpath(root, "test", "runtests.jl"), "using Test\n@test true\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R014", rendered)
+    @test occursin("Pkg.test lacks the harness verification profile", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts harness test profile hook" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        JuliaLangProjectHarness = "67259778-f152-405a-bc38-ee6219bce977"
+
+        [extras]
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["Test"]
+
+        [compat]
+        JuliaLangProjectHarness = "0.1"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using JuliaLangProjectHarness
+        using Test
+
+        @test true
+        assert_julia_project_harness_test_profile_clean(dirname(@__DIR__))
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "project runner reports custom source scope without explanation" begin
     root = mktempdir()
     write_project(root, "Example")

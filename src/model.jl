@@ -137,6 +137,12 @@ struct JuliaHarnessReport
     workspace_member_scopes::Vector{JuliaProjectHarnessScope}
 end
 
+"""In-test verification profile for agent-facing package checks."""
+struct JuliaVerificationProfile
+    report::JuliaHarnessReport
+    task_index::JuliaVerificationTaskIndex
+end
+
 const DEFAULT_IGNORED_DIR_NAMES = Set([
     ".cache",
     ".direnv",

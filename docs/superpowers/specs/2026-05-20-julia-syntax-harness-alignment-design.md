@@ -418,9 +418,11 @@ Initial advisory rules:
 - `AGENT-JL-R012`: public struct exposes stringly domain fields such as mode,
   status, category, or type.
 - `AGENT-JL-R013`: public mutable struct lacks a mutation contract note.
+- `AGENT-JL-R014`: package tests omit the in-test harness verification profile
+  hook.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R013`. Later advisory rules can land only after the needed
+`AGENT-JL-R014`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API
@@ -433,6 +435,8 @@ run_julia_project_harness(project_root::AbstractString; config=default_julia_har
 run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
 assert_julia_project_harness_clean(project_root::AbstractString; config=default_julia_harness_config())
 assert_julia_project_harness_pkg_test_clean(project_root::AbstractString; config=default_julia_harness_config())
+build_julia_project_verification_profile(project_root::AbstractString=pwd(); config=default_julia_harness_config())
+assert_julia_project_harness_test_profile_clean(project_root::AbstractString=pwd(); config=default_julia_harness_config())
 render_julia_project_harness(report)
 render_julia_project_harness_json(report)
 render_julia_project_harness_advice(report)
@@ -462,7 +466,7 @@ using JuliaLangProjectHarness
 
 @testset "julia project harness" begin
     config = default_julia_harness_config()
-    assert_julia_project_harness_pkg_test_clean(pkgdir(JuliaLangProjectHarness); config)
+    assert_julia_project_harness_test_profile_clean(pkgdir(JuliaLangProjectHarness); config)
 end
 ```
 
@@ -482,6 +486,7 @@ The report model should be serializable and compact:
 - `JuliaSearchResult`
 - `JuliaVerificationTaskRecord`
 - `JuliaVerificationTaskIndex`
+- `JuliaVerificationProfile`
 - `JuliaProjectHarnessScope`
 - `JuliaHarnessConfig`
 - `JuliaHarnessReport`

@@ -55,10 +55,13 @@
         "AGENT-JL-R011",
         "AGENT-JL-R012",
         "AGENT-JL-R013",
+        "AGENT-JL-R014",
     ]
 end
 
 @testset "self apply public api" begin
     @test isdefined(JuliaLangProjectHarness, :assert_julia_project_harness_pkg_test_clean)
+    @test isdefined(JuliaLangProjectHarness, :assert_julia_project_harness_test_profile_clean)
+    @test isdefined(JuliaLangProjectHarness, :build_julia_project_verification_profile)
     @test isdefined(JuliaLangProjectHarness, :render_julia_project_harness_agent_snapshot)
 end

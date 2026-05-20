@@ -15,6 +15,10 @@ function write_verification_project(root::AbstractString)
         [extensions]
         VerifyJSONExt = ["JSON3"]
 
+        [compat]
+        JSON3 = "1"
+        JuliaLangProjectHarness = "0.1"
+
         [extras]
         Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
@@ -30,11 +34,21 @@ function write_verification_project(root::AbstractString)
         """
         module VerifyExample
         export run
+        \"\"\"Run the verification fixture value.\"\"\"
         run(value) = value
         end
         """,
     )
-    write(joinpath(root, "test", "runtests.jl"), "using Test\n@test true\n")
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using JuliaLangProjectHarness
+        using Test
+
+        @test true
+        assert_julia_project_harness_test_profile_clean(dirname(@__DIR__))
+        """,
+    )
     write(joinpath(root, "ext", "VerifyJSONExt.jl"), "module VerifyJSONExt\nend\n")
 end
 
@@ -50,6 +64,14 @@ end
     @test all(record -> record.state == "pending", index.records)
     @test any(record -> occursin("Pkg.test()", join(record.command, " ")), index.records)
     @test any(
+        record -> record.kind == "harness_policy" &&
+                  occursin(
+                      "assert_julia_project_harness_test_profile_clean",
+                      join(record.command, " "),
+                  ),
+        index.records,
+    )
+    @test any(
         record -> record.kind == "extension_boundary" &&
                   record.evidence["extension"] == "VerifyJSONExt",
         index.records,
@@ -62,4 +84,8 @@ end
     @test occursin("owner=test/runtests.jl", rendered)
     @test occursin("\"records\"", json)
     @test occursin("VerifyJSONExt", json)
+
+    profile = assert_julia_project_harness_test_profile_clean(root)
+    @test profile.report.project_scope.project_root == root
+    @test [record.kind for record in profile.task_index.records] == kinds
 end

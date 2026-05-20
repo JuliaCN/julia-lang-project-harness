@@ -13,6 +13,29 @@ function build_julia_verification_task_index(
     JuliaVerificationTaskIndex(scope.project_root, records)
 end
 
+"""Build the in-test verification profile that agents should keep green."""
+function build_julia_project_verification_profile(
+    project_root::AbstractString=pwd();
+    config=default_julia_harness_config(),
+)
+    report = run_julia_project_harness(project_root; config)
+    task_index = build_julia_verification_task_index(project_root; config)
+    JuliaVerificationProfile(report, task_index)
+end
+
+"""Assert the package's JuliaSyntax policy and verification profile from Pkg.test."""
+function assert_julia_project_harness_test_profile_clean(
+    project_root::AbstractString=pwd();
+    config=default_julia_harness_config(),
+)
+    profile = build_julia_project_verification_profile(project_root; config)
+    assert_clean(profile.report)
+    if isempty(something(config.agent_advice_allow_explanation, ""))
+        assert_no_advisory_findings(profile.report)
+    end
+    profile
+end
+
 function verification_task_records_for_scope(
     scope::JuliaProjectHarnessScope,
     config::JuliaHarnessConfig,
@@ -61,13 +84,14 @@ function harness_self_policy_verification_task(scope::JuliaProjectHarnessScope)
             "julia",
             "--project=$(scope.project_root)",
             "-e",
-            "using JuliaLangProjectHarness; assert_julia_project_harness_pkg_test_clean(pwd())",
+            "using JuliaLangProjectHarness; assert_julia_project_harness_test_profile_clean(pwd())",
         ],
         verification_evidence(
             "package" => something(scope.package_name, "<unnamed>"),
             "dependency" => "JuliaLangProjectHarness",
+            "profile" => "test",
         ),
-        "Run the harness policy gate that agents should keep green.",
+        "Run the in-test harness verification profile that agents should keep green.",
     )
 end
 

@@ -4,7 +4,7 @@
     mkpath(joinpath(root, "src"))
     write(
         joinpath(root, "src", "Example.jl"),
-        "module Example\nexport run\nusing JSON3\ninclude(\"api.jl\")\nend\n",
+        "module Example\nexport run\nusing JSON3\ninclude(\"api.jl\")\nrun(value) = value\nend\n",
     )
     write(joinpath(root, "src", "api.jl"), "run() = 1\n")
 
@@ -19,6 +19,8 @@
     @test occursin("export=run", rendered)
     @test occursin("Imports:", rendered)
     @test occursin("using=JSON3", rendered)
+    @test occursin("Methods:", rendered)
+    @test occursin("function=run/1", rendered)
     @test occursin("Includes:", rendered)
     @test occursin("src/Example.jl -> src/api.jl", rendered)
     @test !occursin("FindingGroups:", rendered)

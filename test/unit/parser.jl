@@ -46,6 +46,38 @@ end
     ]
 end
 
+@testset "parser function facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "methods.jl")
+    write(
+        source,
+        """
+        function run(x, y::Int; verbose=false, mode=:fast)
+            x + y
+        end
+        short(a, b=1, c::String="x") = a
+        Base.show(io::IO, value::Thing) = print(io, value)
+        macro demo(x)
+            x
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test [(item.kind, item.name, item.terminal_name) for item in parsed.syntax_facts.functions] == [
+        ("function", "run", "run"),
+        ("function", "short", "short"),
+        ("function", "Base.show", "show"),
+        ("macro", "demo", "demo"),
+    ]
+    @test parsed.syntax_facts.functions[1].positional_args == ["x", "y"]
+    @test parsed.syntax_facts.functions[1].keyword_args == ["verbose", "mode"]
+    @test parsed.syntax_facts.functions[2].positional_args == ["a", "b", "c"]
+    @test parsed.syntax_facts.functions[3].positional_args == ["io", "value"]
+    @test parsed.syntax_facts.functions[4].positional_args == ["x"]
+end
+
 @testset "parser include facts" begin
     temp = mktempdir()
     source = joinpath(temp, "entry.jl")

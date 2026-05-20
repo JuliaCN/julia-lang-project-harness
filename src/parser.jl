@@ -33,12 +33,24 @@ struct JuliaExportSyntax
     expression::String
 end
 
+struct JuliaFunctionSyntax
+    line::Int
+    column::Int
+    kind::String
+    name::String
+    terminal_name::String
+    positional_args::Vector{String}
+    keyword_args::Vector{String}
+    expression::String
+end
+
 struct JuliaNativeSyntaxFacts
     has_syntax_tree::Bool
     modules::Vector{JuliaModuleSyntax}
     includes::Vector{JuliaIncludeSyntax}
     imports::Vector{JuliaImportSyntax}
     exports::Vector{JuliaExportSyntax}
+    functions::Vector{JuliaFunctionSyntax}
 end
 
 struct ParsedJuliaFile
@@ -87,6 +99,7 @@ function empty_julia_native_syntax_facts()
         JuliaIncludeSyntax[],
         JuliaImportSyntax[],
         JuliaExportSyntax[],
+        JuliaFunctionSyntax[],
     )
 end
 
@@ -96,6 +109,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaIncludeSyntax[],
         JuliaImportSyntax[],
         JuliaExportSyntax[],
+        JuliaFunctionSyntax[],
     )
     collect_julia_syntax_facts!(collector, syntax, source_path)
     JuliaNativeSyntaxFacts(
@@ -104,6 +118,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.includes,
         collector.imports,
         collector.exports,
+        collector.functions,
     )
 end
 
@@ -112,6 +127,7 @@ mutable struct JuliaSyntaxFactCollector
     includes::Vector{JuliaIncludeSyntax}
     imports::Vector{JuliaImportSyntax}
     exports::Vector{JuliaExportSyntax}
+    functions::Vector{JuliaFunctionSyntax}
 end
 
 function collect_julia_syntax_facts!(
@@ -127,6 +143,9 @@ function collect_julia_syntax_facts!(
         append!(collector.imports, import_syntax_from_node(node))
     elseif syntax_kind(node) in ("export", "public")
         push!(collector.exports, export_syntax_from_node(node))
+    elseif syntax_kind(node) in ("function", "macro")
+        function_fact = function_syntax_from_node(node)
+        !isnothing(function_fact) && push!(collector.functions, function_fact)
     end
     for child in syntax_children(node)
         collect_julia_syntax_facts!(collector, child, source_path)
@@ -201,6 +220,74 @@ function export_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         identifier_texts(node),
         String(JuliaSyntax.sourcetext(node)),
     )
+end
+
+function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
+    signature = first_call_child(node)
+    isnothing(signature) && return nothing
+    location = JuliaSyntax.source_location(node)
+    name_node = first(syntax_children(signature))
+    name = function_name_text(name_node)
+    isnothing(name) && return nothing
+    JuliaFunctionSyntax(
+        location[1],
+        location[2] - 1,
+        syntax_kind(node),
+        name,
+        last(split(name, ".")),
+        function_positional_args(signature),
+        function_keyword_args(signature),
+        String(JuliaSyntax.sourcetext(node)),
+    )
+end
+
+function first_call_child(node::JuliaSyntax.SyntaxNode)
+    for child in syntax_children(node)
+        syntax_kind(child) == "call" && return child
+    end
+    nothing
+end
+
+function function_name_text(node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "Identifier"
+        return String(JuliaSyntax.sourcetext(node))
+    elseif syntax_kind(node) == "."
+        names = identifier_texts(node)
+        isempty(names) && return nothing
+        return join(names, ".")
+    end
+    nothing
+end
+
+function function_positional_args(signature::JuliaSyntax.SyntaxNode)
+    args = String[]
+    for argument in call_arguments(signature)
+        syntax_kind(argument) == "parameters" && continue
+        name = argument_name(argument)
+        !isnothing(name) && push!(args, name)
+    end
+    args
+end
+
+function function_keyword_args(signature::JuliaSyntax.SyntaxNode)
+    arguments = call_arguments(signature)
+    keyword_index = findfirst(node -> syntax_kind(node) == "parameters", arguments)
+    isnothing(keyword_index) && return String[]
+    keyword_node = arguments[keyword_index]
+    names = String[]
+    for argument in syntax_children(keyword_node)
+        name = argument_name(argument)
+        !isnothing(name) && push!(names, name)
+    end
+    names
+end
+
+function argument_name(node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "Identifier"
+        return String(JuliaSyntax.sourcetext(node))
+    end
+    identifiers = identifier_texts(node)
+    isempty(identifiers) ? nothing : first(identifiers)
 end
 
 function literal_path_argument(node::JuliaSyntax.SyntaxNode)

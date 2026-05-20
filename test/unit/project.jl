@@ -68,6 +68,29 @@ end
     @test occursin("Package entry file lacks package module declaration", rendered)
 end
 
+@testset "project runner reports broad public method advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export build
+        build(a, b, c, d, e) = a
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R002", rendered)
+    @test occursin("Public method has a broad positional surface", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
 @testset "project runner reports include graph findings" begin
     root = mktempdir()
     write_project(root, "Example")

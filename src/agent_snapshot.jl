@@ -1,4 +1,5 @@
 const MAX_AGENT_SNAPSHOT_INCLUDE_LINES = 24
+const MAX_AGENT_SNAPSHOT_METHODS_PER_FILE = 12
 
 function render_julia_project_harness_agent_snapshot(
     project_root::AbstractString;
@@ -43,6 +44,11 @@ function render_julia_package_snapshot(
     if !isempty(import_lines)
         rendered *= "Imports:\n"
         rendered *= join(import_lines, "\n") * "\n"
+    end
+    method_lines = snapshot_method_lines(scope, parsed_files)
+    if !isempty(method_lines)
+        rendered *= "Methods:\n"
+        rendered *= join(method_lines, "\n") * "\n"
     end
     include_lines = compact_include_lines(scope, parsed_files)
     if !isempty(include_lines)
@@ -100,6 +106,31 @@ end
 function display_import_syntax(imported::JuliaImportSyntax)
     suffix = isempty(imported.names) ? "" : ":$(join(imported.names, ","))"
     "$(imported.kind)=$(imported.root)$(suffix)"
+end
+
+function snapshot_method_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})
+    lines = String[]
+    for parsed in parsed_files
+        isempty(parsed.syntax_facts.functions) && continue
+        methods = compact_snapshot_methods([
+            display_function_syntax(function_fact) for function_fact in parsed.syntax_facts.functions
+        ])
+        push!(lines, "- $(display_project_path(scope, parsed.report.path)) $(join(methods, "; "))")
+    end
+    lines
+end
+
+function compact_snapshot_methods(methods::Vector{String})
+    length(methods) <= MAX_AGENT_SNAPSHOT_METHODS_PER_FILE && return methods
+    kept = methods[1:MAX_AGENT_SNAPSHOT_METHODS_PER_FILE]
+    push!(kept, "... $(length(methods) - MAX_AGENT_SNAPSHOT_METHODS_PER_FILE) more methods")
+    kept
+end
+
+function display_function_syntax(function_fact::JuliaFunctionSyntax)
+    keyword_suffix = isempty(function_fact.keyword_args) ? "" :
+                     ";kw=$(length(function_fact.keyword_args))"
+    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)"
 end
 
 function compact_include_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

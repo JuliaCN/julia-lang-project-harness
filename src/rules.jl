@@ -10,6 +10,7 @@ const JULIA_MOD_R003 = "JULIA-MOD-R003"
 const JULIA_MOD_R004 = "JULIA-MOD-R004"
 const JULIA_MOD_R005 = "JULIA-MOD-R005"
 const JULIA_MOD_R006 = "JULIA-MOD-R006"
+const AGENT_JL_R002 = "AGENT-JL-R002"
 
 function julia_rule_pack_descriptors()
     [
@@ -104,7 +105,16 @@ julia_modularity_rules() = [
     ),
 ]
 
-julia_agent_policy_rules() = JuliaHarnessRule[]
+julia_agent_policy_rules() = [
+    JuliaHarnessRule(
+        AGENT_JL_R002,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public method has a broad positional surface",
+        "Prefer keyword options or a named config object when exported Julia methods need many arguments.",
+        labels("agent-policy"),
+    ),
+]
 
 function syntax_rule_by_id()
     Dict(rule.rule_id => rule for rule in julia_syntax_rules())
@@ -404,6 +414,46 @@ function evaluate_default_rule_packs(
         evaluate_syntax_rules(parsed_files),
         evaluate_project_policy_rules(scope, parsed_files),
         evaluate_modularity_rules(scope, parsed_files),
+        evaluate_agent_policy_rules(scope, parsed_files),
     )
     apply_config_to_findings(findings, config)
+end
+
+function evaluate_agent_policy_rules(
+    scope::Union{Nothing,JuliaProjectHarnessScope},
+    parsed_files::Vector{ParsedJuliaFile},
+)
+    isnothing(scope) && return JuliaHarnessFinding[]
+    rules = rules_by_id()
+    public_names = package_public_names(parsed_files)
+    isempty(public_names) && return JuliaHarnessFinding[]
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for function_fact in parsed.syntax_facts.functions
+            function_fact.terminal_name in public_names || continue
+            length(function_fact.positional_args) >= 5 || continue
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[AGENT_JL_R002];
+                    summary="Exported/public method `$(function_fact.terminal_name)` has $(length(function_fact.positional_args)) positional arguments: $(join(function_fact.positional_args, ", ")).",
+                    location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                    source_line=source_line(parsed.source, function_fact.line),
+                    label="move optional modes into keywords or a named config surface",
+                ),
+            )
+        end
+    end
+    findings
+end
+
+function package_public_names(parsed_files::Vector{ParsedJuliaFile})
+    names = Set{String}()
+    for parsed in parsed_files
+        for export_fact in parsed.syntax_facts.exports
+            union!(names, export_fact.names)
+        end
+    end
+    names
 end

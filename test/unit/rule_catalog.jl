@@ -22,7 +22,7 @@
         "JULIA-MOD-R005",
         "JULIA-MOD-R006",
     ]
-    @test isempty(julia_agent_policy_rules())
+    @test [rule.rule_id for rule in julia_agent_policy_rules()] == ["AGENT-JL-R002"]
 end
 
 @testset "self apply public api" begin

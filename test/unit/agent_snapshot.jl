@@ -6,9 +6,12 @@
             io,
             """
 
-            [deps]
-            JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-            """,
+        [deps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+
+        [compat]
+        JSON3 = "1"
+        """,
         )
     end
     mkpath(joinpath(root, "src"))
@@ -31,6 +34,7 @@
     @test occursin("Project:", rendered)
     @test occursin("extras=Test", rendered)
     @test occursin("targets=test=Test", rendered)
+    @test occursin("compat=JSON3=1", rendered)
     @test occursin("Modules:", rendered)
     @test occursin("src/Example.jl module=Example", rendered)
     @test occursin("Public:", rendered)

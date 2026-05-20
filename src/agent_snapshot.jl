@@ -116,6 +116,8 @@ function snapshot_project_lines(scope::JuliaProjectHarnessScope)
     !isempty(dependency_line) && push!(lines, "- $(dependency_line)")
     target_line = compact_project_targets_line(scope)
     !isempty(target_line) && push!(lines, "- $(target_line)")
+    compat_line = compact_project_compat_line(scope)
+    !isempty(compat_line) && push!(lines, "- $(compat_line)")
     source_line = compact_project_sources_line(scope)
     !isempty(source_line) && push!(lines, "- $(source_line)")
     lines
@@ -153,6 +155,12 @@ function compact_project_targets_line(scope::JuliaProjectHarnessScope)
         "$(target)=$(join(sort!(copy(names)), ","))" for (target, names) in sort!(collect(scope.targets))
     ]
     "targets=$(join(target_segments, ";"))"
+end
+
+function compact_project_compat_line(scope::JuliaProjectHarnessScope)
+    isempty(scope.compat) && return ""
+    compat_segments = ["$(name)=$(value)" for (name, value) in sort!(collect(scope.compat))]
+    "compat=$(join(compat_segments, ";"))"
 end
 
 function compact_project_sources_line(scope::JuliaProjectHarnessScope)

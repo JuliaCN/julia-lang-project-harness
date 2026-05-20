@@ -48,6 +48,8 @@ function evaluate_project_policy_rules(
     append!(findings, scope_explanation_findings(scope, config, rules))
     append!(findings, test_entrypoint_findings(scope, rules))
     append!(findings, thin_runtests_findings(scope, parsed_files, rules))
+    append!(findings, source_rev_lock_findings(scope, rules))
+    append!(findings, dependency_contract_findings(scope, rules))
     append!(findings, undeclared_import_findings(scope, parsed_files, rules))
     findings
 end
@@ -229,6 +231,71 @@ end
 
 function has_literal_includes(parsed::ParsedJuliaFile)
     any(include -> include.is_literal, parsed.syntax_facts.includes)
+end
+
+function source_rev_lock_findings(
+    scope::JuliaProjectHarnessScope,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for (name, source) in sort!(collect(scope.sources))
+        source_rev_is_locked(source) && continue
+        rev = get(source, "rev", "")
+        rev_summary = isempty(rev) ? "does not record a commit `rev`" :
+                      "uses moving `rev = \"$(rev)\"`"
+        push!(
+            findings,
+            finding_from_rule(
+                rules[JULIA_PROJ_R010];
+                summary="Project source `$(name)` $(rev_summary).",
+                location=SourceLocation(scope.project_toml_path, 1, 0),
+                label="lock the source dependency to a commit SHA from the intended branch",
+            ),
+        )
+    end
+    findings
+end
+
+function source_rev_is_locked(source::Dict{String,String})
+    haskey(source, "path") && return true
+    haskey(source, "url") || return true
+    rev = get(source, "rev", "")
+    is_commit_rev(rev)
+end
+
+function is_commit_rev(rev::AbstractString)
+    length(rev) == 40 && all(
+        character -> character in '0':'9' || character in 'a':'f' || character in 'A':'F',
+        rev,
+    )
+end
+
+function dependency_contract_findings(
+    scope::JuliaProjectHarnessScope,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    stdlib_roots = julia_stdlib_import_roots()
+    findings = JuliaHarnessFinding[]
+    for (section, dependencies) in [
+        ("deps", scope.direct_dependencies),
+        ("weakdeps", scope.weak_dependencies),
+    ]
+        for name in sort!(collect(keys(dependencies)))
+            name in stdlib_roots && continue
+            haskey(scope.compat, name) && continue
+            haskey(scope.sources, name) && continue
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[JULIA_PROJ_R009];
+                    summary="Project dependency `$(name)` is declared in `[$(section)]` but has no `[compat]` entry or `[sources]` override.",
+                    location=SourceLocation(scope.project_toml_path, 1, 0),
+                    label="add a compat bound or record the source-tracked dependency in Project.toml",
+                ),
+            )
+        end
+    end
+    findings
 end
 
 function undeclared_import_findings(

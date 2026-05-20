@@ -94,9 +94,10 @@ end
 
         [compat]
         JSON3 = "1"
+        WeakThing = "1"
 
         [sources]
-        JuliaSyntax = {url = "https://github.com/JuliaLang/JuliaSyntax.jl", rev = "main"}
+        JuliaSyntax = {url = "https://github.com/JuliaLang/JuliaSyntax.jl", rev = "a713779e3a8dbf1fe03c659009dab6eb006cbb31"}
         """,
     )
     mkpath(joinpath(root, "src"))
@@ -113,7 +114,33 @@ end
     @test scope.extra_dependencies["Test"] == "8dfed614-e22c-5e08-85e1-65c5234f0b40"
     @test scope.targets["test"] == ["Test"]
     @test scope.compat["JSON3"] == "1"
-    @test scope.sources["JuliaSyntax"]["rev"] == "main"
+    @test scope.compat["WeakThing"] == "1"
+    @test scope.sources["JuliaSyntax"]["rev"] == "a713779e3a8dbf1fe03c659009dab6eb006cbb31"
+end
+
+@testset "project runner accepts stdlib and source-tracked deps without compat" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        JuliaSyntax = "70703baa-626e-46a2-a12c-08ffd08c73b4"
+        Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+        [sources]
+        JuliaSyntax = {url = "https://github.com/JuliaLang/JuliaSyntax.jl", rev = "a713779e3a8dbf1fe03c659009dab6eb006cbb31"}
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nusing JuliaSyntax\nusing Pkg\nend\n")
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
 end
 
 @testset "project runner captures workspace member scopes" begin
@@ -177,6 +204,59 @@ end
     @test occursin("JULIA-PROJ-R008", rendered)
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
     @test occursin("packages/Member/src/Member.jl", rendered)
+end
+
+@testset "project runner reports dependencies without compat or source override" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nusing JSON3\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R009", rendered)
+    @test occursin("Project dependency lacks compat or source override", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R009", report.findings) == 1
+end
+
+@testset "project runner reports moving source revs" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        JuliaSyntax = "70703baa-626e-46a2-a12c-08ffd08c73b4"
+
+        [sources]
+        JuliaSyntax = {url = "https://github.com/JuliaLang/JuliaSyntax.jl", rev = "main"}
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nusing JuliaSyntax\nend\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-PROJ-R010", rendered)
+    @test occursin("Source-tracked dependency rev is not locked", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-PROJ-R010", report.findings) == 1
 end
 
 @testset "project runner reports undeclared source imports" begin

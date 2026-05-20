@@ -11,6 +11,8 @@ const JULIA_PROJ_R005 = "JULIA-PROJ-R005"
 const JULIA_PROJ_R006 = "JULIA-PROJ-R006"
 const JULIA_PROJ_R007 = "JULIA-PROJ-R007"
 const JULIA_PROJ_R008 = "JULIA-PROJ-R008"
+const JULIA_PROJ_R009 = "JULIA-PROJ-R009"
+const JULIA_PROJ_R010 = "JULIA-PROJ-R010"
 const JULIA_MOD_R001 = "JULIA-MOD-R001"
 const JULIA_MOD_R002 = "JULIA-MOD-R002"
 const JULIA_MOD_R003 = "JULIA-MOD-R003"
@@ -120,6 +122,22 @@ julia_project_policy_rules() = [
         Warning,
         "Imported package is missing from Project.toml",
         "External Julia package imports should be declared in `Project.toml` as deps, weakdeps, or test extras according to their source scope.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R009,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Project dependency lacks compat or source override",
+        "Registry Julia dependencies should carry `[compat]` bounds; source-tracked dependencies should be recorded in `[sources]`.",
+        labels("project-policy"),
+    ),
+    JuliaHarnessRule(
+        JULIA_PROJ_R010,
+        JULIA_PROJECT_POLICY_PACK_ID,
+        Warning,
+        "Source-tracked dependency rev is not locked",
+        "URL-based Julia `[sources]` entries should lock `rev` to a commit SHA instead of a moving branch name.",
         labels("project-policy"),
     ),
 ]

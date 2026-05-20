@@ -105,6 +105,7 @@ function type_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     isnothing(head) && return nothing
     name = type_name_text(head)
     isnothing(name) && return nothing
+    field_facts = type_field_facts(node, name)
     JuliaTypeSyntax(
         location[1],
         location[2] - 1,
@@ -112,7 +113,10 @@ function type_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         name,
         type_parameter_texts(head),
         type_supertype_text(head),
-        type_field_names(node),
+        type_field_names(field_facts),
+        type_typed_fields(field_facts),
+        type_defaulted_fields(field_facts),
+        field_facts,
         JuliaSyntax.has_flags(node, JuliaSyntax.MUTABLE_FLAG),
         String(JuliaSyntax.sourcetext(node)),
     )
@@ -305,73 +309,6 @@ end
 
 function compact_syntax_text(node::JuliaSyntax.SyntaxNode)
     replace(String(JuliaSyntax.sourcetext(node)), r"\s+" => "")
-end
-
-function type_head_node(node::JuliaSyntax.SyntaxNode)
-    for child in syntax_children(node)
-        syntax_kind(child) in ("block", "Integer") && continue
-        return child
-    end
-    nothing
-end
-
-function type_name_text(node::JuliaSyntax.SyntaxNode)
-    kind = syntax_kind(node)
-    if kind == "Identifier"
-        return String(JuliaSyntax.sourcetext(node))
-    elseif kind == "curly"
-        children = syntax_children(node)
-        isempty(children) && return nothing
-        return type_name_text(first(children))
-    elseif kind == "<:"
-        children = syntax_children(node)
-        isempty(children) && return nothing
-        return type_name_text(first(children))
-    end
-    nothing
-end
-
-function type_parameter_texts(node::JuliaSyntax.SyntaxNode)
-    if syntax_kind(node) == "<:"
-        children = syntax_children(node)
-        isempty(children) && return String[]
-        head = first(children)
-    else
-        head = node
-    end
-    syntax_kind(head) == "curly" || return String[]
-    children = syntax_children(head)
-    length(children) <= 1 && return String[]
-    [compact_syntax_text(child) for child in children[2:end]]
-end
-
-function type_supertype_text(node::JuliaSyntax.SyntaxNode)
-    syntax_kind(node) == "<:" || return nothing
-    children = syntax_children(node)
-    length(children) >= 2 || return nothing
-    compact_syntax_text(children[2])
-end
-
-function type_field_names(node::JuliaSyntax.SyntaxNode)
-    block = first_child_with_kind(node, "block")
-    isnothing(block) && return String[]
-    fields = String[]
-    for child in syntax_children(block)
-        name = field_name_text(child)
-        !isnothing(name) && push!(fields, name)
-    end
-    fields
-end
-
-function field_name_text(node::JuliaSyntax.SyntaxNode)
-    if syntax_kind(node) == "Identifier"
-        return String(JuliaSyntax.sourcetext(node))
-    elseif syntax_kind(node) == "::"
-        children = syntax_children(node)
-        isempty(children) && return nothing
-        return field_name_text(first(children))
-    end
-    nothing
 end
 
 function first_child_with_kind(node::JuliaSyntax.SyntaxNode, kind::AbstractString)

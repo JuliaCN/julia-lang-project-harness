@@ -257,7 +257,11 @@ function display_type_syntax(type_fact::JuliaTypeSyntax)
     parameter_suffix = isempty(type_fact.parameters) ? "" : "{$(join(type_fact.parameters, ","))}"
     supertype_suffix = isnothing(type_fact.supertype) ? "" : "<:$(type_fact.supertype)"
     field_suffix = isempty(type_fact.fields) ? "" : " fields=$(length(type_fact.fields))"
-    "$(kind)=$(type_fact.name)$(parameter_suffix)$(supertype_suffix)$(field_suffix)"
+    typed_suffix = isempty(type_fact.typed_fields) ? "" :
+                   " typed=$(length(type_fact.typed_fields))"
+    default_suffix = isempty(type_fact.defaulted_fields) ? "" :
+                     " defaults=$(length(type_fact.defaulted_fields))"
+    "$(kind)=$(type_fact.name)$(parameter_suffix)$(supertype_suffix)$(field_suffix)$(typed_suffix)$(default_suffix)"
 end
 
 function snapshot_binding_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

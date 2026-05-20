@@ -88,6 +88,7 @@ function julia_search_index(parsed_files::Vector{ParsedJuliaFile})
         append!(entries, public_search_entries(parsed))
         append!(entries, import_search_entries(parsed))
         append!(entries, type_search_entries(parsed))
+        append!(entries, type_field_search_entries(parsed))
         append!(entries, binding_search_entries(parsed))
         append!(entries, function_search_entries(parsed))
         append!(entries, call_search_entries(parsed))
@@ -345,7 +346,10 @@ function display_type_search_detail(type_fact::JuliaTypeSyntax)
     parameter_suffix = isempty(type_fact.parameters) ? "" : "{$(join(type_fact.parameters, ","))}"
     supertype_suffix = isnothing(type_fact.supertype) ? "" : " <: $(type_fact.supertype)"
     field_suffix = isempty(type_fact.fields) ? "" : " fields=$(join(type_fact.fields, ","))"
-    "$(kind) $(type_fact.name)$(parameter_suffix)$(supertype_suffix)$(field_suffix)"
+    typed_suffix = isempty(type_fact.typed_fields) ? "" : " typed=$(join(type_fact.typed_fields, ","))"
+    default_suffix = isempty(type_fact.defaulted_fields) ? "" :
+                     " defaults=$(join(type_fact.defaulted_fields, ","))"
+    "$(kind) $(type_fact.name)$(parameter_suffix)$(supertype_suffix)$(field_suffix)$(typed_suffix)$(default_suffix)"
 end
 
 function display_binding_search_detail(binding_fact::JuliaBindingSyntax)

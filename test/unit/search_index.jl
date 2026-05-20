@@ -23,8 +23,9 @@
         export run, Config, DEFAULT_LIMIT
         using Dates
         include("api.jl")
-        struct Config
+        Base.@kwdef struct Config
             value::Int
+            mode::Symbol = :fast
         end
         \"\"\"Default public limit.\"\"\"
         const DEFAULT_LIMIT::Int = 8
@@ -51,7 +52,21 @@
     @test any(entry -> entry.kind == "module" && entry.name == "Example", entries)
     @test any(entry -> entry.kind == "export" && entry.name == "run", entries)
     @test any(entry -> entry.kind == "using" && entry.name == "Dates", entries)
-    @test any(entry -> entry.kind == "struct" && entry.name == "Config", entries)
+    @test any(
+        entry -> entry.kind == "struct" &&
+                 entry.name == "Config" &&
+                 occursin("fields=value,mode", entry.detail) &&
+                 occursin("typed=value::Int,mode::Symbol", entry.detail) &&
+                 occursin("defaults=mode", entry.detail),
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "field" &&
+                 entry.name == "Config.mode" &&
+                 "field" in entry.tags &&
+                 occursin("Config.mode::Symbol default", entry.detail),
+        entries,
+    )
     @test any(
         entry -> entry.kind == "const" &&
                  entry.name == "DEFAULT_LIMIT" &&
@@ -111,6 +126,10 @@
     type_results = search_julia_project(root, "Config"; tags=["type"], limit=1)
     @test length(type_results) == 1
     @test only(type_results).entry.kind == "struct"
+    field_results = search_julia_project(root, "mode"; tags=["field"], limit=1)
+    @test length(field_results) == 1
+    @test only(field_results).entry.kind == "field"
+    @test only(field_results).entry.name == "Config.mode"
     binding_results = search_julia_project(root, "DEFAULT_LIMIT"; tags=["binding"], limit=1)
     @test length(binding_results) == 1
     @test only(binding_results).entry.kind == "const"

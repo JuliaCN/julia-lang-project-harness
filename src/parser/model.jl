@@ -53,6 +53,16 @@ struct JuliaFunctionSyntax
     expression::String
 end
 
+struct JuliaTypeFieldSyntax
+    line::Int
+    column::Int
+    owner_name::String
+    name::String
+    type_annotation::Union{Nothing,String}
+    has_default::Bool
+    expression::String
+end
+
 struct JuliaTypeSyntax
     line::Int
     column::Int
@@ -61,6 +71,9 @@ struct JuliaTypeSyntax
     parameters::Vector{String}
     supertype::Union{Nothing,String}
     fields::Vector{String}
+    typed_fields::Vector{String}
+    defaulted_fields::Vector{String}
+    field_facts::Vector{JuliaTypeFieldSyntax}
     is_mutable::Bool
     expression::String
 end

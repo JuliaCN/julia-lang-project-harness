@@ -151,6 +151,8 @@ The parser layer should classify these constructs in the first slice:
 - macro definitions
 - macro invocations
 - mutable and immutable struct definitions
+- struct field names, type annotations, and defaulted fields from native syntax
+- field-level search entries for Julia type shapes
 - primitive type aliases visible through syntax
 - `Test.@testset` and direct `@test` usage
 

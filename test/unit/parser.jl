@@ -348,9 +348,11 @@ end
         struct Thing{T} <: AbstractThing
             value::T
             name
+            mode::Symbol = :ready
         end
-        mutable struct Box
+        Base.@kwdef mutable struct Box
             item::Thing
+            enabled::Bool = true
         end
         primitive type Word32 <: Unsigned 32 end
         """,
@@ -364,9 +366,28 @@ end
         ("struct", "Box", String[], nothing),
         ("primitive", "Word32", String[], "Unsigned"),
     ]
-    @test parsed.syntax_facts.types[2].fields == ["value", "name"]
+    @test parsed.syntax_facts.types[2].fields == ["value", "name", "mode"]
+    @test parsed.syntax_facts.types[2].typed_fields == ["value::T", "mode::Symbol"]
+    @test parsed.syntax_facts.types[2].defaulted_fields == ["mode"]
+    @test [
+        (field.owner_name, field.name, field.type_annotation, field.has_default) for field in
+        parsed.syntax_facts.types[2].field_facts
+    ] == [
+        ("Thing", "value", "T", false),
+        ("Thing", "name", nothing, false),
+        ("Thing", "mode", "Symbol", true),
+    ]
     @test !parsed.syntax_facts.types[2].is_mutable
-    @test parsed.syntax_facts.types[3].fields == ["item"]
+    @test parsed.syntax_facts.types[3].fields == ["item", "enabled"]
+    @test parsed.syntax_facts.types[3].typed_fields == ["item::Thing", "enabled::Bool"]
+    @test parsed.syntax_facts.types[3].defaulted_fields == ["enabled"]
+    @test [
+        (field.owner_name, field.name, field.type_annotation, field.has_default) for field in
+        parsed.syntax_facts.types[3].field_facts
+    ] == [
+        ("Box", "item", "Thing", false),
+        ("Box", "enabled", "Bool", true),
+    ]
     @test parsed.syntax_facts.types[3].is_mutable
 end
 

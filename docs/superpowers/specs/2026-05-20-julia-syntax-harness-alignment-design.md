@@ -405,9 +405,9 @@ Initial advisory rules:
   without a clear extension pattern.
 - `AGENT-JL-R010`: macro-heavy public API lacks a syntax-level contract note.
 
-The first implementation should choose a small subset of these advisory rules
-after the parser facts are stable. The catalog can list the broader intended
-surface, but tests should only lock rules that are implemented.
+The implemented subset currently locked by tests is `AGENT-JL-R001` through
+`AGENT-JL-R003`. Later advisory rules can land only after the needed
+JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API
 

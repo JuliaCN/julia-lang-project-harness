@@ -1,3 +1,4 @@
+"""Render Julia syntax search results in an agent-readable compact form."""
 function render_julia_search_results(
     results::Vector{JuliaSearchResult};
     project_root::Union{Nothing,AbstractString}=nothing,

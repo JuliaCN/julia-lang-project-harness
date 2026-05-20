@@ -1,8 +1,10 @@
 using JSON3
 
+"""Render blocking findings and agent advice as compact text."""
 render_julia_project_harness(report::JuliaHarnessReport) =
     render_julia_project_harness_with_options(report; severities=nothing, include_advice=true)
 
+"""Render only advisory findings from a Julia project harness report."""
 function render_julia_project_harness_advice(report::JuliaHarnessReport)
     render_finding_list(advisory_findings(report))
 end
@@ -50,6 +52,7 @@ end
 
 slash_path(path::AbstractString) = replace(String(path), '\\' => '/')
 
+"""Render a Julia project harness report as JSON for tools."""
 function render_julia_project_harness_json(report::JuliaHarnessReport)
     JSON3.write(report_dict(report))
 end

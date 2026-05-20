@@ -1,3 +1,4 @@
+"""Build agent-runnable verification tasks for a Julia project root."""
 function build_julia_verification_task_index(
     project_root::AbstractString;
     config=default_julia_harness_config(),
@@ -165,6 +166,7 @@ function compact_fingerprint_part(part::AbstractString)
     replace(slash_path(part), r"[^A-Za-z0-9_.=-]+" => "_")
 end
 
+"""Render verification tasks as compact text for agent execution."""
 function render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
     isempty(index.records) && return "[ok] julia verification tasks no-records\n"
     lines = ["VerificationTasks: count=$(length(index.records))"]
@@ -194,6 +196,7 @@ function shell_quote_arg(arg::AbstractString)
     "'$(replace(text, "'" => "'\\''"))'"
 end
 
+"""Render verification tasks as JSON while preserving raw argv vectors."""
 function render_julia_verification_task_index_json(index::JuliaVerificationTaskIndex)
     JSON3.write(verification_task_index_dict(index))
 end

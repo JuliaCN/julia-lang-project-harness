@@ -1,3 +1,4 @@
+"""Build a JuliaSyntax search index from explicit source roots."""
 function julia_lang_search_index(
     paths::Vector{<:AbstractString};
     config=default_julia_harness_config(),
@@ -9,6 +10,7 @@ function julia_lang_search_index(
     julia_search_index(parsed_files)
 end
 
+"""Build a JuliaSyntax search index for a Project.toml-rooted package."""
 function julia_project_search_index(
     project_root::AbstractString;
     config=default_julia_harness_config(),
@@ -24,6 +26,7 @@ function julia_project_search_index(
     julia_search_index(parsed_files)
 end
 
+"""Search explicit Julia source roots with optional syntax tag filters."""
 function search_julia_lang(
     paths::Vector{<:AbstractString},
     query::AbstractString;
@@ -35,6 +38,7 @@ function search_julia_lang(
     search_julia_index(entries, query; tags, limit)
 end
 
+"""Search a Project.toml-rooted package with optional syntax tag filters."""
 function search_julia_project(
     project_root::AbstractString,
     query::AbstractString;
@@ -46,6 +50,7 @@ function search_julia_project(
     search_julia_index(entries, query; tags, limit)
 end
 
+"""Search prebuilt JuliaSyntax index entries with deterministic ranking."""
 function search_julia_index(
     entries::Vector{JuliaSearchIndexEntry},
     query::AbstractString;

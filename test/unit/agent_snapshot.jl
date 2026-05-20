@@ -18,7 +18,7 @@
     mkpath(joinpath(root, "test"))
     write(
         joinpath(root, "src", "Example.jl"),
-        "module Example\nexport run, Config\nusing JSON3\ninclude(\"api.jl\")\nstruct Config\nvalue::Int\nend\nrun(value) = value\nend\n",
+        "module Example\nexport run, Config\nusing JSON3\ninclude(\"api.jl\")\n\"\"\"Runtime configuration.\"\"\"\nstruct Config\nvalue::Int\nend\n\"\"\"Run a value.\"\"\"\nrun(value) = value\nend\n",
     )
     write(joinpath(root, "src", "api.jl"), "run() = 1\n")
     write(

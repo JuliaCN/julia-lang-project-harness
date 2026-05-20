@@ -15,6 +15,7 @@ function default_julia_harness_cli_options()
     JuliaHarnessCliOptions(pwd(), false, false, false, false, false, nothing, String[], 25, false)
 end
 
+"""Run the Julia project harness command-line interface."""
 function run_julia_project_harness_cli(args=ARGS; out=stdout, err=stderr)
     try
         run_julia_project_harness_cli_checked(String.(collect(args)); out, err)

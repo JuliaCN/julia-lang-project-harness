@@ -38,6 +38,8 @@ function evaluate_agent_policy_rules(
     public_names = package_public_names(parsed_files)
     isempty(public_names) && return JuliaHarnessFinding[]
     findings = JuliaHarnessFinding[]
+    documented_names = package_documented_public_names(parsed_files)
+    append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
     for parsed in parsed_files
         parsed.report.is_valid || continue
         for function_fact in parsed.syntax_facts.functions
@@ -71,6 +73,56 @@ function evaluate_agent_policy_rules(
     findings
 end
 
+function public_api_doc_findings(
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    documented_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    reported = Set{Tuple{String,String}}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for type_fact in parsed.syntax_facts.types
+            name = terminal_public_name(type_fact.name)
+            name in public_names || continue
+            name in documented_names && continue
+            key = ("type", name)
+            key in reported && continue
+            push!(reported, key)
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[AGENT_JL_R001];
+                    summary="Exported/public type `$(name)` lacks a Julia docstring that states its agent-facing intent.",
+                    location=SourceLocation(parsed.report.path, type_fact.line, type_fact.column),
+                    source_line=source_line(parsed.source, type_fact.line),
+                    label="add a Julia docstring before the public type definition",
+                ),
+            )
+        end
+        for function_fact in parsed.syntax_facts.functions
+            name = function_fact.terminal_name
+            name in public_names || continue
+            name in documented_names && continue
+            key = ("function", name)
+            key in reported && continue
+            push!(reported, key)
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[AGENT_JL_R001];
+                    summary="Exported/public function `$(name)` lacks a Julia docstring that states its agent-facing intent.",
+                    location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                    source_line=source_line(parsed.source, function_fact.line),
+                    label="add a Julia docstring before the public function definition",
+                ),
+            )
+        end
+    end
+    findings
+end
+
 function package_public_names(parsed_files::Vector{ParsedJuliaFile})
     names = Set{String}()
     for parsed in parsed_files
@@ -80,3 +132,16 @@ function package_public_names(parsed_files::Vector{ParsedJuliaFile})
     end
     names
 end
+
+function package_documented_public_names(parsed_files::Vector{ParsedJuliaFile})
+    names = Set{String}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for docstring_fact in parsed.syntax_facts.docstrings
+            push!(names, terminal_public_name(docstring_fact.target_name))
+        end
+    end
+    names
+end
+
+terminal_public_name(name::AbstractString) = last(split(String(name), "."))

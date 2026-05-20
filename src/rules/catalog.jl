@@ -23,6 +23,7 @@ const JULIA_MOD_R004 = "JULIA-MOD-R004"
 const JULIA_MOD_R005 = "JULIA-MOD-R005"
 const JULIA_MOD_R006 = "JULIA-MOD-R006"
 const JULIA_MOD_R007 = "JULIA-MOD-R007"
+const AGENT_JL_R001 = "AGENT-JL-R001"
 const AGENT_JL_R002 = "AGENT-JL-R002"
 const AGENT_JL_R003 = "AGENT-JL-R003"
 
@@ -31,6 +32,7 @@ const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
 const MAX_SOURCE_FILE_NONBLANK_LINES = 400
 const MAX_THIN_RUNTESTS_NONBLANK_LINES = 80
 
+"""Return rule pack metadata for the Julia project harness."""
 function julia_rule_pack_descriptors()
     [
         RulePackDescriptor(JULIA_SYNTAX_PACK_ID, "1", ["julia", "syntax"], "blocking"),
@@ -49,6 +51,7 @@ function labels(label::AbstractString)
     Dict("domain" => String(label))
 end
 
+"""Return Julia syntax parse rules backed by JuliaSyntax.jl."""
 function julia_syntax_rules()
     [
         JuliaHarnessRule(
@@ -62,6 +65,7 @@ function julia_syntax_rules()
     ]
 end
 
+"""Return Project.toml and package-layout policy rules."""
 julia_project_policy_rules() = [
     JuliaHarnessRule(
         JULIA_PROJ_R001,
@@ -169,6 +173,7 @@ julia_project_policy_rules() = [
     ),
 ]
 
+"""Return source graph and file ownership policy rules."""
 julia_modularity_rules() = [
     JuliaHarnessRule(
         JULIA_MOD_R001,
@@ -228,7 +233,16 @@ julia_modularity_rules() = [
     ),
 ]
 
+"""Return advisory rules that shape agent-friendly Julia APIs."""
 julia_agent_policy_rules() = [
+    JuliaHarnessRule(
+        AGENT_JL_R001,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public API lacks an intent doc",
+        "Document exported or public Julia API with a JuliaSyntax docstring so agents can reason from native syntax without guessing intent.",
+        labels("agent-policy"),
+    ),
     JuliaHarnessRule(
         AGENT_JL_R002,
         JULIA_AGENT_POLICY_PACK_ID,

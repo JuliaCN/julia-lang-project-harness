@@ -596,6 +596,7 @@ end
         """
         module Example
         export build
+        \"\"\"Build the public value.\"\"\"
         build(a, b, c, d, e) = a
         end
         """,
@@ -619,6 +620,7 @@ end
         """
         module Example
         export run
+        \"\"\"Run the public value.\"\"\"
         run(force::Bool, dry_run=false; verbose=false) = force && !dry_run
         end
         """,
@@ -631,6 +633,50 @@ end
     @test occursin("AGENT-JL-R003", rendered)
     @test occursin("Public method exposes positional Bool flags", rendered)
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner reports public API doc advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        run(value) = value
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R001", rendered)
+    @test occursin("Public API lacks an intent doc", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts documented public API" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        \"\"\"Run the public value.\"\"\"
+        run(value) = value
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
 @testset "project runner reports include graph findings" begin

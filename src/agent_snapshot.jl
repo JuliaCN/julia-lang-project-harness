@@ -2,6 +2,7 @@ const MAX_AGENT_SNAPSHOT_INCLUDE_LINES = 24
 const MAX_AGENT_SNAPSHOT_METHODS_PER_FILE = 12
 const MAX_AGENT_SNAPSHOT_TESTSETS_PER_FILE = 8
 
+"""Render a compact agent snapshot for a Project.toml-rooted Julia package."""
 function render_julia_project_harness_agent_snapshot(
     project_root::AbstractString;
     config=default_julia_harness_config(),

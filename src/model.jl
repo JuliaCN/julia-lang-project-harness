@@ -5,12 +5,14 @@ severity_label(::Val{Warning}) = "warning"
 severity_label(::Val{Error}) = "error"
 severity_label(severity::JuliaDiagnosticSeverity) = severity_label(Val(severity))
 
+"""Source position for a parser fact or harness finding."""
 struct SourceLocation
     path::Union{Nothing,String}
     line::Int
     column::Int
 end
 
+"""Metadata for a rule pack exposed by the Julia project harness."""
 struct RulePackDescriptor
     id::String
     version::String
@@ -18,6 +20,7 @@ struct RulePackDescriptor
     default_mode::String
 end
 
+"""Rule contract used to create project harness findings."""
 struct JuliaHarnessRule
     rule_id::String
     pack_id::String
@@ -27,6 +30,7 @@ struct JuliaHarnessRule
     labels::Dict{String,String}
 end
 
+"""Concrete harness finding with source evidence and repair guidance."""
 struct JuliaHarnessFinding
     rule_id::String
     pack_id::String
@@ -40,12 +44,14 @@ struct JuliaHarnessFinding
     labels::Dict{String,String}
 end
 
+"""Parse status for one Julia source file."""
 struct JuliaFileReport
     path::String
     is_valid::Bool
     parse_error::Union{Nothing,String}
 end
 
+"""Searchable JuliaSyntax-derived entry for agent context retrieval."""
 struct JuliaSearchIndexEntry
     location::SourceLocation
     kind::String
@@ -55,11 +61,13 @@ struct JuliaSearchIndexEntry
     tags::Vector{String}
 end
 
+"""Ranked result returned by Julia syntax search queries."""
 struct JuliaSearchResult
     entry::JuliaSearchIndexEntry
     score::Int
 end
 
+"""Agent-runnable verification task derived from project structure."""
 struct JuliaVerificationTaskRecord
     fingerprint::String
     kind::String
@@ -73,11 +81,13 @@ struct JuliaVerificationTaskRecord
     reason::String
 end
 
+"""Collection of verification tasks for a Julia project root."""
 struct JuliaVerificationTaskIndex
     project_root::String
     records::Vector{JuliaVerificationTaskRecord}
 end
 
+"""Pkg project scope resolved from Project.toml and Julia source layout."""
 struct JuliaProjectHarnessScope
     project_root::String
     project_toml_path::Union{Nothing,String}
@@ -101,6 +111,7 @@ struct JuliaProjectHarnessScope
     fallback_paths::Vector{String}
 end
 
+"""Configuration for syntax parsing, project policy, and advice rules."""
 struct JuliaHarnessConfig
     ignored_dir_names::Set{String}
     blocking_severities::Set{JuliaDiagnosticSeverity}
@@ -116,6 +127,7 @@ struct JuliaHarnessConfig
     agent_advice_allow_explanation::Union{Nothing,String}
 end
 
+"""Full harness run result with parsed files, findings, and project scope."""
 struct JuliaHarnessReport
     files::Vector{JuliaFileReport}
     findings::Vector{JuliaHarnessFinding}
@@ -139,6 +151,7 @@ const DEFAULT_IGNORED_DIR_NAMES = Set([
     "scratchspaces",
 ])
 
+"""Return the default Julia project harness configuration."""
 function default_julia_harness_config()
     JuliaHarnessConfig(
         copy(DEFAULT_IGNORED_DIR_NAMES),

@@ -1,5 +1,6 @@
 using Pkg
 
+"""Run the JuliaSyntax harness over explicit Julia source roots."""
 function run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
     for path in paths
         ispath(path) || error("harness path does not exist: $(path)")
@@ -7,6 +8,7 @@ function run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_
     run_paths(abspath.(String.(paths)), config)
 end
 
+"""Run the project harness from a Project.toml root resolved through Pkg facts."""
 function run_julia_project_harness(project_root::AbstractString; config=default_julia_harness_config())
     ispath(project_root) || error("project path does not exist: $(project_root)")
     scope = julia_project_harness_scope(project_root, config)
@@ -15,16 +17,19 @@ function run_julia_project_harness(project_root::AbstractString; config=default_
     run_paths(monitored_paths, config; scope, workspace_member_scopes)
 end
 
+"""Run explicit paths and throw when blocking Julia harness findings exist."""
 function assert_julia_lang_harness_clean(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
     report = run_julia_lang_harness(paths; config)
     assert_clean(report)
 end
 
+"""Run a Project.toml-rooted harness check and throw on blocking findings."""
 function assert_julia_project_harness_clean(project_root::AbstractString; config=default_julia_harness_config())
     report = run_julia_project_harness(project_root; config)
     assert_clean(report)
 end
 
+"""Run project policy plus advisory self-apply checks for package test gates."""
 function assert_julia_project_harness_pkg_test_clean(
     project_root::AbstractString;
     config=default_julia_harness_config(),

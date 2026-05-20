@@ -833,6 +833,59 @@ end
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
+@testset "project runner reports public mutable type contract advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export Cache
+        \"\"\"Public cache for computed values.\"\"\"
+        mutable struct Cache
+            entries::Dict{Symbol,Int}
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R013", rendered)
+    @test occursin("Public mutable type lacks a mutation contract", rendered)
+    @test occursin("mutable struct `Cache`", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts public mutable type mutation contract" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export Cache
+        \"\"\"Mutable cache.
+
+        Mutation contract: callers own lifecycle and preserve entry invariants.
+        \"\"\"
+        mutable struct Cache
+            entries::Dict{Symbol,Int}
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "project runner reports stringly public domain advice" begin
     root = mktempdir()
     write_project(root, "Example")

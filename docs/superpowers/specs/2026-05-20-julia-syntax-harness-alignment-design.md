@@ -414,9 +414,10 @@ Initial advisory rules:
 - `AGENT-JL-R011`: public struct fields omit explicit type annotations.
 - `AGENT-JL-R012`: public struct exposes stringly domain fields such as mode,
   status, category, or type.
+- `AGENT-JL-R013`: public mutable struct lacks a mutation contract note.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R012`. Later advisory rules can land only after the needed
+`AGENT-JL-R013`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

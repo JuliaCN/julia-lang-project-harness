@@ -35,6 +35,7 @@ const AGENT_JL_R009 = "AGENT-JL-R009"
 const AGENT_JL_R010 = "AGENT-JL-R010"
 const AGENT_JL_R011 = "AGENT-JL-R011"
 const AGENT_JL_R012 = "AGENT-JL-R012"
+const AGENT_JL_R013 = "AGENT-JL-R013"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -338,6 +339,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public type exposes stringly domain fields",
         "Prefer Symbol, enum, or named value carriers when exported Julia structs expose mode, status, category, or type fields.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R013,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public mutable type lacks a mutation contract",
+        "Document mutation ownership, lifecycle, or invariants when exported Julia types are mutable.",
         labels("agent-policy"),
     ),
 ]

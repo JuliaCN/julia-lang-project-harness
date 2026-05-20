@@ -11,6 +11,17 @@ const EXTENSION_PATTERN_DOC_TOKENS = (
 const SYNTAX_CONTRACT_DOC_TOKENS = ("syntax", "macro", "expansion", "generated", "contract")
 const STRINGLY_DOMAIN_FIELD_NAME_PARTS = Set(["category", "mode", "status", "type"])
 const STRINGLY_DOMAIN_FIELD_TYPE_NAMES = Set(["AbstractString", "String"])
+const MUTATION_CONTRACT_DOC_TOKENS = (
+    "invariant",
+    "invariants",
+    "lifecycle",
+    "mutable",
+    "mutate",
+    "mutates",
+    "mutation",
+    "ownership",
+    "state",
+)
 
 function public_api_doc_findings(
     parsed_files::Vector{ParsedJuliaFile},
@@ -172,6 +183,66 @@ function is_stringly_domain_field_name(name::AbstractString)
     any(part -> part in STRINGLY_DOMAIN_FIELD_NAME_PARTS, parts)
 end
 
+function public_mutable_type_contract_findings(
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    type_docs_by_name::Dict{String,Vector{String}},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        append!(
+            findings,
+            public_mutable_type_contract_findings(
+                parsed,
+                public_names,
+                type_docs_by_name,
+                rules,
+            ),
+        )
+    end
+    findings
+end
+
+function public_mutable_type_contract_findings(
+    parsed::ParsedJuliaFile,
+    public_names::Set{String},
+    type_docs_by_name::Dict{String,Vector{String}},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for type_fact in parsed.syntax_facts.types
+        type_fact.kind == "struct" || continue
+        type_fact.is_mutable || continue
+        name = terminal_public_name(type_fact.name)
+        name in public_names || continue
+        haskey(type_docs_by_name, name) || continue
+        has_mutation_contract_doc(type_docs_by_name, name) && continue
+        push!(
+            findings,
+            finding_from_rule(
+                rules[AGENT_JL_R013];
+                summary="Exported/public mutable struct `$(name)` is documented without a mutation contract.",
+                location=SourceLocation(parsed.report.path, type_fact.line, type_fact.column),
+                source_line=source_line(parsed.source, type_fact.line),
+                label="document mutation ownership, lifecycle, or invariants for this public mutable type",
+            ),
+        )
+    end
+    findings
+end
+
+function has_mutation_contract_doc(
+    docs_by_name::Dict{String,Vector{String}},
+    name::AbstractString,
+)
+    any(get(docs_by_name, String(name), String[])) do text
+        lower_text = lowercase(text)
+        any(token -> occursin(token, lower_text), MUTATION_CONTRACT_DOC_TOKENS)
+    end
+end
+
 function has_extension_pattern_doc(
     docs_by_name::Dict{String,Vector{String}},
     name::AbstractString,
@@ -287,6 +358,19 @@ function package_function_docstrings_by_public_name(parsed_files::Vector{ParsedJ
         parsed.report.is_valid || continue
         for docstring_fact in parsed.syntax_facts.docstrings
             docstring_fact.target_kind == "function" || continue
+            name = terminal_public_name(docstring_fact.target_name)
+            push!(get!(docs, name, String[]), docstring_fact.text)
+        end
+    end
+    docs
+end
+
+function package_type_docstrings_by_public_name(parsed_files::Vector{ParsedJuliaFile})
+    docs = Dict{String,Vector{String}}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for docstring_fact in parsed.syntax_facts.docstrings
+            docstring_fact.target_kind == "struct" || continue
             name = terminal_public_name(docstring_fact.target_name)
             push!(get!(docs, name, String[]), docstring_fact.text)
         end

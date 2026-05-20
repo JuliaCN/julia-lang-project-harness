@@ -78,6 +78,38 @@ end
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end
 
+@testset "parser type facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "types.jl")
+    write(
+        source,
+        """
+        abstract type AbstractThing end
+        struct Thing{T} <: AbstractThing
+            value::T
+            name
+        end
+        mutable struct Box
+            item::Thing
+        end
+        primitive type Word32 <: Unsigned 32 end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test [(item.kind, item.name, item.parameters, item.supertype) for item in parsed.syntax_facts.types] == [
+        ("abstract", "AbstractThing", String[], nothing),
+        ("struct", "Thing", ["T"], "AbstractThing"),
+        ("struct", "Box", String[], nothing),
+        ("primitive", "Word32", String[], "Unsigned"),
+    ]
+    @test parsed.syntax_facts.types[2].fields == ["value", "name"]
+    @test !parsed.syntax_facts.types[2].is_mutable
+    @test parsed.syntax_facts.types[3].fields == ["item"]
+    @test parsed.syntax_facts.types[3].is_mutable
+end
+
 @testset "parser macro and test facts" begin
     temp = mktempdir()
     source = joinpath(temp, "tests.jl")

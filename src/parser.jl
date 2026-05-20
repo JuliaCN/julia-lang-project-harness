@@ -44,6 +44,18 @@ struct JuliaFunctionSyntax
     expression::String
 end
 
+struct JuliaTypeSyntax
+    line::Int
+    column::Int
+    kind::String
+    name::String
+    parameters::Vector{String}
+    supertype::Union{Nothing,String}
+    fields::Vector{String}
+    is_mutable::Bool
+    expression::String
+end
+
 struct JuliaMacroInvocationSyntax
     line::Int
     column::Int
@@ -68,6 +80,7 @@ struct JuliaNativeSyntaxFacts
     imports::Vector{JuliaImportSyntax}
     exports::Vector{JuliaExportSyntax}
     functions::Vector{JuliaFunctionSyntax}
+    types::Vector{JuliaTypeSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     tests::Vector{JuliaTestSyntax}
 end
@@ -119,6 +132,7 @@ function empty_julia_native_syntax_facts()
         JuliaImportSyntax[],
         JuliaExportSyntax[],
         JuliaFunctionSyntax[],
+        JuliaTypeSyntax[],
         JuliaMacroInvocationSyntax[],
         JuliaTestSyntax[],
     )
@@ -131,6 +145,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaImportSyntax[],
         JuliaExportSyntax[],
         JuliaFunctionSyntax[],
+        JuliaTypeSyntax[],
         JuliaMacroInvocationSyntax[],
         JuliaTestSyntax[],
     )
@@ -142,6 +157,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.imports,
         collector.exports,
         collector.functions,
+        collector.types,
         collector.macro_invocations,
         collector.tests,
     )
@@ -153,6 +169,7 @@ mutable struct JuliaSyntaxFactCollector
     imports::Vector{JuliaImportSyntax}
     exports::Vector{JuliaExportSyntax}
     functions::Vector{JuliaFunctionSyntax}
+    types::Vector{JuliaTypeSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     tests::Vector{JuliaTestSyntax}
 end
@@ -173,6 +190,9 @@ function collect_julia_syntax_facts!(
     elseif syntax_kind(node) in ("function", "macro")
         function_fact = function_syntax_from_node(node)
         !isnothing(function_fact) && push!(collector.functions, function_fact)
+    elseif syntax_kind(node) in ("struct", "abstract", "primitive")
+        type_fact = type_syntax_from_node(node)
+        !isnothing(type_fact) && push!(collector.types, type_fact)
     elseif syntax_kind(node) == "macrocall"
         macro_invocation = macro_invocation_syntax_from_node(node)
         if !isnothing(macro_invocation)
@@ -275,6 +295,25 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     )
 end
 
+function type_syntax_from_node(node::JuliaSyntax.SyntaxNode)
+    location = JuliaSyntax.source_location(node)
+    head = type_head_node(node)
+    isnothing(head) && return nothing
+    name = type_name_text(head)
+    isnothing(name) && return nothing
+    JuliaTypeSyntax(
+        location[1],
+        location[2] - 1,
+        syntax_kind(node),
+        name,
+        type_parameter_texts(head),
+        type_supertype_text(head),
+        type_field_names(node),
+        JuliaSyntax.has_flags(node, JuliaSyntax.MUTABLE_FLAG),
+        String(JuliaSyntax.sourcetext(node)),
+    )
+end
+
 function macro_invocation_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     children = syntax_children(node)
     isempty(children) && return nothing
@@ -340,6 +379,80 @@ end
 
 function compact_syntax_text(node::JuliaSyntax.SyntaxNode)
     replace(String(JuliaSyntax.sourcetext(node)), r"\s+" => "")
+end
+
+function type_head_node(node::JuliaSyntax.SyntaxNode)
+    for child in syntax_children(node)
+        syntax_kind(child) in ("block", "Integer") && continue
+        return child
+    end
+    nothing
+end
+
+function type_name_text(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "Identifier"
+        return String(JuliaSyntax.sourcetext(node))
+    elseif kind == "curly"
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return type_name_text(first(children))
+    elseif kind == "<:"
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return type_name_text(first(children))
+    end
+    nothing
+end
+
+function type_parameter_texts(node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "<:"
+        children = syntax_children(node)
+        isempty(children) && return String[]
+        head = first(children)
+    else
+        head = node
+    end
+    syntax_kind(head) == "curly" || return String[]
+    children = syntax_children(head)
+    length(children) <= 1 && return String[]
+    [compact_syntax_text(child) for child in children[2:end]]
+end
+
+function type_supertype_text(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "<:" || return nothing
+    children = syntax_children(node)
+    length(children) >= 2 || return nothing
+    compact_syntax_text(children[2])
+end
+
+function type_field_names(node::JuliaSyntax.SyntaxNode)
+    block = first_child_with_kind(node, "block")
+    isnothing(block) && return String[]
+    fields = String[]
+    for child in syntax_children(block)
+        name = field_name_text(child)
+        !isnothing(name) && push!(fields, name)
+    end
+    fields
+end
+
+function field_name_text(node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "Identifier"
+        return String(JuliaSyntax.sourcetext(node))
+    elseif syntax_kind(node) == "::"
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return field_name_text(first(children))
+    end
+    nothing
+end
+
+function first_child_with_kind(node::JuliaSyntax.SyntaxNode, kind::AbstractString)
+    for child in syntax_children(node)
+        syntax_kind(child) == kind && return child
+    end
+    nothing
 end
 
 function first_call_child(node::JuliaSyntax.SyntaxNode)

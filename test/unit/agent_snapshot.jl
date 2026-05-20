@@ -5,7 +5,7 @@
     mkpath(joinpath(root, "test"))
     write(
         joinpath(root, "src", "Example.jl"),
-        "module Example\nexport run\nusing JSON3\ninclude(\"api.jl\")\nrun(value) = value\nend\n",
+        "module Example\nexport run, Config\nusing JSON3\ninclude(\"api.jl\")\nstruct Config\nvalue::Int\nend\nrun(value) = value\nend\n",
     )
     write(joinpath(root, "src", "api.jl"), "run() = 1\n")
     write(
@@ -24,6 +24,8 @@
     @test occursin("export=run", rendered)
     @test occursin("Imports:", rendered)
     @test occursin("using=JSON3", rendered)
+    @test occursin("Types:", rendered)
+    @test occursin("struct=Config fields=1", rendered)
     @test occursin("Methods:", rendered)
     @test occursin("function=run/1", rendered)
     @test occursin("Tests:", rendered)

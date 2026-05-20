@@ -46,6 +46,11 @@ function render_julia_package_snapshot(
         rendered *= "Imports:\n"
         rendered *= join(import_lines, "\n") * "\n"
     end
+    type_lines = snapshot_type_lines(scope, parsed_files)
+    if !isempty(type_lines)
+        rendered *= "Types:\n"
+        rendered *= join(type_lines, "\n") * "\n"
+    end
     method_lines = snapshot_method_lines(scope, parsed_files)
     if !isempty(method_lines)
         rendered *= "Methods:\n"
@@ -112,6 +117,25 @@ end
 function display_import_syntax(imported::JuliaImportSyntax)
     suffix = isempty(imported.names) ? "" : ":$(join(imported.names, ","))"
     "$(imported.kind)=$(imported.root)$(suffix)"
+end
+
+function snapshot_type_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})
+    lines = String[]
+    for parsed in parsed_files
+        isempty(parsed.syntax_facts.types) && continue
+        types = [display_type_syntax(type_fact) for type_fact in parsed.syntax_facts.types]
+        push!(lines, "- $(display_project_path(scope, parsed.report.path)) $(join(types, "; "))")
+    end
+    lines
+end
+
+function display_type_syntax(type_fact::JuliaTypeSyntax)
+    kind = type_fact.kind == "struct" && type_fact.is_mutable ? "mutable struct" :
+           type_fact.kind
+    parameter_suffix = isempty(type_fact.parameters) ? "" : "{$(join(type_fact.parameters, ","))}"
+    supertype_suffix = isnothing(type_fact.supertype) ? "" : "<:$(type_fact.supertype)"
+    field_suffix = isempty(type_fact.fields) ? "" : " fields=$(length(type_fact.fields))"
+    "$(kind)=$(type_fact.name)$(parameter_suffix)$(supertype_suffix)$(field_suffix)"
 end
 
 function snapshot_method_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

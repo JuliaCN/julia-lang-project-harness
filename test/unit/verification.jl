@@ -52,6 +52,48 @@ function write_verification_project(root::AbstractString)
     write(joinpath(root, "ext", "VerifyJSONExt.jl"), "module VerifyJSONExt\nend\n")
 end
 
+function write_responsibility_project(root::AbstractString)
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ResponsibilityExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+
+        [compat]
+        HTTP = "1"
+        JSON3 = "1"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "ResponsibilityExample.jl"),
+        """
+        module ResponsibilityExample
+        using HTTP
+        using JSON3
+        using SHA
+        using LinearAlgebra
+        export fetch_config
+
+        \"\"\"Fetch and decode a remote config payload.\"\"\"
+        function fetch_config(urls)
+            digests = mapreduce(url -> bytes2hex(sha256(url)), vcat, urls)
+            response = HTTP.get(first(urls))
+            data = open("config.json") do io
+                JSON3.read(read(io, String))
+            end
+            return norm(digests), response, data
+        end
+        end
+        """,
+    )
+end
+
 @testset "verification task index" begin
     root = mktempdir()
     write_verification_project(root)
@@ -99,4 +141,37 @@ end
     @test occursin("responsibilities=extension_boundary", profile_rendered)
     @test occursin("\"profile_index\"", profile_json)
     @test occursin("extension_boundary", profile_json)
+end
+
+@testset "verification profile infers agent responsibilities from project facts" begin
+    root = mktempdir()
+    write_responsibility_project(root)
+
+    index = build_julia_verification_profile_index(root)
+    rendered = render_julia_verification_profile_index(index)
+    candidate = only(index.candidates)
+
+    @test candidate.responsibilities == [
+        "public_api",
+        "external_dependency",
+        "persistence",
+        "security_boundary",
+        "latency_sensitive",
+        "availability_critical",
+    ]
+    @test candidate.task_kinds == [
+        "pkg_test",
+        "syntax_search",
+        "stress",
+        "performance",
+        "chaos",
+        "security",
+    ]
+    @test candidate.evidence["direct_deps"] == "HTTP,JSON3"
+    @test candidate.evidence["network_roots"] == "HTTP"
+    @test candidate.evidence["persistence_roots"] == "JSON3"
+    @test candidate.evidence["security_roots"] == "SHA"
+    @test candidate.evidence["performance_roots"] == "LinearAlgebra"
+    @test occursin("responsibilities=public_api,external_dependency", rendered)
+    @test occursin("tasks=pkg_test,syntax_search,stress,performance,chaos,security", rendered)
 end

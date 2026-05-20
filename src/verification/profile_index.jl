@@ -37,8 +37,8 @@ function verification_profile_candidates_for_scope(
     if has_harness_dependency(scope)
         push!(candidates, test_profile_gate_candidate(scope, parsed_files))
     end
-    public_api_candidate = public_api_profile_candidate(scope, parsed_files)
-    !isnothing(public_api_candidate) && push!(candidates, public_api_candidate)
+    responsibility_candidate = project_responsibility_profile_candidate(scope, parsed_files)
+    !isnothing(responsibility_candidate) && push!(candidates, responsibility_candidate)
     append!(candidates, extension_profile_candidates(scope))
     candidates
 end
@@ -57,25 +57,6 @@ function test_profile_gate_candidate(
         verification_evidence(
             "hook" => string(has_hook),
             "dependency" => "JuliaLangProjectHarness",
-        ),
-    )
-end
-
-function public_api_profile_candidate(
-    scope::JuliaProjectHarnessScope,
-    parsed_files::Vector{ParsedJuliaFile},
-)
-    public_names = package_public_names(parsed_files)
-    isempty(public_names) && return nothing
-    JuliaVerificationProfileCandidate(
-        scope.project_root,
-        preferred_source_owner_path(scope),
-        "inferred",
-        ["public_api"],
-        ["pkg_test", "syntax_search"],
-        verification_evidence(
-            "public" => string(length(public_names)),
-            "exports" => join(first(sort!(collect(public_names)), min(8, length(public_names))), ","),
         ),
     )
 end

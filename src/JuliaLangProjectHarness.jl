@@ -12,6 +12,7 @@ include("search_index/functions.jl")
 include("search_render.jl")
 include("agent_snapshot.jl")
 include("verification.jl")
+include("verification/responsibility_inference.jl")
 include("verification/profile_index.jl")
 include("cli.jl")
 

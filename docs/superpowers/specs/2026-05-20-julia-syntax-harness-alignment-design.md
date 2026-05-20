@@ -549,9 +549,32 @@ The renderer should avoid:
 JSON is available through the structured renderer. Agents should not need JSON
 for the common repair loop.
 
+## Agent-First Verification Inference
+
+The harness is primarily run by agents, so verification configuration should be
+derived before it is hand-authored. Project facts from `Project.toml` and native
+JuliaSyntax facts from imports, calls, macros, exports, extensions, and test
+entrypoints should produce compact `VerificationProfiles` that tell an agent
+which responsibility family is present:
+
+- `public_api` asks for ordinary package tests, syntax-search smoke coverage,
+  and stress-style API validation;
+- `external_dependency`, `persistence`, and `availability_critical` ask for
+  dependency/chaos-style checks;
+- `security_boundary` asks for security-oriented evidence;
+- `latency_sensitive` asks for performance evidence.
+
+This is an adaptation of the Rust harness verification profile design, but the
+signals are Julia-native: package dependencies, stdlibs such as `SHA` or
+`LinearAlgebra`, data/persistence packages such as `JSON3`, network packages
+such as `HTTP`, file/process calls, and performance-related calls/macros. The
+agent should use this inferred profile as the default verification plan and only
+write explicit config when it needs to explain a true exception.
+
 ## Configuration
 
-Config should support:
+Config is an escape and tuning surface, not the primary source of truth. It
+should support:
 
 - ignored directory names;
 - blocking severities;

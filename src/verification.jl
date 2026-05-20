@@ -7,7 +7,8 @@ function build_julia_verification_task_index(
     workspace_scopes = julia_workspace_member_scopes(scope, config)
     records = JuliaVerificationTaskRecord[]
     for task_scope in vcat([scope], workspace_scopes)
-        append!(records, verification_task_records_for_scope(task_scope, config))
+        parsed_files = parsed_julia_files_for_scope(task_scope, config)
+        append!(records, verification_task_records_for_scope(task_scope, config, parsed_files))
     end
     sort!(records; by=record -> (record.kind, record.owner_path, record.fingerprint))
     JuliaVerificationTaskIndex(scope.project_root, records)
@@ -42,6 +43,7 @@ end
 function verification_task_records_for_scope(
     scope::JuliaProjectHarnessScope,
     config::JuliaHarnessConfig,
+    parsed_files::Vector{ParsedJuliaFile}=parsed_julia_files_for_scope(scope, config),
 )
     records = JuliaVerificationTaskRecord[]
     push!(records, pkg_test_verification_task(scope))
@@ -49,14 +51,28 @@ function verification_task_records_for_scope(
         push!(records, harness_self_policy_verification_task(scope))
         push!(records, syntax_search_verification_task(scope))
     end
+    append!(records, inferred_verification_task_records(scope, parsed_files))
     append!(records, extension_verification_tasks(scope))
     filter(!isnothing, records)
+end
+
+function parsed_julia_files_for_scope(scope::JuliaProjectHarnessScope, config::JuliaHarnessConfig)
+    [
+        parse_julia_file(path) for path in discover_julia_files(
+            scope_monitored_paths(scope),
+            config,
+        )
+    ]
 end
 
 function pkg_test_verification_task(scope::JuliaProjectHarnessScope)
     owner_path = preferred_test_owner_path(scope)
     JuliaVerificationTaskRecord(
-        verification_fingerprint("pkg_test", scope.project_root, owner_path),
+        verification_fingerprint(
+            "pkg_test",
+            verification_scope_fingerprint(scope),
+            verification_owner_fingerprint_part(scope, owner_path),
+        ),
         "pkg_test",
         "pending",
         "after_unit_tests_pass",
@@ -76,7 +92,11 @@ end
 function harness_self_policy_verification_task(scope::JuliaProjectHarnessScope)
     owner_path = preferred_test_owner_path(scope)
     JuliaVerificationTaskRecord(
-        verification_fingerprint("harness_policy", scope.project_root, owner_path),
+        verification_fingerprint(
+            "harness_policy",
+            verification_scope_fingerprint(scope),
+            verification_owner_fingerprint_part(scope, owner_path),
+        ),
         "harness_policy",
         "pending",
         "after_unit_tests_pass",
@@ -101,7 +121,11 @@ end
 function syntax_search_verification_task(scope::JuliaProjectHarnessScope)
     owner_path = preferred_source_owner_path(scope)
     JuliaVerificationTaskRecord(
-        verification_fingerprint("syntax_search", scope.project_root, owner_path),
+        verification_fingerprint(
+            "syntax_search",
+            verification_scope_fingerprint(scope),
+            verification_owner_fingerprint_part(scope, owner_path),
+        ),
         "syntax_search",
         "pending",
         "after_unit_tests_pass",
@@ -129,7 +153,11 @@ function extension_verification_tasks(scope::JuliaProjectHarnessScope)
         push!(
             records,
             JuliaVerificationTaskRecord(
-                verification_fingerprint("extension", scope.project_root, owner_path),
+                verification_fingerprint(
+                    "extension",
+                    verification_scope_fingerprint(scope),
+                    verification_owner_fingerprint_part(scope, owner_path),
+                ),
                 "extension_boundary",
                 "pending",
                 "after_unit_tests_pass",
@@ -146,6 +174,69 @@ function extension_verification_tasks(scope::JuliaProjectHarnessScope)
         )
     end
     records
+end
+
+const JULIA_AGENT_VERIFICATION_TASK_KINDS = Set([
+    "chaos",
+    "performance",
+    "security",
+    "stress",
+])
+
+function inferred_verification_task_records(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+)
+    candidate = project_responsibility_profile_candidate(scope, parsed_files)
+    isnothing(candidate) && return JuliaVerificationTaskRecord[]
+    [
+        inferred_verification_task_record(scope, candidate, task_kind) for
+        task_kind in candidate.task_kinds if task_kind in JULIA_AGENT_VERIFICATION_TASK_KINDS
+    ]
+end
+
+function inferred_verification_task_record(
+    scope::JuliaProjectHarnessScope,
+    candidate::JuliaVerificationProfileCandidate,
+    task_kind::AbstractString,
+)
+    evidence = copy(candidate.evidence)
+    evidence["responsibilities"] = join(candidate.responsibilities, ",")
+    JuliaVerificationTaskRecord(
+        verification_fingerprint(
+            String(task_kind),
+            verification_scope_fingerprint(scope),
+            verification_owner_fingerprint_part(scope, candidate.owner_path),
+            join(candidate.responsibilities, ","),
+        ),
+        String(task_kind),
+        "pending",
+        inferred_verification_task_phase(task_kind),
+        scope.project_root,
+        candidate.owner_path,
+        nothing,
+        String[],
+        evidence,
+        inferred_verification_task_reason(task_kind),
+    )
+end
+
+function inferred_verification_task_phase(task_kind::AbstractString)
+    task_kind in ("stress", "performance") && return "after_unit_tests_pass"
+    task_kind in ("chaos", "security") && return "before_release"
+    "after_unit_tests_pass"
+end
+
+function inferred_verification_task_reason(task_kind::AbstractString)
+    task_kind == "stress" &&
+        return "Agent should add or run stress-style validation for this public Julia API surface."
+    task_kind == "performance" &&
+        return "Agent should add or run Julia-native performance evidence for this latency-sensitive owner."
+    task_kind == "chaos" &&
+        return "Agent should add or run dependency, persistence, or availability failure-mode verification."
+    task_kind == "security" &&
+        return "Agent should add or run security-boundary verification for this owner."
+    "Agent should add or run verification evidence for this inferred responsibility."
 end
 
 function has_harness_dependency(scope::JuliaProjectHarnessScope)
@@ -189,6 +280,24 @@ function verification_fingerprint(parts::AbstractString...)
     join((compact_fingerprint_part(part) for part in parts), ":")
 end
 
+function verification_scope_fingerprint(scope::JuliaProjectHarnessScope)
+    !isnothing(scope.package_uuid) && return scope.package_uuid
+    !isnothing(scope.package_name) && return scope.package_name
+    basename(scope.project_root)
+end
+
+function verification_owner_fingerprint_part(
+    scope::JuliaProjectHarnessScope,
+    owner_path::AbstractString,
+)
+    relative_path = relpath(owner_path, scope.project_root)
+    parts = splitpath(relative_path)
+    if !isabspath(relative_path) && (isempty(parts) || first(parts) != "..")
+        return slash_path(relative_path)
+    end
+    slash_path(owner_path)
+end
+
 function compact_fingerprint_part(part::AbstractString)
     replace(slash_path(part), r"[^A-Za-z0-9_.=-]+" => "_")
 end
@@ -203,8 +312,11 @@ function render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
             "- kind=$(record.kind) state=$(record.state) phase=$(record.phase) owner=" *
             verification_owner_path(index, record),
         )
-        command = join(shell_quote_arg.(record.command), " ")
-        push!(lines, "  command=$(command)")
+        push!(lines, "  fingerprint=$(record.fingerprint)")
+        if !isempty(record.command)
+            command = join(shell_quote_arg.(record.command), " ")
+            push!(lines, "  command=$(command)")
+        end
         if !isempty(record.evidence)
             evidence = [
                 "$(key)=$(value)" for (key, value) in sort(collect(record.evidence); by=first)

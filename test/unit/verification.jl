@@ -102,7 +102,7 @@ end
     kinds = [record.kind for record in index.records]
 
     @test index.project_root == root
-    @test kinds == ["extension_boundary", "harness_policy", "pkg_test", "syntax_search"]
+    @test kinds == ["extension_boundary", "harness_policy", "pkg_test", "stress", "syntax_search"]
     @test all(record -> record.state == "pending", index.records)
     @test any(record -> occursin("Pkg.test()", join(record.command, " ")), index.records)
     @test any(
@@ -122,8 +122,10 @@ end
     rendered = render_julia_verification_task_index(index)
     json = render_julia_verification_task_index_json(index)
 
-    @test occursin("VerificationTasks: count=4", rendered)
+    @test occursin("VerificationTasks: count=5", rendered)
     @test occursin("owner=test/runtests.jl", rendered)
+    @test occursin("fingerprint=", rendered)
+    @test occursin("kind=stress", rendered)
     @test occursin("\"records\"", json)
     @test occursin("VerifyJSONExt", json)
 
@@ -174,4 +176,15 @@ end
     @test candidate.evidence["performance_roots"] == "LinearAlgebra"
     @test occursin("responsibilities=public_api,external_dependency", rendered)
     @test occursin("tasks=pkg_test,syntax_search,stress,performance,chaos,security", rendered)
+
+    task_index = build_julia_verification_task_index(root)
+    task_kinds = [record.kind for record in task_index.records]
+    task_rendered = render_julia_verification_task_index(task_index)
+
+    @test task_kinds == ["chaos", "performance", "pkg_test", "security", "stress"]
+    @test occursin("kind=performance state=pending phase=after_unit_tests_pass", task_rendered)
+    @test occursin("kind=security state=pending phase=before_release", task_rendered)
+    @test occursin("fingerprint=performance", task_rendered)
+    @test occursin("responsibilities=public_api,external_dependency", task_rendered)
+    @test occursin("Agent should add or run Julia-native performance evidence", task_rendered)
 end

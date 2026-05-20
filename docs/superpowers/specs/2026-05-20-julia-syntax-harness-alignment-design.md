@@ -571,6 +571,16 @@ such as `HTTP`, file/process calls, and performance-related calls/macros. The
 agent should use this inferred profile as the default verification plan and only
 write explicit config when it needs to explain a true exception.
 
+The task index should project these inferred responsibilities into pending
+agent obligations. Ordinary `pkg_test`, self-policy, extension, and syntax-search
+records can carry runnable commands. External evidence families such as
+`stress`, `performance`, `chaos`, and `security` should carry owner path,
+fingerprint, lifecycle phase, compact parser/project evidence, and a reason for
+what the agent should add or run next. Compact text renders should include the
+fingerprint so future receipts or waivers can bind evidence to the exact inferred
+obligation. The harness must not pretend those tasks are satisfied merely
+because package tests pass.
+
 ## Configuration
 
 Config is an escape and tuning surface, not the primary source of truth. It

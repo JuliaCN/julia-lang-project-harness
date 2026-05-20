@@ -7,12 +7,7 @@ function build_julia_verification_profile_index(
     workspace_scopes = julia_workspace_member_scopes(scope, config)
     candidates = JuliaVerificationProfileCandidate[]
     for candidate_scope in vcat([scope], workspace_scopes)
-        parsed_files = [
-            parse_julia_file(path) for path in discover_julia_files(
-                scope_monitored_paths(candidate_scope),
-                config,
-            )
-        ]
+        parsed_files = parsed_julia_files_for_scope(candidate_scope, config)
         append!(
             candidates,
             verification_profile_candidates_for_scope(candidate_scope, parsed_files),

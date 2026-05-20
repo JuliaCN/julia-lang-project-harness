@@ -83,7 +83,11 @@ end
     )
 
     @test status == 0
-    @test occursin("VerificationTasks: count=1", String(take!(out)))
+    task_rendered = String(take!(out))
+    @test occursin("VerificationTasks: count=2", task_rendered)
+    @test occursin("kind=pkg_test", task_rendered)
+    @test occursin("kind=stress", task_rendered)
+    @test occursin("fingerprint=stress", task_rendered)
     @test json_status == 0
     @test occursin("\"records\"", String(take!(json_out)))
     @test profile_status == 0

@@ -71,6 +71,7 @@ The package should be a normal Julia package:
 - `src/runner/...`
 - `test/runtests.jl`
 - `test/unit/...`
+- `bin/julia-project-harness.jl`
 
 The root module should remain a facade. It should include owned modules and
 re-export stable public API, but implementation should live in leaf files. This
@@ -279,6 +280,22 @@ filters, and avoid hidden external services or fuzzy state. Ranking should favor
 exact symbol-name matches, then name containment, tag matches, detail matches,
 and broader search text matches.
 
+## CLI Surface
+
+The package should expose a small command-line entrypoint comparable to the Rust
+harness CLI while staying Julia-native:
+
+- default output renders the compact repair report;
+- `--json` renders the structured report;
+- `--agent-snapshot` renders the low-noise project summary;
+- `--advice` renders only advisory findings;
+- `--search QUERY` renders scored search results from JuliaSyntax-derived
+  index entries;
+- `--tag TAG` and `--limit N` constrain search output.
+
+The CLI is a thin wrapper over public library functions. It should not own
+policy, parsing, or search behavior.
+
 ## Rule Packs
 
 Default project execution order:
@@ -384,11 +401,13 @@ render_julia_project_harness(report)
 render_julia_project_harness_json(report)
 render_julia_project_harness_advice(report)
 render_julia_project_harness_agent_snapshot(project_root::AbstractString; config=default_julia_harness_config())
+render_julia_search_results(results::Vector{JuliaSearchResult}; project_root=nothing)
 julia_project_search_index(project_root::AbstractString; config=default_julia_harness_config())
 julia_lang_search_index(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
 search_julia_index(entries::Vector{JuliaSearchIndexEntry}, query::AbstractString; tags=String[], limit=25)
 search_julia_project(project_root::AbstractString, query::AbstractString; config=default_julia_harness_config(), tags=String[], limit=25)
 search_julia_lang(paths::Vector{<:AbstractString}, query::AbstractString; config=default_julia_harness_config(), tags=String[], limit=25)
+run_julia_project_harness_cli(args=ARGS; out=stdout, err=stderr)
 julia_rule_pack_descriptors()
 julia_syntax_rules()
 julia_project_policy_rules()

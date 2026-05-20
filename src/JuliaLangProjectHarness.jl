@@ -6,7 +6,9 @@ include("rules.jl")
 include("render.jl")
 include("runner.jl")
 include("search_index.jl")
+include("search_render.jl")
 include("agent_snapshot.jl")
+include("cli.jl")
 
 export JuliaDiagnosticSeverity,
     JuliaHarnessConfig,
@@ -33,6 +35,8 @@ export JuliaDiagnosticSeverity,
     render_julia_project_harness_advice,
     render_julia_project_harness_agent_snapshot,
     render_julia_project_harness_json,
+    render_julia_search_results,
+    run_julia_project_harness_cli,
     run_julia_lang_harness,
     run_julia_project_harness,
     search_julia_index,

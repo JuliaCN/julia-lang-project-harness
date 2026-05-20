@@ -11,3 +11,31 @@ using JuliaLangProjectHarness: parse_julia_file
     @test isnothing(parsed.report.parse_error)
     @test parsed.syntax_facts.has_syntax_tree
 end
+
+@testset "parser include facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "entry.jl")
+    write(
+        source,
+        """
+        include("api.jl")
+        include(joinpath("core", "impl.jl"))
+        include(path)
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    includes = parsed.syntax_facts.includes
+
+    @test length(includes) == 3
+    @test includes[1].is_literal
+    @test includes[1].target == "api.jl"
+    @test includes[1].resolved_target == joinpath(temp, "api.jl")
+    @test includes[2].is_literal
+    @test includes[2].target == joinpath("core", "impl.jl")
+    @test includes[2].resolved_target == joinpath(temp, "core", "impl.jl")
+    @test !includes[3].is_literal
+    @test isnothing(includes[3].target)
+    @test includes[3].line == 3
+    @test includes[3].column == 0
+end

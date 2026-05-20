@@ -100,6 +100,11 @@ end
 function project_scope_dict(scope::JuliaProjectHarnessScope)
     Dict(
         "project_root" => slash_path(scope.project_root),
+        "project_toml_path" => isnothing(scope.project_toml_path) ? nothing :
+                               slash_path(scope.project_toml_path),
+        "package_name" => scope.package_name,
+        "package_entry_path" => isnothing(scope.package_entry_path) ? nothing :
+                                slash_path(scope.package_entry_path),
         "source_paths" => slash_path.(scope.source_paths),
         "test_paths" => slash_path.(scope.test_paths),
         "package_paths" => slash_path.(scope.package_paths),

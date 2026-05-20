@@ -11,7 +11,14 @@
     @test length(syntax_rules) == 1
     @test only(syntax_rules).rule_id == "JULIA-SYN-R001"
     @test only(syntax_rules).severity == JuliaLangProjectHarness.Error
-    @test isempty(julia_project_policy_rules())
-    @test isempty(julia_modularity_rules())
+    @test [rule.rule_id for rule in julia_project_policy_rules()] == [
+        "JULIA-PROJ-R001",
+        "JULIA-PROJ-R002",
+    ]
+    @test [rule.rule_id for rule in julia_modularity_rules()] == [
+        "JULIA-MOD-R003",
+        "JULIA-MOD-R004",
+        "JULIA-MOD-R006",
+    ]
     @test isempty(julia_agent_policy_rules())
 end

@@ -48,6 +48,9 @@ end
 
 struct JuliaProjectHarnessScope
     project_root::String
+    project_toml_path::Union{Nothing,String}
+    package_name::Union{Nothing,String}
+    package_entry_path::Union{Nothing,String}
     source_paths::Vector{String}
     test_paths::Vector{String}
     package_paths::Vector{String}

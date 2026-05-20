@@ -40,6 +40,7 @@ function evaluate_agent_policy_rules(
     findings = JuliaHarnessFinding[]
     documented_names = package_documented_public_names(parsed_files)
     append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
+    append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
     for parsed in parsed_files
         parsed.report.is_valid || continue
         for function_fact in parsed.syntax_facts.functions
@@ -83,6 +84,108 @@ function evaluate_agent_policy_rules(
         end
     end
     findings
+end
+
+function public_api_owner_conflict_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    records = public_api_definition_records(parsed_files, public_names)
+    findings = JuliaHarnessFinding[]
+    for (name, definitions) in sort(collect(records); by=first)
+        owner_paths = sort(unique(definition.path for definition in definitions))
+        syntax_families = sort(unique(definition.kind for definition in definitions))
+        length(owner_paths) > 1 || length(syntax_families) > 1 || continue
+        first_definition = first(sort(definitions; by=definition -> (
+            definition.path,
+            definition.line,
+            definition.column,
+        )))
+        owner_summary = join(display_public_owner_path.(Ref(scope), owner_paths), ", ")
+        family_summary = join(syntax_families, ", ")
+        push!(
+            findings,
+            finding_from_rule(
+                rules[AGENT_JL_R005];
+                summary="Exported/public API `$(name)` spans owners: $(owner_summary); syntax families: $(family_summary).",
+                location=SourceLocation(
+                    first_definition.path,
+                    first_definition.line,
+                    first_definition.column,
+                ),
+                source_line=first_definition.source_line,
+                label="move the public API family behind one owner file or document the extension pattern",
+            ),
+        )
+    end
+    findings
+end
+
+function public_api_definition_records(
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+)
+    records = Dict{String,Vector{NamedTuple}}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for type_fact in parsed.syntax_facts.types
+            name = terminal_public_name(type_fact.name)
+            name in public_names || continue
+            push_public_api_definition!(
+                records,
+                name,
+                type_fact.kind,
+                parsed,
+                type_fact.line,
+                type_fact.column,
+            )
+        end
+        for function_fact in parsed.syntax_facts.functions
+            name = function_fact.terminal_name
+            name in public_names || continue
+            push_public_api_definition!(
+                records,
+                name,
+                function_fact.kind,
+                parsed,
+                function_fact.line,
+                function_fact.column,
+            )
+        end
+    end
+    records
+end
+
+function push_public_api_definition!(
+    records::Dict{String,Vector{NamedTuple}},
+    name::AbstractString,
+    kind::AbstractString,
+    parsed::ParsedJuliaFile,
+    line::Int,
+    column::Int,
+)
+    definitions = get!(records, String(name), NamedTuple[])
+    push!(
+        definitions,
+        (
+            kind=String(kind),
+            path=parsed.report.path,
+            line=line,
+            column=column,
+            source_line=source_line(parsed.source, line),
+        ),
+    )
+end
+
+function display_public_owner_path(scope::JuliaProjectHarnessScope, path::AbstractString)
+    relative_path = relpath(path, scope.project_root)
+    parts = splitpath(relative_path)
+    if !isabspath(relative_path) && (isempty(parts) || first(parts) != "..")
+        return replace(relative_path, '\\' => '/')
+    end
+    replace(String(path), '\\' => '/')
 end
 
 function public_api_doc_findings(

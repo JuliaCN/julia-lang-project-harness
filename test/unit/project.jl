@@ -703,6 +703,40 @@ end
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
 end
 
+@testset "project runner reports public API owner conflicts" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        include("api.jl")
+        include("fallbacks.jl")
+        end
+        """,
+    )
+    write(
+        joinpath(root, "src", "api.jl"),
+        """
+        \"\"\"Run the public value.\"\"\"
+        run(value::Int) = value
+        """,
+    )
+    write(joinpath(root, "src", "fallbacks.jl"), "run(value::String) = value\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R005", rendered)
+    @test occursin("Public API name spans multiple owners", rendered)
+    @test occursin("src/api.jl", rendered)
+    @test occursin("src/fallbacks.jl", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
 @testset "project runner reports include graph findings" begin
     root = mktempdir()
     write_project(root, "Example")

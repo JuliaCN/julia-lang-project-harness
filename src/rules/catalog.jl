@@ -27,6 +27,7 @@ const AGENT_JL_R001 = "AGENT-JL-R001"
 const AGENT_JL_R002 = "AGENT-JL-R002"
 const AGENT_JL_R003 = "AGENT-JL-R003"
 const AGENT_JL_R004 = "AGENT-JL-R004"
+const AGENT_JL_R005 = "AGENT-JL-R005"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -266,6 +267,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public method exposes a stringly domain argument",
         "Prefer a named domain carrier when exported Julia methods accept stringly state, mode, kind, phase, status, tag, or type arguments.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R005,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public API name spans multiple owners",
+        "Keep exported Julia API names owned by one file or document a deliberate extension pattern when a public method family spans owners.",
         labels("agent-policy"),
     ),
 ]

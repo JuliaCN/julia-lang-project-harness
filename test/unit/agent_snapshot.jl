@@ -20,10 +20,10 @@
         joinpath(root, "src", "Example.jl"),
         "module Example\nexport run, Config\nusing JSON3\ninclude(\"api.jl\")\n\"\"\"Runtime configuration.\"\"\"\nstruct Config\nvalue::Int\nend\n\"\"\"Run a value.\"\"\"\nrun(value) = value\nend\n",
     )
-    write(joinpath(root, "src", "api.jl"), "run() = 1\n")
+    write(joinpath(root, "src", "api.jl"), "internal_api() = 1\n")
     write(
         joinpath(root, "test", "runtests.jl"),
-        "using Test\n@testset \"core\" begin\n@test run() == 1\nend\n",
+        "using Test\n@testset \"core\" begin\n@test run(1) == 1\nend\n",
     )
 
     rendered = render_julia_project_harness_agent_snapshot(root)

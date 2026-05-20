@@ -174,6 +174,7 @@ struct JuliaVerificationProfile
     report::JuliaHarnessReport
     task_index::JuliaVerificationTaskIndex
     profile_index::JuliaVerificationProfileIndex
+    receipt_reviews::Vector{JuliaVerificationReceiptReview}
 end
 
 const DEFAULT_IGNORED_DIR_NAMES = Set([

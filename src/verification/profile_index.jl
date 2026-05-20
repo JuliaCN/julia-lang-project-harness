@@ -100,6 +100,12 @@ function render_julia_verification_profile(profile::JuliaVerificationProfile)
         chomp(render_julia_project_harness(profile.report)),
         chomp(render_julia_verification_task_index(profile.task_index)),
         chomp(render_julia_verification_profile_index(profile.profile_index)),
+        isempty(profile.receipt_reviews) ? "" : chomp(
+            render_julia_verification_receipt_reviews(
+                profile.receipt_reviews;
+                project_root=profile.task_index.project_root,
+            ),
+        ),
     ]
     join(filter(!isempty, parts), "\n") * "\n"
 end
@@ -119,6 +125,7 @@ function verification_profile_dict(profile::JuliaVerificationProfile)
         "report" => report_dict(profile.report),
         "task_index" => verification_task_index_dict(profile.task_index),
         "profile_index" => verification_profile_index_dict(profile.profile_index),
+        "receipt_reviews" => map(verification_receipt_review_dict, profile.receipt_reviews),
     )
 end
 

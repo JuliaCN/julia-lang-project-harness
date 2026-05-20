@@ -141,6 +141,7 @@ end
     @test profile.report.project_scope.project_root == root
     @test [record.kind for record in profile.task_index.records] == kinds
     @test length(profile.profile_index.candidates) == 3
+    @test isempty(profile.receipt_reviews)
     @test occursin("[verify-advice] pending=1", advice)
     @test occursin("kind=stress", advice)
     @test occursin("fingerprint=stress", advice)
@@ -154,6 +155,7 @@ end
     @test occursin("responsibilities=public_api", profile_rendered)
     @test occursin("responsibilities=extension_boundary", profile_rendered)
     @test occursin("\"profile_index\"", profile_json)
+    @test occursin("\"receipt_reviews\"", profile_json)
     @test occursin("extension_boundary", profile_json)
 end
 
@@ -218,6 +220,47 @@ end
     @test occursin("\"benchmark_command\":\"\"", receipt_template)
     @test occursin("\"attack_classes\":\"\"", receipt_template)
     @test occursin("\"injected_failure\":\"\"", receipt_template)
+end
+
+@testset "verification profile reviews default agent receipt file" begin
+    root = mktempdir()
+    write_verification_project(root)
+    receipt_root = joinpath(root, ".julia-harness")
+    mkpath(receipt_root)
+    receipt_path = joinpath(receipt_root, "verification-receipts.json")
+
+    index = build_julia_verification_task_index(root)
+    stress = only(record for record in index.records if record.kind == "stress")
+    write(receipt_path, render_julia_verification_receipt_template(index))
+
+    profile = build_julia_project_verification_profile(root)
+    rendered = render_julia_verification_profile(profile)
+    json = render_julia_verification_profile_json(profile)
+
+    @test length(profile.receipt_reviews) == 1
+    @test only(profile.receipt_reviews).status == :incomplete
+    @test occursin("VerificationReceiptReview: count=1 accepted=0 incomplete=1", rendered)
+    @test occursin("weak=scenario,load_steps,p50_ms,p99_ms,threshold,result", rendered)
+    @test occursin("\"receipt_reviews\"", json)
+    @test_throws ErrorException assert_julia_project_harness_test_profile_clean(
+        root;
+        advice_io=nothing,
+    )
+
+    write(
+        receipt_path,
+        """
+        {"receipts":[{"fingerprint":"$(stress.fingerprint)","kind":"stress","owner_path":"src/VerifyExample.jl","scenario":"profile default receipt smoke","load_steps":"1,4,8","p50_ms":"1.0","p99_ms":"4.0","threshold":"p99_ms <= 10","result":"pass"}]}
+        """,
+    )
+    accepted_advice_out = IOBuffer()
+    accepted_profile = assert_julia_project_harness_test_profile_clean(
+        root;
+        advice_io=accepted_advice_out,
+    )
+    @test length(accepted_profile.receipt_reviews) == 1
+    @test only(accepted_profile.receipt_reviews).status == :accepted
+    @test isempty(String(take!(accepted_advice_out)))
 end
 
 @testset "verification receipt review enforces required evidence" begin

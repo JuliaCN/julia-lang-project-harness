@@ -1,11 +1,36 @@
 const JULIA_VERIFICATION_RECEIPT_ESCAPE_STATES = Set(["skip", "skipped", "waive", "waived"])
 const JULIA_VERIFICATION_RECEIPT_CLEAN_STATUSES = Set([:accepted, :waived, :not_required])
+const JULIA_VERIFICATION_RECEIPT_RELATIVE_PATHS = [
+    joinpath(".julia-harness", "verification-receipts.json"),
+]
 
 """Read agent verification receipts from a compact JSON file."""
 function read_julia_verification_receipts_json(path::AbstractString)
     payload = JSON3.read(read(path, String))
     raw_receipts = json_payload_receipts(payload)
     [verification_receipt_dict(receipt) for receipt in raw_receipts]
+end
+
+function review_julia_project_verification_receipts(index::JuliaVerificationTaskIndex)
+    reviews = JuliaVerificationReceiptReview[]
+    for path in existing_julia_verification_receipt_paths(index.project_root)
+        append!(
+            reviews,
+            review_julia_verification_receipts(
+                index,
+                read_julia_verification_receipts_json(path),
+            ),
+        )
+    end
+    reviews
+end
+
+function existing_julia_verification_receipt_paths(project_root::AbstractString)
+    root = abspath(String(project_root))
+    [
+        joinpath(root, relative_path) for relative_path in
+        JULIA_VERIFICATION_RECEIPT_RELATIVE_PATHS if isfile(joinpath(root, relative_path))
+    ]
 end
 
 function json_payload_receipts(payload)

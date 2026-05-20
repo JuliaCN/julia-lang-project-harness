@@ -502,6 +502,7 @@ The report model should be serializable and compact:
 - `JuliaVerificationProfileIndex`
 - `JuliaVerificationTaskRecord`
 - `JuliaVerificationTaskIndex`
+- `JuliaVerificationReceiptReview`
 - `JuliaVerificationProfile`
 - `JuliaProjectHarnessScope`
 - `JuliaHarnessConfig`
@@ -616,6 +617,13 @@ Template values are intentionally blank: they help the Agent fill the required
 keys, but they must not pass review until replaced with concrete evidence. This
 keeps the loop tight without turning the template itself into an escape path.
 The CLI exposes this as `--verification-receipt-template`.
+
+The in-test verification profile should review the default project receipt file
+at `.julia-harness/verification-receipts.json` when it exists. A missing receipt
+file leaves external evidence tasks advisory, but an existing incomplete or
+mismatched receipt should fail `assert_julia_project_harness_test_profile_clean`
+and render the receipt review in the test failure. Accepted or concretely waived
+receipts should suppress the corresponding pending advice entry.
 
 ## Configuration
 

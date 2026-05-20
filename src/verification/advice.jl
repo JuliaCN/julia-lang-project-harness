@@ -34,9 +34,15 @@ function render_julia_verification_pending_advice(profile::JuliaVerificationProf
 end
 
 function pending_agent_verification_tasks(profile::JuliaVerificationProfile)
+    clean_receipt_fingerprints = Set(
+        review.fingerprint for review in profile.receipt_reviews if
+        is_julia_verification_receipt_review_clean(review)
+    )
     [
         record for record in profile.task_index.records if
-        record.kind in JULIA_AGENT_VERIFICATION_TASK_KINDS && record.state == "pending"
+        record.kind in JULIA_AGENT_VERIFICATION_TASK_KINDS &&
+        record.state == "pending" &&
+        !(record.fingerprint in clean_receipt_fingerprints)
     ]
 end
 

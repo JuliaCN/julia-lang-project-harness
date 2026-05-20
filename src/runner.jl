@@ -36,7 +36,7 @@ function assert_julia_project_harness_pkg_test_clean(
 )
     report = run_julia_project_harness(project_root; config)
     assert_clean(report)
-    if isempty(something(config.agent_advice_allow_explanation, ""))
+    if !has_agent_advice_allow_explanation(config)
         assert_no_advisory_findings(report)
     end
     report

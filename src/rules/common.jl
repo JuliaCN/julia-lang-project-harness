@@ -44,5 +44,121 @@ function apply_config_to_findings(findings::Vector{JuliaHarnessFinding}, config:
             )
         end
     end
+    append!(selected, config_escape_findings(config))
     selected
+end
+
+function config_escape_findings(config::JuliaHarnessConfig)
+    rules = rules_by_id()
+    rule = rules[JULIA_PROJ_R014]
+    findings = JuliaHarnessFinding[]
+    append!(findings, disabled_rule_escape_findings(config, rule))
+    append!(findings, severity_override_escape_findings(config, rule, rules))
+    append!(findings, blocking_severity_escape_findings(config, rule))
+    append!(findings, advisory_allow_escape_findings(config, rule))
+    findings
+end
+
+function disabled_rule_escape_findings(
+    config::JuliaHarnessConfig,
+    rule::JuliaHarnessRule,
+)
+    [
+        config_escape_finding(
+            rule,
+            "Rule `$(rule_id)` is disabled without a non-empty explanation.",
+            "add `config.disabled_rule_explanations[\"$(rule_id)\"] = \"...\"` or remove the disabled rule",
+        ) for rule_id in sort(collect(config.disabled_rules)) if !has_config_explanation(
+            config.disabled_rule_explanations,
+            rule_id,
+        )
+    ]
+end
+
+function severity_override_escape_findings(
+    config::JuliaHarnessConfig,
+    rule::JuliaHarnessRule,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for (rule_id, severity) in sort(collect(config.rule_severity_overrides); by=first)
+        canonical = get(rules, rule_id, nothing)
+        !isnothing(canonical) && canonical.severity == severity && continue
+        has_config_explanation(config.rule_severity_override_explanations, rule_id) && continue
+        push!(
+            findings,
+            config_escape_finding(
+                rule,
+                "Rule `$(rule_id)` severity is overridden to `$(severity_label(severity))` without a non-empty explanation.",
+                "add `config.rule_severity_override_explanations[\"$(rule_id)\"] = \"...\"` or remove the severity override",
+            ),
+        )
+    end
+    findings
+end
+
+function blocking_severity_escape_findings(
+    config::JuliaHarnessConfig,
+    rule::JuliaHarnessRule,
+)
+    findings = JuliaHarnessFinding[]
+    for severity in (Warning, Error)
+        severity in config.blocking_severities && continue
+        label = severity_label(severity)
+        has_config_explanation(config.blocking_severity_explanations, label) && continue
+        push!(
+            findings,
+            config_escape_finding(
+                rule,
+                "Blocking severity `$(label)` is removed without a non-empty explanation.",
+                "add `config.blocking_severity_explanations[\"$(label)\"] = \"...\"` or keep `$(label)` blocking",
+            ),
+        )
+    end
+    findings
+end
+
+function advisory_allow_escape_findings(
+    config::JuliaHarnessConfig,
+    rule::JuliaHarnessRule,
+)
+    isnothing(config.agent_advice_allow_explanation) && return JuliaHarnessFinding[]
+    has_agent_advice_allow_explanation(config) && return JuliaHarnessFinding[]
+    [
+        config_escape_finding(
+            rule,
+            "`agent_advice_allow_explanation` is set but empty after trimming whitespace.",
+            "write a concrete `agent_advice_allow_explanation` or leave it unset",
+        ),
+    ]
+end
+
+function config_escape_finding(
+    rule::JuliaHarnessRule,
+    summary::AbstractString,
+    label::AbstractString,
+)
+    JuliaHarnessFinding(
+        rule.rule_id,
+        rule.pack_id,
+        rule.severity,
+        rule.title,
+        String(summary),
+        SourceLocation(nothing, 1, 0),
+        rule.requirement,
+        nothing,
+        String(label),
+        merge(copy(rule.labels), Dict("escape_guard" => "true")),
+    )
+end
+
+function has_config_explanation(
+    explanations::Dict{String,String},
+    key::AbstractString,
+)
+    !isempty(strip(get(explanations, String(key), "")))
+end
+
+function has_agent_advice_allow_explanation(config::JuliaHarnessConfig)
+    !isempty(strip(something(config.agent_advice_allow_explanation, "")))
 end

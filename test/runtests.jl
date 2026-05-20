@@ -11,5 +11,6 @@ using Test
     include("unit/cli.jl")
     include("unit/agent_snapshot.jl")
     include("unit/render.jl")
+    include("unit/config.jl")
     include("unit/rule_catalog.jl")
 end

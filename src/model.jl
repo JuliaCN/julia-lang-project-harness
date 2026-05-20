@@ -132,7 +132,10 @@ struct JuliaHarnessConfig
     ignored_dir_names::Set{String}
     blocking_severities::Set{JuliaDiagnosticSeverity}
     disabled_rules::Set{String}
+    disabled_rule_explanations::Dict{String,String}
     rule_severity_overrides::Dict{String,JuliaDiagnosticSeverity}
+    rule_severity_override_explanations::Dict{String,String}
+    blocking_severity_explanations::Dict{String,String}
     include_tests::Bool
     source_dir_names::Vector{String}
     test_dir_names::Vector{String}
@@ -180,7 +183,10 @@ function default_julia_harness_config()
         copy(DEFAULT_IGNORED_DIR_NAMES),
         Set([Warning, Error]),
         Set{String}(),
+        Dict{String,String}(),
         Dict{String,JuliaDiagnosticSeverity}(),
+        Dict{String,String}(),
+        Dict{String,String}(),
         true,
         ["src"],
         ["test"],
@@ -197,13 +203,20 @@ parsed_count(report::JuliaHarnessReport) = count(file -> file.is_valid, report.f
 
 function blocking_findings(report::JuliaHarnessReport; severities=nothing)
     selected = isnothing(severities) ? report.blocking_severities : severities
-    [finding for finding in report.findings if finding.severity in selected]
+    [
+        finding for finding in report.findings if finding.severity in selected ||
+        is_escape_guard_finding(finding)
+    ]
 end
 
 advisory_findings(report::JuliaHarnessReport) =
     [finding for finding in report.findings if finding.severity == Info]
 
 is_clean(report::JuliaHarnessReport) = isempty(blocking_findings(report))
+
+function is_escape_guard_finding(finding::JuliaHarnessFinding)
+    get(finding.labels, "escape_guard", "") == "true"
+end
 
 function assert_clean(report::JuliaHarnessReport)
     if !is_clean(report)

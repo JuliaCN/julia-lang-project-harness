@@ -366,6 +366,8 @@ Initial rules:
   explanations.
 - `JULIA-PROJ-R006`: removing conventional source or test scope needs a
   non-empty explanation.
+- `JULIA-PROJ-R014`: harness config escape surfaces need non-empty
+  explanations.
 
 The first implementation can keep `JULIA-PROJ-R003` narrow: if the package
 depends on this harness or calls its assertion API, the test gate must be
@@ -554,7 +556,10 @@ Config should support:
 - ignored directory names;
 - blocking severities;
 - disabled rule ids;
+- disabled rule explanations;
 - rule severity overrides;
+- rule severity override explanations;
+- blocking severity explanations;
 - source scope paths;
 - test scope paths;
 - source path explanations;
@@ -568,6 +573,12 @@ Config should support:
 Custom scope additions and removals should require non-empty explanations.
 This is a direct adaptation of the Rust harness lesson: exceptions are allowed,
 but silent scope shrinkage is not.
+
+Config surfaces that let an agent escape policy must also require non-empty
+explanations. Disabling a rule, lowering a rule severity, removing a default
+blocking severity, or allowing advisory findings is valid only when the config
+records why. The escape guard must be appended after config filtering so the
+same config cannot silently suppress the finding that reports the escape.
 
 ## Self-Apply Contract
 

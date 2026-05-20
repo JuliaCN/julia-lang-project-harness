@@ -31,7 +31,7 @@ function assert_julia_project_harness_test_profile_clean(
 )
     profile = build_julia_project_verification_profile(project_root; config)
     has_blocking = !is_clean(profile.report)
-    has_advice = isempty(something(config.agent_advice_allow_explanation, "")) &&
+    has_advice = !has_agent_advice_allow_explanation(config) &&
                  !isempty(advisory_findings(profile.report))
     if has_blocking || has_advice
         error(render_julia_verification_profile(profile))

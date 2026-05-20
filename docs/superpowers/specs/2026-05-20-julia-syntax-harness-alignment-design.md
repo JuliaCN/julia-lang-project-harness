@@ -1,0 +1,556 @@
+# Julia Syntax Harness Alignment Design
+
+Status: ready for user review
+Date: 2026-05-20
+Repository: `julia-lang-project-harness`
+
+## Purpose
+
+This design starts a Julia project harness that learns from the
+`rust-lang-project-harness` without copying Rust-specific rules into Julia.
+
+The goal is a Julia-native, parser-first, repair-oriented harness for coding
+agents. It should help an agent understand a Julia package through stable
+project facts, compact findings, and a low-noise reasoning snapshot. The
+harness is not a replacement for Julia, `Pkg.test`, formatting tools, or static
+analysis packages. It is a structural policy layer that makes the next repair
+action visible.
+
+## Design Posture
+
+The Rust harness is an experience source, not a template.
+
+The reusable experience is:
+
+- build one native parser fact layer before policy runs;
+- make policy consume facts instead of raw text;
+- render compact repair contracts for agents by default;
+- keep structured JSON available for tools;
+- keep default severity split clear: blocking policy vs advisory agent repair;
+- self-apply the harness so rule drift is found in the package itself;
+- permit local exceptions only when the project records a reason;
+- expose a project reasoning snapshot so agents do not start from a file list.
+
+The Julia adaptation must be based on Julia's own project and language model:
+
+- `Project.toml` defines the package boundary;
+- `src/<PackageName>.jl` is the package entry module and facade candidate;
+- `include(...)` builds the practical file graph;
+- `module` and `baremodule` define namespaces but do not automatically map to
+  files;
+- `using` and `import` define package and module dependency facts;
+- `export` and Julia 1.11+ `public` define public API intent;
+- method families matter more than isolated function declarations;
+- macros and generated behavior are syntax facts at first, not expanded
+  semantic facts;
+- `test/runtests.jl`, `Pkg.test`, and `Test.@testset` define the first test
+  gate surface.
+
+## Non-Goals
+
+The first implementation will not:
+
+- evaluate or include project files;
+- expand macros;
+- infer runtime dispatch behavior;
+- require all Julia packages to use one physical source layout;
+- port Rust rules such as `mod.rs`, `build.rs`, `crate::...`, or
+  `#[cfg(test)]`;
+- implement the full verification report subsystem from the Rust harness;
+- claim dynamic `include` calls are resolved when they are not parser-stable.
+
+## Package Shape
+
+The package should be a normal Julia package:
+
+- `Project.toml`
+- `src/JuliaLangProjectHarness.jl`
+- `src/parser/...`
+- `src/rules/...`
+- `src/render/...`
+- `src/runner/...`
+- `test/runtests.jl`
+- `test/unit/...`
+
+The root module should remain a facade. It should include owned modules and
+re-export stable public API, but implementation should live in leaf files. This
+is a Julia-native version of the "thin package boundary" lesson, not a Rust
+`lib.rs` clone.
+
+The public module name should be `JuliaLangProjectHarness` unless package
+registration constraints require a different name. The repository name can stay
+`julia-lang-project-harness`.
+
+## Parser Boundary
+
+`JuliaSyntax.jl` is the only Julia syntax parser used by the harness.
+
+The parser layer owns all direct calls to JuliaSyntax. Rule packs, runners, and
+renderers must consume parser-owned facts. They must not call JuliaSyntax or
+scan source text directly except through parser helper functions.
+
+The strict parse path should parse each `.jl` file with filename-aware
+JuliaSyntax APIs. The design should prefer a path that preserves diagnostics
+and source locations. `parseall(JuliaSyntax.SyntaxNode, source; filename=path)`
+is the simple strict interface. `parse!(JuliaSyntax.SyntaxNode, io; rule=:all)`
+is available when diagnostics need to be retained without losing the tree.
+
+The parser layer should expose these internal facts:
+
+- `ParsedJuliaFile`
+- `JuliaFileReport`
+- `JuliaNativeSyntaxFacts`
+- `JuliaSourceMetrics`
+- `JuliaTopLevelItemSyntax`
+- `JuliaModuleSyntax`
+- `JuliaIncludeSyntax`
+- `JuliaImportSyntax`
+- `JuliaExportSyntax`
+- `JuliaFunctionSyntax`
+- `JuliaMethodSignatureSyntax`
+- `JuliaStructSyntax`
+- `JuliaMacroInvocationSyntax`
+- `JuliaTestSyntax`
+
+Each fact that can trigger a finding must carry a stable source location:
+
+- path
+- one-based line
+- zero-based column
+- source line when useful
+
+The parser layer should classify these constructs in the first slice:
+
+- `module Name ... end`
+- `baremodule Name ... end`
+- `include("file.jl")`
+- `include(joinpath("dir", "file.jl"))` when every segment is literal
+- dynamic `include(...)`
+- `using Package`
+- `using Package: name, name2`
+- `import Package`
+- `import Package: name`
+- `export name`
+- `public name` when supported by the configured Julia syntax version
+- long-form function definitions
+- short-form function definitions
+- macro definitions
+- macro invocations
+- mutable and immutable struct definitions
+- primitive type aliases visible through syntax
+- `Test.@testset` and direct `@test` usage
+
+The parser layer must preserve "unknown but real" syntax nodes. If a syntax
+form is parseable but not yet classified, the harness should keep the file
+valid and avoid inventing policy from partial knowledge.
+
+## Project Discovery
+
+Project runner mode starts from a project root.
+
+Discovery should treat `Project.toml` as the package authority. It should parse
+the manifest facts through a parser-owned TOML helper, not by ad hoc string
+search. The first facts needed are:
+
+- package name;
+- uuid when present;
+- direct dependencies;
+- weak dependencies when present;
+- extras and targets used by tests;
+- configured test target shape when present.
+
+Default project scope:
+
+- `src/`
+- package entry file `src/<PackageName>.jl` when present
+- `test/runtests.jl`
+- additional `.jl` files under `test/`
+- optional `examples/` only as package examples, not public source API
+- optional `benchmark/` and `perf/` later through verification policy, not in
+  the first blocking rule set
+
+Ignored directories should include:
+
+- `.git`
+- `.jj`
+- `.direnv`
+- `.cache`
+- `.vscode`
+- `.idea`
+- `node_modules`
+- `deps/usr`
+- `artifacts`
+- `scratchspaces`
+
+Explicit-path runner mode accepts files or directories and runs syntax parsing
+only. It has no project graph, no include reachability, and no package policy.
+This mirrors the useful runner split from the Rust harness while keeping the
+Julia policy semantics separate.
+
+## Reasoning Tree
+
+The Julia reasoning tree should summarize package structure for agents.
+
+It should derive from parser facts and discovery facts:
+
+- package root;
+- package module name;
+- package entry file;
+- source files;
+- test files;
+- literal include edges;
+- dynamic include sites;
+- module declarations;
+- exports and public names;
+- package imports;
+- local module imports;
+- method families;
+- public API candidates;
+- orphan source files;
+- include cycles;
+- owner branches.
+
+An owner branch is not a Rust module branch. In Julia it is a repair ownership
+unit inferred from one or more of:
+
+- package entry module;
+- file included by the entry module;
+- file that includes child files;
+- top-level module declaration;
+- path namespace under `src/`;
+- exported or public API family.
+
+The snapshot renderer should stay compact. A clean small package might render:
+
+```text
+Package: Example
+Files: source=5 test=2
+Owners:
+- src/Example.jl [entry, facade] includes=api.jl, parser.jl exports=run
+- src/parser.jl [owner] includes=syntax.jl methods=7
+Imports:
+- Test only in test/runtests.jl
+```
+
+The exact text can change during implementation, but the contract is stable:
+agents get owner and dependency shape without reading a full JSON report.
+
+## Rule Packs
+
+Default project execution order:
+
+1. `julia.syntax`
+2. `julia.project_policy`
+3. `julia.modularity`
+4. `julia.agent_policy`
+
+The first three packs are blocking by default. `julia.agent_policy` is advisory
+in the library runner. The package test gate can promote advisory findings to
+visible test feedback, with an explicit config escape hatch and explanation.
+
+### `julia.syntax`
+
+Initial rule:
+
+- `JULIA-SYN-R001`: Julia source must parse through `JuliaSyntax.jl`.
+
+This rule is syntax-only and applies in both project and explicit-path runner
+modes.
+
+### `julia.project_policy`
+
+Initial rules:
+
+- `JULIA-PROJ-R001`: package projects should have a `Project.toml` with a
+  package name.
+- `JULIA-PROJ-R002`: package projects should expose the package entry module
+  through `src/<PackageName>.jl`, unless config records a reason.
+- `JULIA-PROJ-R003`: harness-enabled packages should mount a configured
+  `Pkg.test` gate from `test/runtests.jl`.
+- `JULIA-PROJ-R004`: `test/runtests.jl` should stay a thin test aggregate when
+  it grows beyond small package scale.
+- `JULIA-PROJ-R005`: custom source or test scope paths need non-empty
+  explanations.
+- `JULIA-PROJ-R006`: removing conventional source or test scope needs a
+  non-empty explanation.
+
+The first implementation can keep `JULIA-PROJ-R003` narrow: if the package
+depends on this harness or calls its assertion API, the test gate must be
+configured. Comments and strings do not count.
+
+### `julia.modularity`
+
+Initial rules:
+
+- `JULIA-MOD-R001`: `src/<PackageName>.jl` should act as a package facade,
+  not a large implementation file.
+- `JULIA-MOD-R002`: source files should stay within a configured size and
+  responsibility budget.
+- `JULIA-MOD-R003`: dynamic `include(...)` hides the repair graph and should
+  be replaced with parser-stable literal includes or a documented exception.
+- `JULIA-MOD-R004`: literal include targets must exist.
+- `JULIA-MOD-R005`: literal include graph must not contain cycles.
+- `JULIA-MOD-R006`: scanned source files under `src/` should be reachable from
+  the package entry include graph, unless config records a reason.
+- `JULIA-MOD-R007`: source path segments should avoid generic owner buckets
+  such as `utils`, `common`, `helpers`, and `misc`.
+- `JULIA-MOD-R008`: nested module ownership should be explicit; large nested
+  modules inside files should move to named files or carry a documented reason.
+
+These rules are Julia-specific. They protect the include graph and namespace
+surface instead of Rust's module tree.
+
+### `julia.agent_policy`
+
+Initial advisory rules:
+
+- `AGENT-JL-R001`: exported or `public` API lacks an intent doc.
+- `AGENT-JL-R002`: public method family has too many positional parameters.
+- `AGENT-JL-R003`: public method family exposes multiple `Bool` flags instead
+  of a named option or keyword config shape.
+- `AGENT-JL-R004`: public API uses stringly state, mode, kind, type, tag,
+  phase, or status fields without a named domain carrier.
+- `AGENT-JL-R005`: exported names conflict across owner files or method
+  families.
+- `AGENT-JL-R006`: owner file fans out to many local owners without an intent
+  doc.
+- `AGENT-JL-R007`: public function body hides algorithm shape behind deeply
+  nested control flow.
+- `AGENT-JL-R008`: broad public function should split into named pipeline
+  steps.
+- `AGENT-JL-R009`: method family is scattered across unrelated owner files
+  without a clear extension pattern.
+- `AGENT-JL-R010`: macro-heavy public API lacks a syntax-level contract note.
+
+The first implementation should choose a small subset of these advisory rules
+after the parser facts are stable. The catalog can list the broader intended
+surface, but tests should only lock rules that are implemented.
+
+## Public API
+
+The package should expose a library-first API:
+
+```julia
+default_julia_harness_config()
+run_julia_project_harness(project_root::AbstractString; config=default_julia_harness_config())
+run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
+assert_julia_project_harness_clean(project_root::AbstractString; config=default_julia_harness_config())
+assert_julia_project_harness_pkg_test_clean(project_root::AbstractString; config=default_julia_harness_config())
+render_julia_project_harness(report)
+render_julia_project_harness_json(report)
+render_julia_project_harness_advice(report)
+render_julia_project_harness_agent_snapshot(project_root::AbstractString; config=default_julia_harness_config())
+julia_rule_pack_descriptors()
+julia_syntax_rules()
+julia_project_policy_rules()
+julia_modularity_rules()
+julia_agent_policy_rules()
+```
+
+The package test gate should be an ordinary Julia test assertion, for example:
+
+```julia
+using Test
+using JuliaLangProjectHarness
+
+@testset "julia project harness" begin
+    config = default_julia_harness_config()
+    assert_julia_project_harness_pkg_test_clean(pkgdir(JuliaLangProjectHarness); config)
+end
+```
+
+The exact function signatures can be adjusted during implementation, but the
+API shape should remain library-first and runnable from `Pkg.test`.
+
+## Report Model
+
+The report model should be serializable and compact:
+
+- `JuliaDiagnosticSeverity`: `info`, `warning`, `error`
+- `JuliaRulePack`
+- `JuliaHarnessRule`
+- `JuliaHarnessFinding`
+- `JuliaFileReport`
+- `JuliaProjectHarnessScope`
+- `JuliaHarnessConfig`
+- `JuliaHarnessReport`
+
+Each finding should contain:
+
+- stable rule id;
+- stable pack id;
+- severity;
+- short title;
+- concrete summary;
+- source location;
+- stable requirement;
+- optional source line;
+- short fix label;
+- labels for tooling.
+
+`Warning` and `Error` block by default. `Info` remains advisory in the library
+runner. The package test assertion may fail on advisory findings so `Pkg.test`
+does not hide repair feedback.
+
+## Rendering Contract
+
+Compact text is the default agent surface.
+
+Finding format:
+
+```text
+[JULIA-MOD-R003] Warning: Dynamic include hides source graph
+@ src/Example.jl:12:5
+fix: replace dynamic include with literal include or document the exception
+line: 12 | include(path)
+Help: parser facts found an include call whose target is not statically known.
+Contract: Keep Julia package source graphs parser-stable for repair agents.
+```
+
+Clean output:
+
+```text
+[ok] julia
+```
+
+The renderer should avoid:
+
+- human audit headers;
+- file counters before the repair action;
+- large JSON by default;
+- decorative code frames;
+- empty sections.
+
+JSON is available through the structured renderer. Agents should not need JSON
+for the common repair loop.
+
+## Configuration
+
+Config should support:
+
+- ignored directory names;
+- blocking severities;
+- disabled rule ids;
+- rule severity overrides;
+- source scope paths;
+- test scope paths;
+- source path explanations;
+- test path explanations;
+- source path exclusion explanations;
+- test path exclusion explanations;
+- agent advice allow explanation;
+- syntax version when JuliaSyntax supports version-sensitive parsing;
+- reserved verification policy field for a later design slice.
+
+Custom scope additions and removals should require non-empty explanations.
+This is a direct adaptation of the Rust harness lesson: exceptions are allowed,
+but silent scope shrinkage is not.
+
+## Self-Apply Contract
+
+The harness must apply itself before it is treated as ready for downstream use.
+
+The first self-apply target is `Pkg.test`:
+
+- `test/runtests.jl` mounts the package's own harness assertion;
+- the assertion uses explicit config;
+- config explains intentional early exceptions;
+- the compact render for self policy is covered by snapshot tests;
+- advisory policy is either fixed or explicitly allowed with an explanation.
+
+This is the Julia-native equivalent of the Rust source-backed cargo test gate.
+There is no first-slice `build.rs` equivalent.
+
+## Testing Strategy
+
+The first implementation should add tests in this order:
+
+1. parser fixtures for JuliaSyntax facts;
+2. explicit-path runner syntax-only behavior;
+3. package-root discovery from `Project.toml`;
+4. literal include graph facts;
+5. dynamic include finding;
+6. compact render snapshots;
+7. JSON shape smoke test;
+8. package self-apply gate.
+
+Expected local validation commands after implementation:
+
+```shell
+julia --project=. -e 'using Pkg; Pkg.instantiate()'
+julia --project=. -e 'using Pkg; Pkg.test()'
+git diff --check
+```
+
+If formatting or lint tools are added later, they should be explicit package
+dependencies or documented developer tools. They should not be assumed in the
+bootstrap design.
+
+## Implementation Stages
+
+Stage 1: Bootstrap package and parser substrate.
+
+- Create `Project.toml`.
+- Add `JuliaSyntax` and `Test` dependencies.
+- Add parser fact types and strict file parsing.
+- Add explicit-path runner with syntax-only reporting.
+- Add compact renderer and JSON renderer.
+
+Stage 2: Project discovery and include graph.
+
+- Parse `Project.toml`.
+- Discover package entry file and source/test scope.
+- Extract literal include graph.
+- Detect dynamic includes, missing targets, cycles, and orphan source files.
+- Add agent snapshot renderer.
+
+Stage 3: First policy packs and self-apply.
+
+- Add rule catalog descriptors.
+- Add `julia.syntax`, `julia.project_policy`, and first `julia.modularity`
+  rules.
+- Add a small first subset of `julia.agent_policy`.
+- Mount the package's own `Pkg.test` harness gate.
+- Record intentional exceptions in config only when needed.
+
+Stage 4: Julia API shape advice.
+
+- Build method-family facts.
+- Add exported/public documentation advice.
+- Add parameter-shape, flag-shape, and broad-function advice.
+- Keep all advice non-blocking in the library runner.
+
+Stage 5: Reserved verification planning slice.
+
+- Add a lightweight verification policy field only after the core harness is
+  stable.
+- Do not port the Rust verification subsystem wholesale.
+- Design Julia verification around `Pkg.test`, benchmarks, examples, and
+  package-specific evidence.
+
+## Approval Criteria
+
+This design is approved when the reviewer agrees that:
+
+- Rust harness lessons are used as principles, not copied rules;
+- JuliaSyntax owns all Julia syntax parsing;
+- the first project graph is based on `Project.toml`, package entry modules,
+  literal includes, modules, imports, exports, and tests;
+- dynamic language features are represented honestly as bounded syntax facts;
+- compact repair output remains the primary agent interface;
+- self-apply is required before downstream use;
+- implementation can proceed in staged slices without building the full
+  verification subsystem first.
+
+## References
+
+- Local Rust harness boundary:
+  `/Users/guangtao/ghq/github.com/tao3k/rust-lang-project-harness/docs/01_core/101_harness_boundary.md`
+- Local Rust runner modes:
+  `/Users/guangtao/ghq/github.com/tao3k/rust-lang-project-harness/docs/03_features/202_runner_modes.md`
+- Local Rust rule catalog:
+  `/Users/guangtao/ghq/github.com/tao3k/rust-lang-project-harness/docs/03_features/201_rule_catalog.md`
+- JuliaSyntax API:
+  `https://julialang.github.io/JuliaSyntax.jl/dev/api/`
+- JuliaSyntax syntax trees:
+  `https://julialang.github.io/JuliaSyntax.jl/dev/reference/`

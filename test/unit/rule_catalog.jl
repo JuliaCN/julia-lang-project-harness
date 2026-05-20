@@ -25,6 +25,7 @@
         "JULIA-MOD-R004",
         "JULIA-MOD-R005",
         "JULIA-MOD-R006",
+        "JULIA-MOD-R007",
     ]
     @test [rule.rule_id for rule in julia_agent_policy_rules()] == ["AGENT-JL-R002"]
 end

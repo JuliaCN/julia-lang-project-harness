@@ -16,7 +16,10 @@ const JULIA_MOD_R003 = "JULIA-MOD-R003"
 const JULIA_MOD_R004 = "JULIA-MOD-R004"
 const JULIA_MOD_R005 = "JULIA-MOD-R005"
 const JULIA_MOD_R006 = "JULIA-MOD-R006"
+const JULIA_MOD_R007 = "JULIA-MOD-R007"
 const AGENT_JL_R002 = "AGENT-JL-R002"
+
+const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 
 function julia_rule_pack_descriptors()
     [
@@ -139,6 +142,14 @@ julia_modularity_rules() = [
         Warning,
         "Source file is orphaned from package entry",
         "Julia source files under `src/` should be reachable from the package entry include graph, unless project config records a reason.",
+        labels("modularity"),
+    ),
+    JuliaHarnessRule(
+        JULIA_MOD_R007,
+        JULIA_MODULARITY_PACK_ID,
+        Warning,
+        "Source path uses a generic owner bucket",
+        "Julia source path segments should name domain ownership instead of generic buckets such as `utils`, `common`, `helpers`, or `misc`.",
         labels("modularity"),
     ),
 ]
@@ -533,6 +544,7 @@ function evaluate_modularity_rules(
     end
     append!(findings, include_cycle_findings(parsed_by_path, rules))
     append!(findings, orphan_source_findings(scope, parsed_files, parsed_by_path, rules))
+    append!(findings, generic_owner_bucket_findings(scope, parsed_files, rules))
     findings
 end
 
@@ -654,6 +666,48 @@ end
 function is_path_under(path::AbstractString, root::AbstractString)
     relative = relpath(path, root)
     relative == "." || (!startswith(relative, "..") && !isabspath(relative))
+end
+
+function generic_owner_bucket_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        source_root = first_source_root(scope, parsed.report.path)
+        isnothing(source_root) && continue
+        generic_segment = first_generic_owner_segment(source_root, parsed.report.path)
+        isnothing(generic_segment) && continue
+        push!(
+            findings,
+            finding_from_rule(
+                rules[JULIA_MOD_R007];
+                summary="`$(parsed.report.path)` is under generic source owner `$(generic_segment)`.",
+                location=SourceLocation(parsed.report.path, 1, 0),
+                source_line=source_line(parsed.source, 1),
+                label="rename the source directory to the domain owner it represents",
+            ),
+        )
+    end
+    findings
+end
+
+function first_source_root(scope::JuliaProjectHarnessScope, path::AbstractString)
+    for source_path in scope.source_paths
+        is_path_under(path, source_path) && return source_path
+    end
+    nothing
+end
+
+function first_generic_owner_segment(source_root::AbstractString, path::AbstractString)
+    relative = relpath(dirname(path), source_root)
+    relative == "." && return nothing
+    for segment in splitpath(relative)
+        normalized = lowercase(String(segment))
+        normalized in GENERIC_SOURCE_OWNER_SEGMENTS && return segment
+    end
+    nothing
 end
 
 function evaluate_default_rule_packs(

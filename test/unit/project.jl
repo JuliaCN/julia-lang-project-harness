@@ -282,6 +282,22 @@ end
     @test occursin("Source file is orphaned from package entry", rendered)
 end
 
+@testset "project runner reports generic source owner buckets" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src", "utils"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\ninclude(\"utils/helpers.jl\")\nend\n")
+    write(joinpath(root, "src", "utils", "helpers.jl"), "value() = 1\n")
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test occursin("JULIA-MOD-R007", rendered)
+    @test occursin("Source path uses a generic owner bucket", rendered)
+    @test count(finding -> finding.rule_id == "JULIA-MOD-R007", report.findings) == 1
+end
+
 @testset "project runner reports literal include cycles" begin
     root = mktempdir()
     write_project(root, "Example")

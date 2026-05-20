@@ -62,6 +62,17 @@ struct JuliaTypeSyntax
     expression::String
 end
 
+struct JuliaBindingSyntax
+    line::Int
+    column::Int
+    kind::String
+    name::String
+    terminal_name::String
+    type_annotation::Union{Nothing,String}
+    is_constant::Bool
+    expression::String
+end
+
 struct JuliaMacroInvocationSyntax
     line::Int
     column::Int
@@ -119,6 +130,7 @@ struct JuliaNativeSyntaxFacts
     exports::Vector{JuliaExportSyntax}
     functions::Vector{JuliaFunctionSyntax}
     types::Vector{JuliaTypeSyntax}
+    bindings::Vector{JuliaBindingSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     calls::Vector{JuliaCallSyntax}
     docstrings::Vector{JuliaDocstringSyntax}

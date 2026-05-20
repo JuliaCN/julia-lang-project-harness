@@ -136,6 +136,9 @@ The parser layer should classify these constructs in the first slice:
 - `import Package: name`
 - `export name`
 - `public name` when supported by the configured Julia syntax version
+- `const NAME = value` and typed `const NAME::T = value` public bindings
+- `global NAME = value` bindings when they are part of the declared public
+  surface
 - long-form function definitions
 - short-form function definitions
 - function and constructor call references, excluding definition signatures
@@ -254,14 +257,14 @@ from `JuliaSyntax` facts owned by the parser layer, so search behavior and
 policy behavior agree on source locations and syntax classification.
 
 Initial entries should cover definitions, public API declarations, imports,
-tests, includes, call references, docstrings, and identifier occurrences. A call
-reference is a real invocation in code, macro arguments, or test expressions.
-Function and macro definition signatures are not call references. A docstring
-entry is only emitted from a JuliaSyntax `doc` node with a named target;
-ordinary string literals are not treated as documentation. An identifier entry
-is a syntax occurrence with its immediate parent kind; it is intentionally
-low-level so later reference classifiers can build on real syntax facts instead
-of rescanning text.
+tests, includes, call references, bindings, docstrings, and identifier
+occurrences. A call reference is a real invocation in code, macro arguments, or
+test expressions. Function and macro definition signatures are not call
+references. A docstring entry is only emitted from a JuliaSyntax `doc` node with
+a named target; ordinary string literals are not treated as documentation. An
+identifier entry is a syntax occurrence with its immediate parent kind; it is
+intentionally low-level so later reference classifiers can build on real syntax
+facts instead of rescanning text.
 
 Each search entry should carry:
 

@@ -88,6 +88,7 @@ function julia_search_index(parsed_files::Vector{ParsedJuliaFile})
         append!(entries, public_search_entries(parsed))
         append!(entries, import_search_entries(parsed))
         append!(entries, type_search_entries(parsed))
+        append!(entries, binding_search_entries(parsed))
         append!(entries, function_search_entries(parsed))
         append!(entries, call_search_entries(parsed))
         append!(entries, docstring_search_entries(parsed))
@@ -171,6 +172,20 @@ function type_search_entries(parsed::ParsedJuliaFile)
             detail=display_type_search_detail(type_fact),
             tags=type_fact.is_mutable ? ["type", "mutable"] : ["type"],
         ) for type_fact in parsed.syntax_facts.types
+    ]
+end
+
+function binding_search_entries(parsed::ParsedJuliaFile)
+    [
+        search_index_entry(
+            parsed,
+            binding_fact.line,
+            binding_fact.column,
+            binding_fact.kind,
+            binding_fact.name;
+            detail=display_binding_search_detail(binding_fact),
+            tags=binding_fact.is_constant ? ["binding", "constant"] : ["binding"],
+        ) for binding_fact in parsed.syntax_facts.bindings
     ]
 end
 
@@ -331,6 +346,12 @@ function display_type_search_detail(type_fact::JuliaTypeSyntax)
     supertype_suffix = isnothing(type_fact.supertype) ? "" : " <: $(type_fact.supertype)"
     field_suffix = isempty(type_fact.fields) ? "" : " fields=$(join(type_fact.fields, ","))"
     "$(kind) $(type_fact.name)$(parameter_suffix)$(supertype_suffix)$(field_suffix)"
+end
+
+function display_binding_search_detail(binding_fact::JuliaBindingSyntax)
+    type_suffix = isnothing(binding_fact.type_annotation) ? "" :
+                  "::$(binding_fact.type_annotation)"
+    "$(binding_fact.kind) $(binding_fact.name)$(type_suffix)"
 end
 
 function display_function_search_detail(function_fact::JuliaFunctionSyntax)

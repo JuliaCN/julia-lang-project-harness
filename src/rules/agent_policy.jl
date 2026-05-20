@@ -8,6 +8,24 @@ const EXTENSION_PATTERN_DOC_TOKENS = (
     "overload",
     "overloads",
 )
+const SYNTAX_CONTRACT_DOC_TOKENS = ("syntax", "macro", "expansion", "generated", "contract")
+
+function public_api_doc_findings(
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    documented_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    reported = Set{Tuple{String,String}}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        append!(findings, public_type_doc_findings(parsed, public_names, documented_names, reported, rules))
+        append!(findings, public_function_doc_findings(parsed, public_names, documented_names, reported, rules))
+        append!(findings, public_binding_doc_findings(parsed, public_names, documented_names, reported, rules))
+    end
+    findings
+end
 
 function public_method_family_scattering_findings(
     scope::JuliaProjectHarnessScope,
@@ -57,5 +75,127 @@ function has_extension_pattern_doc(
     any(get(docs_by_name, String(name), String[])) do text
         lower_text = lowercase(text)
         any(token -> occursin(token, lower_text), EXTENSION_PATTERN_DOC_TOKENS)
+    end
+end
+
+function public_type_doc_findings(
+    parsed::ParsedJuliaFile,
+    public_names::Set{String},
+    documented_names::Set{String},
+    reported::Set{Tuple{String,String}},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for type_fact in parsed.syntax_facts.types
+        name = terminal_public_name(type_fact.name)
+        name in public_names || continue
+        name in documented_names && continue
+        key = ("type", name)
+        key in reported && continue
+        push!(reported, key)
+        push!(findings, finding_from_rule(
+            rules[AGENT_JL_R001];
+            summary="Exported/public type `$(name)` lacks a Julia docstring that states its agent-facing intent.",
+            location=SourceLocation(parsed.report.path, type_fact.line, type_fact.column),
+            source_line=source_line(parsed.source, type_fact.line),
+            label="add a Julia docstring before the public type definition",
+        ))
+    end
+    findings
+end
+
+function public_function_doc_findings(
+    parsed::ParsedJuliaFile,
+    public_names::Set{String},
+    documented_names::Set{String},
+    reported::Set{Tuple{String,String}},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for function_fact in parsed.syntax_facts.functions
+        name = function_fact.terminal_name
+        name in public_names || continue
+        name in documented_names && continue
+        key = ("function", name)
+        key in reported && continue
+        push!(reported, key)
+        push!(findings, finding_from_rule(
+            rules[AGENT_JL_R001];
+            summary="Exported/public function `$(name)` lacks a Julia docstring that states its agent-facing intent.",
+            location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+            source_line=source_line(parsed.source, function_fact.line),
+            label="add a Julia docstring before the public function definition",
+        ))
+    end
+    findings
+end
+
+function public_binding_doc_findings(
+    parsed::ParsedJuliaFile,
+    public_names::Set{String},
+    documented_names::Set{String},
+    reported::Set{Tuple{String,String}},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for binding_fact in parsed.syntax_facts.bindings
+        name = binding_fact.terminal_name
+        name in public_names || continue
+        name in documented_names && continue
+        key = ("binding", name)
+        key in reported && continue
+        push!(reported, key)
+        push!(findings, finding_from_rule(
+            rules[AGENT_JL_R001];
+            summary="Exported/public binding `$(name)` lacks a Julia docstring that states its agent-facing intent.",
+            location=SourceLocation(parsed.report.path, binding_fact.line, binding_fact.column),
+            source_line=source_line(parsed.source, binding_fact.line),
+            label="add a Julia docstring before the public binding definition",
+        ))
+    end
+    findings
+end
+
+function package_public_names(parsed_files::Vector{ParsedJuliaFile})
+    names = Set{String}()
+    for parsed in parsed_files
+        for export_fact in parsed.syntax_facts.exports
+            union!(names, export_fact.names)
+        end
+    end
+    names
+end
+
+function package_documented_public_names(parsed_files::Vector{ParsedJuliaFile})
+    names = Set{String}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for docstring_fact in parsed.syntax_facts.docstrings
+            push!(names, terminal_public_name(docstring_fact.target_name))
+        end
+    end
+    names
+end
+
+function package_function_docstrings_by_public_name(parsed_files::Vector{ParsedJuliaFile})
+    docs = Dict{String,Vector{String}}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        for docstring_fact in parsed.syntax_facts.docstrings
+            docstring_fact.target_kind == "function" || continue
+            name = terminal_public_name(docstring_fact.target_name)
+            push!(get!(docs, name, String[]), docstring_fact.text)
+        end
+    end
+    docs
+end
+
+function has_syntax_contract_doc(
+    docs_by_name::Dict{String,Vector{String}},
+    name::AbstractString,
+)
+    any(get(docs_by_name, String(name), String[])) do text
+        lower_text = lowercase(text)
+        any(token -> occursin(token, lower_text), SYNTAX_CONTRACT_DOC_TOKENS)
     end
 end

@@ -20,12 +20,14 @@
         joinpath(root, "src", "Example.jl"),
         """
         module Example
-        export run, Config
+        export run, Config, DEFAULT_LIMIT
         using Dates
         include("api.jl")
         struct Config
             value::Int
         end
+        \"\"\"Default public limit.\"\"\"
+        const DEFAULT_LIMIT::Int = 8
         end
         """,
     )
@@ -50,6 +52,14 @@
     @test any(entry -> entry.kind == "export" && entry.name == "run", entries)
     @test any(entry -> entry.kind == "using" && entry.name == "Dates", entries)
     @test any(entry -> entry.kind == "struct" && entry.name == "Config", entries)
+    @test any(
+        entry -> entry.kind == "const" &&
+                 entry.name == "DEFAULT_LIMIT" &&
+                 "binding" in entry.tags &&
+                 "constant" in entry.tags &&
+                 occursin("::Int", entry.detail),
+        entries,
+    )
     @test any(
         entry -> entry.kind == "function" &&
                  entry.name == "run" &&
@@ -98,6 +108,9 @@
     type_results = search_julia_project(root, "Config"; tags=["type"], limit=1)
     @test length(type_results) == 1
     @test only(type_results).entry.kind == "struct"
+    binding_results = search_julia_project(root, "DEFAULT_LIMIT"; tags=["binding"], limit=1)
+    @test length(binding_results) == 1
+    @test only(binding_results).entry.kind == "const"
     @test isempty(search_julia_index(entries, "run"; limit=0))
 end
 

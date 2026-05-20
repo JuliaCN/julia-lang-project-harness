@@ -27,17 +27,11 @@ function documented_syntax_target(node::JuliaSyntax.SyntaxNode)
     elseif kind in ("struct", "abstract", "primitive")
         type_fact = type_syntax_from_node(node)
         return isnothing(type_fact) ? nothing : (type_fact.kind, type_fact.name)
-    elseif kind == "const"
-        name = const_binding_name(node)
-        return isnothing(name) ? nothing : ("const", name)
+    elseif kind in ("const", "global")
+        binding_fact = binding_syntax_from_node(node)
+        return isnothing(binding_fact) ? nothing : (binding_fact.kind, binding_fact.name)
     end
     nothing
-end
-
-function const_binding_name(node::JuliaSyntax.SyntaxNode)
-    children = syntax_children(node)
-    isempty(children) && return nothing
-    binding_name_text(first(children))
 end
 
 function binding_name_text(node::JuliaSyntax.SyntaxNode)

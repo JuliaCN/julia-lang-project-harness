@@ -115,6 +115,26 @@ function type_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     )
 end
 
+function binding_syntax_from_node(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    kind in ("const", "global") || return nothing
+    children = syntax_children(node)
+    isempty(children) && return nothing
+    name = binding_name_text(first(children))
+    isnothing(name) && return nothing
+    location = JuliaSyntax.source_location(node)
+    JuliaBindingSyntax(
+        location[1],
+        location[2] - 1,
+        kind,
+        name,
+        last(split(name, ".")),
+        binding_type_annotation(first(children)),
+        kind == "const",
+        String(JuliaSyntax.sourcetext(node)),
+    )
+end
+
 function macro_invocation_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     children = syntax_children(node)
     isempty(children) && return nothing
@@ -184,6 +204,20 @@ const TEST_MACRO_NAMES = Set([
 function terminal_macro_name(node::JuliaSyntax.SyntaxNode)
     names = identifier_texts(node)
     isempty(names) ? nothing : last(names)
+end
+
+function binding_type_annotation(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "::"
+        children = syntax_children(node)
+        length(children) >= 2 || return nothing
+        return compact_syntax_text(children[2])
+    elseif kind == "="
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return binding_type_annotation(first(children))
+    end
+    nothing
 end
 
 function is_definition_signature_call(

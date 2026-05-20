@@ -142,7 +142,6 @@ const MAX_PUBLIC_METHOD_BODY_STATEMENTS = 8
 const MIN_PUBLIC_METHOD_PIPELINE_STEPS = 3
 const MAX_PUBLIC_METHOD_MACRO_INVOCATIONS = 3
 const MAX_UNDOCUMENTED_MODULE_OWNER_INCLUDES = 4
-const SYNTAX_CONTRACT_DOC_TOKENS = ("syntax", "macro", "expansion", "generated", "contract")
 
 function module_owner_fanout_findings(
     scope::JuliaProjectHarnessScope,
@@ -249,6 +248,18 @@ function public_api_definition_records(
                 type_fact.column,
             )
         end
+        for binding_fact in parsed.syntax_facts.bindings
+            name = binding_fact.terminal_name
+            name in public_names || continue
+            push_public_api_definition!(
+                records,
+                name,
+                binding_fact.kind,
+                parsed,
+                binding_fact.line,
+                binding_fact.column,
+            )
+        end
         for function_fact in parsed.syntax_facts.functions
             name = function_fact.terminal_name
             name in public_names || continue
@@ -293,100 +304,6 @@ function display_public_owner_path(scope::JuliaProjectHarnessScope, path::Abstra
         return replace(relative_path, '\\' => '/')
     end
     replace(String(path), '\\' => '/')
-end
-
-function public_api_doc_findings(
-    parsed_files::Vector{ParsedJuliaFile},
-    public_names::Set{String},
-    documented_names::Set{String},
-    rules::Dict{String,JuliaHarnessRule},
-)
-    findings = JuliaHarnessFinding[]
-    reported = Set{Tuple{String,String}}()
-    for parsed in parsed_files
-        parsed.report.is_valid || continue
-        for type_fact in parsed.syntax_facts.types
-            name = terminal_public_name(type_fact.name)
-            name in public_names || continue
-            name in documented_names && continue
-            key = ("type", name)
-            key in reported && continue
-            push!(reported, key)
-            push!(
-                findings,
-                finding_from_rule(
-                    rules[AGENT_JL_R001];
-                    summary="Exported/public type `$(name)` lacks a Julia docstring that states its agent-facing intent.",
-                    location=SourceLocation(parsed.report.path, type_fact.line, type_fact.column),
-                    source_line=source_line(parsed.source, type_fact.line),
-                    label="add a Julia docstring before the public type definition",
-                ),
-            )
-        end
-        for function_fact in parsed.syntax_facts.functions
-            name = function_fact.terminal_name
-            name in public_names || continue
-            name in documented_names && continue
-            key = ("function", name)
-            key in reported && continue
-            push!(reported, key)
-            push!(
-                findings,
-                finding_from_rule(
-                    rules[AGENT_JL_R001];
-                    summary="Exported/public function `$(name)` lacks a Julia docstring that states its agent-facing intent.",
-                    location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                    source_line=source_line(parsed.source, function_fact.line),
-                    label="add a Julia docstring before the public function definition",
-                ),
-            )
-        end
-    end
-    findings
-end
-
-function package_public_names(parsed_files::Vector{ParsedJuliaFile})
-    names = Set{String}()
-    for parsed in parsed_files
-        for export_fact in parsed.syntax_facts.exports
-            union!(names, export_fact.names)
-        end
-    end
-    names
-end
-
-function package_documented_public_names(parsed_files::Vector{ParsedJuliaFile})
-    names = Set{String}()
-    for parsed in parsed_files
-        parsed.report.is_valid || continue
-        for docstring_fact in parsed.syntax_facts.docstrings
-            push!(names, terminal_public_name(docstring_fact.target_name))
-        end
-    end
-    names
-end
-
-function package_function_docstrings_by_public_name(parsed_files::Vector{ParsedJuliaFile})
-    docs = Dict{String,Vector{String}}()
-    for parsed in parsed_files
-        parsed.report.is_valid || continue
-        for docstring_fact in parsed.syntax_facts.docstrings
-            docstring_fact.target_kind == "function" || continue
-            name = terminal_public_name(docstring_fact.target_name)
-            push!(get!(docs, name, String[]), docstring_fact.text)
-        end
-    end
-    docs
-end
-
-function has_syntax_contract_doc(
-    docs_by_name::Dict{String,Vector{String}},
-    name::AbstractString,
-)
-    any(get(docs_by_name, String(name), String[])) do text
-        lower_text = lowercase(text)
-        any(token -> occursin(token, lower_text), SYNTAX_CONTRACT_DOC_TOKENS)
-    end
 end
 
 terminal_public_name(name::AbstractString) = last(split(String(name), "."))

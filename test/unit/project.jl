@@ -658,6 +658,29 @@ end
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
 end
 
+@testset "project runner reports public binding doc advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export DEFAULT_LIMIT
+        const DEFAULT_LIMIT = 8
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R001", rendered)
+    @test occursin("Exported/public binding `DEFAULT_LIMIT`", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
 @testset "project runner accepts documented public API" begin
     root = mktempdir()
     write_project(root, "Example")
@@ -669,6 +692,27 @@ end
         export run
         \"\"\"Run the public value.\"\"\"
         run(value) = value
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
+@testset "project runner accepts documented public binding" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export DEFAULT_LIMIT
+        \"\"\"Default public limit.\"\"\"
+        const DEFAULT_LIMIT = 8
         end
         """,
     )

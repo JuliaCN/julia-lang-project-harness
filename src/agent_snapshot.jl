@@ -1,4 +1,5 @@
 const MAX_AGENT_SNAPSHOT_INCLUDE_LINES = 24
+const MAX_AGENT_SNAPSHOT_BINDINGS_PER_FILE = 12
 const MAX_AGENT_SNAPSHOT_METHODS_PER_FILE = 12
 const MAX_AGENT_SNAPSHOT_TESTSETS_PER_FILE = 8
 
@@ -87,6 +88,11 @@ function render_julia_package_snapshot(
     if !isempty(type_lines)
         rendered *= "Types:\n"
         rendered *= join(type_lines, "\n") * "\n"
+    end
+    binding_lines = snapshot_binding_lines(scope, parsed_files)
+    if !isempty(binding_lines)
+        rendered *= "Bindings:\n"
+        rendered *= join(binding_lines, "\n") * "\n"
     end
     method_lines = snapshot_method_lines(scope, parsed_files)
     if !isempty(method_lines)
@@ -252,6 +258,30 @@ function display_type_syntax(type_fact::JuliaTypeSyntax)
     supertype_suffix = isnothing(type_fact.supertype) ? "" : "<:$(type_fact.supertype)"
     field_suffix = isempty(type_fact.fields) ? "" : " fields=$(length(type_fact.fields))"
     "$(kind)=$(type_fact.name)$(parameter_suffix)$(supertype_suffix)$(field_suffix)"
+end
+
+function snapshot_binding_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})
+    lines = String[]
+    for parsed in parsed_files
+        isempty(parsed.syntax_facts.bindings) && continue
+        bindings = compact_snapshot_bindings([
+            display_binding_syntax(binding) for binding in parsed.syntax_facts.bindings
+        ])
+        push!(lines, "- $(display_project_path(scope, parsed.report.path)) $(join(bindings, "; "))")
+    end
+    lines
+end
+
+function compact_snapshot_bindings(bindings::Vector{String})
+    length(bindings) <= MAX_AGENT_SNAPSHOT_BINDINGS_PER_FILE && return bindings
+    kept = bindings[1:MAX_AGENT_SNAPSHOT_BINDINGS_PER_FILE]
+    push!(kept, "... $(length(bindings) - MAX_AGENT_SNAPSHOT_BINDINGS_PER_FILE) more bindings")
+    kept
+end
+
+function display_binding_syntax(binding::JuliaBindingSyntax)
+    type_suffix = isnothing(binding.type_annotation) ? "" : "::$(binding.type_annotation)"
+    "$(binding.kind)=$(binding.name)$(type_suffix)"
 end
 
 function snapshot_method_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

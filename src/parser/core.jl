@@ -49,6 +49,7 @@ function empty_julia_native_syntax_facts()
         JuliaExportSyntax[],
         JuliaFunctionSyntax[],
         JuliaTypeSyntax[],
+        JuliaBindingSyntax[],
         JuliaMacroInvocationSyntax[],
         JuliaCallSyntax[],
         JuliaDocstringSyntax[],
@@ -65,6 +66,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaExportSyntax[],
         JuliaFunctionSyntax[],
         JuliaTypeSyntax[],
+        JuliaBindingSyntax[],
         JuliaMacroInvocationSyntax[],
         JuliaCallSyntax[],
         JuliaDocstringSyntax[],
@@ -80,6 +82,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.exports,
         collector.functions,
         collector.types,
+        collector.bindings,
         collector.macro_invocations,
         collector.calls,
         collector.docstrings,
@@ -95,6 +98,7 @@ mutable struct JuliaSyntaxFactCollector
     exports::Vector{JuliaExportSyntax}
     functions::Vector{JuliaFunctionSyntax}
     types::Vector{JuliaTypeSyntax}
+    bindings::Vector{JuliaBindingSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     calls::Vector{JuliaCallSyntax}
     docstrings::Vector{JuliaDocstringSyntax}
@@ -125,6 +129,9 @@ function collect_julia_syntax_facts!(
     elseif syntax_kind(node) in ("struct", "abstract", "primitive")
         type_fact = type_syntax_from_node(node)
         !isnothing(type_fact) && push!(collector.types, type_fact)
+    elseif syntax_kind(node) in ("const", "global")
+        binding_fact = binding_syntax_from_node(node)
+        !isnothing(binding_fact) && push!(collector.bindings, binding_fact)
     elseif syntax_kind(node) == "macrocall"
         macro_invocation = macro_invocation_syntax_from_node(node)
         if !isnothing(macro_invocation)

@@ -83,6 +83,35 @@ end
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end
 
+@testset "parser binding facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "bindings.jl")
+    write(
+        source,
+        """
+        const DEFAULT_LIMIT = 8
+        const TYPED_LIMIT::Int = 13
+        global CACHE = Dict()
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test [
+        (
+            item.kind,
+            item.name,
+            item.terminal_name,
+            item.type_annotation,
+            item.is_constant,
+        ) for item in parsed.syntax_facts.bindings
+    ] == [
+        ("const", "DEFAULT_LIMIT", "DEFAULT_LIMIT", nothing, true),
+        ("const", "TYPED_LIMIT", "TYPED_LIMIT", "Int", true),
+        ("global", "CACHE", "CACHE", nothing, false),
+    ]
+end
+
 @testset "parser control flow facts" begin
     temp = mktempdir()
     source = joinpath(temp, "flow.jl")
@@ -215,6 +244,8 @@ end
         end
         \"\"\"Public constant.\"\"\"
         const DEFAULT_PAYLOAD = Payload(1)
+        \"\"\"Shared cache.\"\"\"
+        global CACHE = Dict()
         end
         """,
     )
@@ -233,6 +264,7 @@ end
         ),
         ("struct", "Payload", "A named payload."),
         ("const", "DEFAULT_PAYLOAD", "Public constant."),
+        ("global", "CACHE", "Shared cache."),
     ]
 end
 

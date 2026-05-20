@@ -453,6 +453,7 @@ render_julia_verification_profile_index_json(index::JuliaVerificationProfileInde
 render_julia_verification_pending_advice(profile::JuliaVerificationProfile)
 render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
 render_julia_verification_task_index_json(index::JuliaVerificationTaskIndex)
+render_julia_verification_receipt_template(index::JuliaVerificationTaskIndex)
 read_julia_verification_receipts_json(path::AbstractString)
 review_julia_verification_receipts(index::JuliaVerificationTaskIndex, receipts)
 assert_julia_verification_receipts_accepted(index::JuliaVerificationTaskIndex, receipts)
@@ -606,6 +607,12 @@ remain incomplete. Waivers are allowed only when the receipt records a concrete
 explanation, so an Agent cannot silently skip expensive verification by adding a
 lightweight config escape. The CLI review mode should return success only when
 every required external receipt is accepted or concretely waived.
+
+The harness should also emit a JSON receipt template from the same task index.
+Template values are intentionally blank: they help the Agent fill the required
+keys, but they must not pass review until replaced with concrete evidence. This
+keeps the loop tight without turning the template itself into an escape path.
+The CLI exposes this as `--verification-receipt-template`.
 
 ## Configuration
 

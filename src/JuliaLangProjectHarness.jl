@@ -14,6 +14,7 @@ include("agent_snapshot.jl")
 include("verification.jl")
 include("verification/responsibility_inference.jl")
 include("verification/contracts.jl")
+include("verification/receipt_templates.jl")
 include("verification/receipts.jl")
 include("verification/advice.jl")
 include("verification/profile_index.jl")
@@ -62,6 +63,7 @@ export JuliaDiagnosticSeverity,
     render_julia_verification_profile_index,
     render_julia_verification_profile_index_json,
     render_julia_verification_profile_json,
+    render_julia_verification_receipt_template,
     render_julia_verification_receipt_reviews,
     render_julia_verification_receipt_reviews_json,
     render_julia_verification_task_index,

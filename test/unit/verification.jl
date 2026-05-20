@@ -121,6 +121,7 @@ end
 
     rendered = render_julia_verification_task_index(index)
     json = render_julia_verification_task_index_json(index)
+    template = render_julia_verification_receipt_template(index)
 
     @test occursin("VerificationTasks: count=5", rendered)
     @test occursin("owner=test/runtests.jl", rendered)
@@ -130,6 +131,9 @@ end
     @test occursin("\"records\"", json)
     @test occursin("\"required_evidence\"", json)
     @test occursin("VerifyJSONExt", json)
+    @test occursin("\"receipts\"", template)
+    @test occursin("\"scenario\":\"\"", template)
+    @test occursin("\"required_receipt\"", template)
 
     advice_out = IOBuffer()
     profile = assert_julia_project_harness_test_profile_clean(root; advice_io=advice_out)
@@ -203,6 +207,7 @@ end
 
     profile = build_julia_project_verification_profile(root)
     advice = render_julia_verification_pending_advice(profile)
+    receipt_template = render_julia_verification_receipt_template(task_index)
 
     @test occursin("[verify-advice] pending=4", advice)
     @test occursin("kind=performance", advice)
@@ -210,6 +215,9 @@ end
     @test occursin("requires=benchmark_command,baseline,regression_threshold", advice)
     @test occursin("evidence=responsibilities=public_api,external_dependency", advice)
     @test !occursin("exports=", advice)
+    @test occursin("\"benchmark_command\":\"\"", receipt_template)
+    @test occursin("\"attack_classes\":\"\"", receipt_template)
+    @test occursin("\"injected_failure\":\"\"", receipt_template)
 end
 
 @testset "verification receipt review enforces required evidence" begin
@@ -218,6 +226,26 @@ end
 
     index = build_julia_verification_task_index(root)
     stress = only(record for record in index.records if record.kind == "stress")
+    template = render_julia_verification_receipt_template(index)
+    template_path = joinpath(root, "receipt-template.json")
+    write(template_path, template)
+    template_reviews = review_julia_verification_receipts(
+        index,
+        read_julia_verification_receipts_json(template_path),
+    )
+
+    @test occursin("\"fingerprint\":\"$(stress.fingerprint)\"", template)
+    @test occursin("\"task_evidence\"", template)
+    @test only(template_reviews).status == :incomplete
+    @test only(template_reviews).weak_evidence == [
+        "scenario",
+        "load_steps",
+        "p50_ms",
+        "p99_ms",
+        "threshold",
+        "result",
+    ]
+
     good_receipt = Dict(
         "fingerprint" => stress.fingerprint,
         "scenario" => "public API smoke under generated load",

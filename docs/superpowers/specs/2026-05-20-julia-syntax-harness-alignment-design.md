@@ -46,6 +46,13 @@ The Julia adaptation must be based on Julia's own project and language model:
 - `test/runtests.jl`, `Pkg.test`, and `Test.@testset` define the first test
   gate surface.
 
+The source-grounded Julia quality model for this harness lives in
+`docs/superpowers/research/2026-05-20-julia-project-quality-for-agents.md`.
+It translates the Julia manual, Pkg/Documenter guidance, and mature package
+practices from SciML, JuMP, DataFrames, and BlueStyle into Agent-facing project
+quality signals. Later policy slices should use that note as calibration input
+instead of copying Rust-specific design rules.
+
 ## Non-Goals
 
 The first implementation will not:

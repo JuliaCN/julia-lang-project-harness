@@ -1,0 +1,293 @@
+# Julia Project Quality Notes for Agents
+
+Status: research note
+Date: 2026-05-20
+Repository: `julia-lang-project-harness`
+
+## Purpose
+
+This note turns Julia project quality guidance into harness design input for
+coding agents. The goal is not to make agents memorize a generic style guide.
+The goal is to make Julia project structure, API intent, algorithm shape,
+performance risk, tests, documentation, and escape-policy surfaces visible
+enough that an agent can repair a package without writing brittle "AI-shaped"
+Julia.
+
+The Rust harness remains an experience source, but the Julia harness must use
+Julia-native authority:
+
+- `Project.toml`, `Pkg`, and workspace environments define project boundaries.
+- `JuliaSyntax.jl` facts define syntax, search, and advisory policy inputs.
+- `Pkg.test`, package docs, doctests, and focused verification receipts define
+  the first evidence surface.
+
+## Sources Reviewed
+
+Official references:
+
+- [Julia Style Guide](https://docs.julialang.org/en/v1/manual/style-guide/)
+- [Julia Performance Tips](https://docs.julialang.org/en/v1/manual/performance-tips/)
+- [Julia Modules](https://docs.julialang.org/en/v1/manual/modules/)
+- [Julia Code Loading](https://docs.julialang.org/en/v1/manual/code-loading/)
+- [Julia Documentation](https://docs.julialang.org/en/v1/manual/documentation/)
+- [Pkg Creating Packages](https://pkgdocs.julialang.org/v1/creating-packages/)
+- [Pkg Project.toml and Manifest.toml](https://pkgdocs.julialang.org/dev/toml-files/)
+- [Pkg Compatibility](https://pkgdocs.julialang.org/v1/compatibility/)
+- [Documenter Package Guide](https://documenter.juliadocs.org/stable/man/guide/index.html)
+- [Documenter Doctests](https://documenter.juliadocs.org/stable/man/doctests/)
+
+Mature project and ecosystem references:
+
+- [SciML Style Guide](https://docs.sciml.ai/SciMLStyle/dev/)
+- [BlueStyle](https://github.com/JuliaDiff/BlueStyle)
+- [JuMP Style Guide](https://jump.dev/JuMP.jl/stable/developers/style/)
+- [JuMP Contributing Guide](https://jump.dev/JuMP.jl/stable/developers/contributing/)
+- [JuMP AI Policy](https://jump.dev/JuMP.jl/stable/developers/ai_policy/)
+- [DataFrames.jl contributing guide](https://raw.githubusercontent.com/JuliaData/DataFrames.jl/main/CONTRIBUTING.md)
+
+These sources do not fully agree on every style detail. That is useful signal:
+the harness should prefer project-local consistency, parser-visible intent, and
+verification receipts over universal formatting taste.
+
+## Quality Model
+
+### 1. Project Boundary Is A Pkg Boundary
+
+High-quality Julia project work starts from the active package environment, not
+from a loose directory scan. `Project.toml` owns package identity, direct
+dependencies, weak dependencies, extensions, compatibility, extras, targets,
+and workspace membership. `Manifest.toml` can be important evidence for
+applications or shared workspaces, but harness policy should not invent a
+version lock where the package intends resolver-compatible library behavior.
+
+Agent implication:
+
+- Discover the project root from `Project.toml`.
+- Read `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`, `[extras]`,
+  `[targets]`, and `[workspace]` as structured package facts.
+- Treat `test/`, `docs/`, and `benchmarks/` projects as first-class package
+  environments when they have their own `Project.toml`.
+- Prefer compat and resolver facts over arbitrary branch or version pinning.
+
+Harness implication:
+
+- Root discovery must stay `Project.toml`/Pkg-driven.
+- Policy should flag missing compat or unexplained dependency source overrides,
+  but it should not force an arbitrary `#main` rev or a generated lockfile.
+- Verification tasks should know whether they are running package tests, docs,
+  extension tests, or benchmark/performance checks.
+
+### 2. The Entry Module Is A Facade, Not A Dumping Ground
+
+Julia modules do not map to files the way Rust modules do. A package commonly
+has `src/<PackageName>.jl` as the entry module, then uses literal `include`
+calls to evaluate owned files in that module. File names and module expressions
+are related by convention and ownership, not by a compiler-enforced file tree.
+
+Agent implication:
+
+- Start from the entry module and literal include graph.
+- Keep the entry file small: imports, exports/public API, includes, and facade
+  definitions belong there; large algorithms usually belong in owner files.
+- Avoid dynamic `include(...)` unless the project documents why that flexibility
+  is necessary.
+- Use local module imports explicitly so owner and dependency edges remain
+  searchable.
+
+Harness implication:
+
+- Owner branches should be inferred from entry files, include edges, local
+  modules, public API families, and path namespaces.
+- Search entries for owners are a central Agent surface, not a convenience
+  feature.
+- Dynamic include sites should stay policy-visible because they hide the repair
+  graph.
+
+### 3. API Shape Should Express Multiple-Dispatch Intent
+
+Julia quality is not "classes with methods." Good Julia APIs expose operations
+as functions, use exported or `public` names as the contract, and keep fields as
+implementation detail unless documented otherwise. Argument order should feel
+like Base where possible. Mutating functions should use `!`, and their
+docstrings should say what is mutated when several arguments are present.
+
+Agent implication:
+
+- Add methods to a coherent function family instead of inventing near-duplicate
+  names.
+- Prefer named keyword options or domain carriers over clusters of positional
+  `Bool` flags or stringly mode/status arguments.
+- Avoid type piracy and accidental extension of external methods.
+- Keep exported/public names documented and searchable.
+
+Harness implication:
+
+- Public API, exported names, method families, argument facts, bool flags,
+  stringly domains, and docstring bindings are core parser facts.
+- Advisory policy should push agents toward explicit API intent, not merely
+  toward shorter functions.
+
+### 4. Algorithm Shape Must Be Agent-Readable
+
+The target reader is also an agent. A function can be correct for Julia and
+still be hard for an agent to safely repair if it mixes traversal, filtering,
+mutation, branching, and result shaping in one broad nested loop. Nested loops
+are not automatically bad, especially in numeric kernels. The smell is an
+unexplained traversal shape where the repair intent is hidden.
+
+Agent implication:
+
+- Put hot or broad code inside functions, not scripts.
+- Split traversal from predicates, mapping, accumulation, and formatting when
+  the body becomes broad or deeply nested.
+- Prefer named iterator, predicate, reducer, or pipeline helpers when they make
+  the algorithm easier to search and patch.
+- Use broadcasting or generic iteration when it accurately expresses the data
+  contract. Do not turn every loop into clever syntax.
+- Keep macros around syntax convenience or domain notation; do not hide core
+  behavior from parser/search unless the macro contract is documented.
+
+Harness implication:
+
+- Function facts should include control-flow depth, branch count, loop count,
+  loop nesting depth, macro count, broad-body shape, and named call pipelines.
+- Search tags such as `control-flow`, `loop`, `nested-loop`, `branchy`,
+  `broad-body`, `macro`, and `pipeline` are quality-navigation signals.
+- Advisory rules should separate public API algorithm shape from internal
+  traversal shape. The repair advice for each is different.
+
+### 5. Performance Quality Is Evidence-Driven
+
+Julia performance guidance repeatedly comes back to the same pattern: place
+performance-critical code in functions, avoid untyped globals, keep types
+stable, avoid abstract fields and ambiguous containers in hot structures, and
+use measurement tools before making low-level changes. Mature ecosystem guides
+add a pragmatic rule: either write non-allocating code with explicit cache
+reuse, or write out-of-place code that treats inputs as immutable. Mixing both
+styles without a reason is hard to maintain and hard for agents to repair.
+
+Agent implication:
+
+- Before optimizing, identify the hot owner and record the verification command
+  that proves the concern.
+- Prefer type-stable helper boundaries and function barriers over scattered
+  local annotations.
+- Use `@inbounds`, `ccall`, `eval`, process execution, and unsafe operations
+  only with a concrete reason and focused tests.
+- For numerical and collection code, test more than one relevant input type
+  when the API claims generic behavior.
+
+Harness implication:
+
+- Performance rules should be advisory until there is project evidence:
+  benchmark files, test receipts, JET/profile receipts, or explicit hot-owner
+  tags.
+- Unsafe and escape-like constructs should require explanation and evidence,
+  not a silent config disable.
+
+### 6. Tests And Docs Are Part Of The Project Contract
+
+High-quality Julia packages use tests and docs as project surfaces. `Pkg.test`
+is the first common test gate. Mature projects commonly keep `runtests.jl` as
+an aggregate, split test files by owner or feature, and add tests with behavior
+changes. Documentation is not separate prose: docstrings, manual pages,
+examples, and doctests help keep public API behavior executable.
+
+Agent implication:
+
+- Pair new functionality with tests, and bug fixes with regression tests.
+- Keep `test/runtests.jl` as a runner/aggregate once a package grows.
+- Add or update docstrings for exported/public names.
+- Prefer doctestable examples for public API examples when the docs use
+  Documenter.
+- Run the package's existing test command before adding new verification
+  surfaces.
+
+Harness implication:
+
+- Verification profiles should guide agents toward `Pkg.test`, docs/doctests,
+  extension tests, and focused receipts.
+- The harness should remind the agent to improve verification based on current
+  project facts. It should not wait for the user to specify every test.
+
+### 7. Anti-Escape Policy Must Be Agent-Facing
+
+JuMP's AI policy is human-review oriented, but the harness lesson is broader:
+AI-assisted changes need responsibility, explanation, and evidence. In this
+repo, the first consumer is the agent itself. A config escape that suppresses
+policy without a concrete reason is not a responsible interface.
+
+Agent implication:
+
+- When policy is wrong, explain the project-specific reason and provide a
+  verification receipt.
+- Prefer improving code, tests, docs, or parser facts over adding a loose
+  disable.
+- Treat harness advice as a repair queue, not as user-facing nag text.
+
+Harness implication:
+
+- Escape hatches must require structured explanations.
+- Self-apply should remain active so the harness cannot normalize weak policy
+  for downstream packages.
+- Renderers should keep advice compact enough that an agent can consume it
+  during tests without drowning in JSON.
+
+## Mapping Into The Current Harness
+
+Already implemented or designed:
+
+- Project discovery uses `Project.toml` as the package authority.
+- The parser layer is `JuliaSyntax.jl`-native.
+- Policy consumes parser facts instead of raw source rescans.
+- The reasoning tree exposes package owners, include edges, public surface, and
+  test/source shape.
+- Search is parser-backed and includes owner entries, public/API entries,
+  docstrings, calls, identifiers, arguments, fields, tests, and algorithm-shape
+  tags.
+- Advisory rules cover public docs, bool/stringly arguments, exported-name
+  conflicts, large owner fanout, public algorithm shape, scattered method
+  families, macro-heavy APIs, struct field contracts, mutable-struct mutation
+  contracts, in-test verification hooks, and internal nested traversal shape.
+- Verification profile and receipt surfaces let `Pkg.test` show agents what to
+  verify next.
+- Config escape surfaces require explanations.
+
+Useful next policy slices:
+
+- Public mutating methods should document which arguments are mutated.
+- Package extensions should have a verification task when `[weakdeps]` and
+  `[extensions]` are present.
+- Docs projects using Documenter should expose a doctest or docs-build task.
+- Unsafe constructs such as `eval`, external process execution, `ccall`,
+  `@inbounds`, and unchecked bounds removal should require a reason and focused
+  evidence in non-test code.
+- Hot owners with `nested-loop`, `branchy`, or `broad-body` search tags should
+  receive performance-verification advice when benchmarks or profiling tools
+  exist in the project.
+- Public generic APIs should get type-coverage advice when tests only exercise
+  a single narrow input shape.
+
+## Agent Operating Checklist
+
+For an agent changing a Julia project under this harness:
+
+1. Start from the `Project.toml` root, not a random working directory.
+2. Read the compact agent snapshot before editing.
+3. Use owner search to find the relevant project branch.
+4. Use tag search for risky repair zones: `nested-loop`, `branchy`,
+   `broad-body`, `macro`, `stringly`, `bool`, and `public`.
+5. Make the smallest owner-scoped change that preserves package API intent.
+6. Add or update tests, docs, doctests, or verification receipts based on the
+   changed owner.
+7. Run `Pkg.test()` or the project-native test command.
+8. Run the harness test profile and treat advice as a repair queue.
+9. Add policy exceptions only with a concrete explanation and evidence.
+
+## Design Rule
+
+The harness should not try to make every Julia project look the same. It should
+make the important project facts legible enough that an agent can write Julia
+that is idiomatic, performant where it matters, documented where it is public,
+tested where it changes behavior, and structured so the next agent can safely
+continue the work.

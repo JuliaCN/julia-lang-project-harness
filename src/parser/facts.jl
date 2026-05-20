@@ -87,6 +87,8 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         function_keyword_args(signature),
         function_control_flow_depth(node),
         function_control_flow_kinds(node),
+        function_body_statement_count(node),
+        function_body_named_calls(node),
         String(JuliaSyntax.sourcetext(node)),
     )
 end
@@ -131,9 +133,7 @@ function call_syntax_from_node(
     parent::Union{Nothing,JuliaSyntax.SyntaxNode},
 )
     is_definition_signature_call(node, parent) && return nothing
-    children = syntax_children(node)
-    isempty(children) && return nothing
-    name = call_name_text(first(children))
+    name = call_expression_name(node)
     isnothing(name) && return nothing
     terminal_name = last(split(name, "."))
     is_searchable_call_name(terminal_name) || return nothing
@@ -192,6 +192,26 @@ function is_definition_signature_call(
     signature = first_call_child(parent)
     isnothing(signature) && return false
     signature === node
+end
+
+function call_expression_name(node::JuliaSyntax.SyntaxNode)
+    children = syntax_children(node)
+    isempty(children) && return nothing
+    head = call_head_node(children)
+    call_name_text(head)
+end
+
+function call_head_node(children::Vector{JuliaSyntax.SyntaxNode})
+    if length(children) >= 2 && is_operator_identifier(children[2])
+        return children[2]
+    end
+    first(children)
+end
+
+function is_operator_identifier(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "Identifier" || return false
+    text = String(JuliaSyntax.sourcetext(node))
+    isnothing(match(r"^[A-Za-z_][A-Za-z0-9_!]*$", text))
 end
 
 function call_name_text(node::JuliaSyntax.SyntaxNode)

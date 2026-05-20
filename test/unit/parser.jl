@@ -114,6 +114,29 @@ end
     @test function_fact.control_flow_kinds == ["if", "for", "while", "try"]
 end
 
+@testset "parser function body shape facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "body_shape.jl")
+    write(
+        source,
+        """
+        function pipeline(value)
+            loaded = load(value)
+            normalized = normalize(loaded)
+            scored = score(normalized)
+            rendered = render(scored)
+            rendered
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    function_fact = only(parsed.syntax_facts.functions)
+
+    @test function_fact.body_statement_count == 5
+    @test function_fact.body_named_calls == ["load", "normalize", "score", "render"]
+end
+
 @testset "parser call facts" begin
     temp = mktempdir()
     source = joinpath(temp, "calls.jl")
@@ -122,6 +145,7 @@ end
         """
         function run(x; verbose=false)
             JSON3.read(x; allow_inf=true)
+            local total = x + 1
         end
         short(y) = helper(y)
         macro demo(x)

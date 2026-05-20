@@ -22,6 +22,53 @@ function function_body_nodes(node::JuliaSyntax.SyntaxNode)
     [child for child in syntax_children(node) if child !== signature]
 end
 
+function function_body_statement_count(node::JuliaSyntax.SyntaxNode)
+    length(function_body_statement_nodes(node))
+end
+
+function function_body_named_calls(node::JuliaSyntax.SyntaxNode)
+    names = String[]
+    seen = Set{String}()
+    for statement in function_body_statement_nodes(node)
+        collect_body_named_calls!(names, seen, statement)
+    end
+    names
+end
+
+function function_body_statement_nodes(node::JuliaSyntax.SyntaxNode)
+    statements = JuliaSyntax.SyntaxNode[]
+    for child in function_body_nodes(node)
+        if syntax_kind(child) == "block"
+            append!(statements, syntax_children(child))
+        else
+            push!(statements, child)
+        end
+    end
+    statements
+end
+
+function collect_body_named_calls!(
+    names::Vector{String},
+    seen::Set{String},
+    node::JuliaSyntax.SyntaxNode,
+)
+    kind = syntax_kind(node)
+    kind in ("function", "macro") && return
+    if kind == "call"
+        call_name = call_expression_name(node)
+        if !isnothing(call_name)
+            terminal_name = last(split(call_name, "."))
+            if is_searchable_call_name(terminal_name) && !(terminal_name in seen)
+                push!(seen, terminal_name)
+                push!(names, terminal_name)
+            end
+        end
+    end
+    for child in syntax_children(node)
+        collect_body_named_calls!(names, seen, child)
+    end
+end
+
 function control_flow_depth_from_node(node::JuliaSyntax.SyntaxNode, depth::Int)
     kind = syntax_kind(node)
     kind in ("function", "macro") && return depth

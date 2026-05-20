@@ -343,7 +343,11 @@ function display_function_search_detail(function_fact::JuliaFunctionSyntax)
                       " stringly=$(join(function_fact.stringly_domain_args, ","))"
     flow_suffix = function_fact.control_flow_depth == 0 ? "" :
                   " flow=$(function_fact.control_flow_depth):$(join(function_fact.control_flow_kinds, ","))"
-    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)$(stringly_suffix)$(flow_suffix)"
+    body_suffix = function_fact.body_statement_count == 0 ? "" :
+                  " body=$(function_fact.body_statement_count)"
+    step_suffix = isempty(function_fact.body_named_calls) ? "" :
+                  " steps=$(join(function_fact.body_named_calls, ","))"
+    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(step_suffix)"
 end
 
 function display_call_search_detail(call_fact::JuliaCallSyntax)

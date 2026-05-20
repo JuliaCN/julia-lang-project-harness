@@ -30,6 +30,7 @@ const AGENT_JL_R004 = "AGENT-JL-R004"
 const AGENT_JL_R005 = "AGENT-JL-R005"
 const AGENT_JL_R006 = "AGENT-JL-R006"
 const AGENT_JL_R007 = "AGENT-JL-R007"
+const AGENT_JL_R008 = "AGENT-JL-R008"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -293,6 +294,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public method hides deep control flow",
         "Prefer named pipeline steps when exported Julia methods hide algorithm shape behind deeply nested control flow.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R008,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public method body lacks named pipeline steps",
+        "Split broad exported Julia methods into named pipeline steps when the public body has many top-level statements.",
         labels("agent-policy"),
     ),
 ]

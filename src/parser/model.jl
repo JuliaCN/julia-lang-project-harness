@@ -43,6 +43,8 @@ struct JuliaFunctionSyntax
     keyword_args::Vector{String}
     control_flow_depth::Int
     control_flow_kinds::Vector{String}
+    body_statement_count::Int
+    body_named_calls::Vector{String}
     expression::String
 end
 

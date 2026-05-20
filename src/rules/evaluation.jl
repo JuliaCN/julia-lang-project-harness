@@ -95,12 +95,28 @@ function evaluate_agent_policy_rules(
                     ),
                 )
             end
+            if function_fact.kind == "function" &&
+               function_fact.body_statement_count >= MAX_PUBLIC_METHOD_BODY_STATEMENTS &&
+               length(function_fact.body_named_calls) < MIN_PUBLIC_METHOD_PIPELINE_STEPS
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[AGENT_JL_R008];
+                        summary="Exported/public method `$(function_fact.terminal_name)` has $(function_fact.body_statement_count) top-level body statements but only $(length(function_fact.body_named_calls)) named body calls.",
+                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                        source_line=source_line(parsed.source, function_fact.line),
+                        label="split the broad public body into named pipeline helper functions",
+                    ),
+                )
+            end
         end
     end
     findings
 end
 
 const MAX_PUBLIC_METHOD_CONTROL_FLOW_DEPTH = 4
+const MAX_PUBLIC_METHOD_BODY_STATEMENTS = 8
+const MIN_PUBLIC_METHOD_PIPELINE_STEPS = 3
 const MAX_UNDOCUMENTED_MODULE_OWNER_INCLUDES = 4
 
 function module_owner_fanout_findings(

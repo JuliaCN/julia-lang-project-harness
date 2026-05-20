@@ -111,6 +111,7 @@ The parser layer should expose these internal facts:
 - `JuliaStructSyntax`
 - `JuliaMacroInvocationSyntax`
 - `JuliaCallSyntax`
+- `JuliaDocstringSyntax`
 - `JuliaTestSyntax`
 
 Each fact that can trigger a finding must carry a stable source location:
@@ -136,6 +137,8 @@ The parser layer should classify these constructs in the first slice:
 - long-form function definitions
 - short-form function definitions
 - function and constructor call references, excluding definition signatures
+- docstring bindings through JuliaSyntax `doc` nodes for named modules,
+  functions, macros, types, and constants
 - macro definitions
 - macro invocations
 - mutable and immutable struct definitions
@@ -247,14 +250,17 @@ from `JuliaSyntax` facts owned by the parser layer, so search behavior and
 policy behavior agree on source locations and syntax classification.
 
 Initial entries should cover definitions, public API declarations, imports,
-tests, includes, and call references. A call reference is a real invocation in
-code, macro arguments, or test expressions. Function and macro definition
-signatures are not call references.
+tests, includes, call references, and docstrings. A call reference is a real
+invocation in code, macro arguments, or test expressions. Function and macro
+definition signatures are not call references. A docstring entry is only emitted
+from a JuliaSyntax `doc` node with a named target; ordinary string literals are
+not treated as documentation.
 
 Each search entry should carry:
 
 - stable source location;
-- kind, such as `module`, `function`, `struct`, `call`, `include`, or `test`;
+- kind, such as `module`, `function`, `struct`, `call`, `doc`, `include`, or
+  `test`;
 - name;
 - detail text for disambiguation;
 - combined search text;

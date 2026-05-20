@@ -34,6 +34,7 @@ function julia_search_index(parsed_files::Vector{ParsedJuliaFile})
         append!(entries, type_search_entries(parsed))
         append!(entries, function_search_entries(parsed))
         append!(entries, call_search_entries(parsed))
+        append!(entries, docstring_search_entries(parsed))
         append!(entries, test_search_entries(parsed))
         append!(entries, include_search_entries(parsed))
     end
@@ -144,6 +145,20 @@ function call_search_entries(parsed::ParsedJuliaFile)
     ]
 end
 
+function docstring_search_entries(parsed::ParsedJuliaFile)
+    [
+        search_index_entry(
+            parsed,
+            docstring_fact.line,
+            docstring_fact.column,
+            "doc",
+            docstring_fact.target_name;
+            detail=display_docstring_search_detail(docstring_fact),
+            tags=["doc", docstring_fact.target_kind, docstring_fact.target_name],
+        ) for docstring_fact in parsed.syntax_facts.docstrings
+    ]
+end
+
 function test_search_entries(parsed::ParsedJuliaFile)
     [
         search_index_entry(
@@ -218,6 +233,16 @@ function display_call_search_detail(call_fact::JuliaCallSyntax)
     keyword_suffix = isempty(call_fact.keyword_args) ? "" :
                      ";$(join(call_fact.keyword_args, ","))"
     "call $(call_fact.name)(args=$(call_fact.argument_count)$(keyword_suffix))"
+end
+
+function display_docstring_search_detail(docstring_fact::JuliaDocstringSyntax)
+    "doc $(docstring_fact.target_kind) $(docstring_fact.target_name): " *
+    first_docstring_line(docstring_fact.text)
+end
+
+function first_docstring_line(text::AbstractString)
+    lines = split(text, '\n'; keepempty=false)
+    isempty(lines) ? "" : strip(first(lines))
 end
 
 function include_search_detail(include_fact::JuliaIncludeSyntax)

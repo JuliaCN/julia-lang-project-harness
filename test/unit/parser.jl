@@ -113,6 +113,46 @@ end
     @test !("demo" in [item.name for item in calls])
 end
 
+@testset "parser docstring facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "docs.jl")
+    write(
+        source,
+        """
+        \"\"\"Package module docs.\"\"\"
+        module Docs
+        \"\"\"Run a value.
+
+        Keeps the first paragraph searchable.
+        \"\"\"
+        run(value) = value
+        \"\"\"A named payload.\"\"\"
+        struct Payload
+            value::Int
+        end
+        \"\"\"Public constant.\"\"\"
+        const DEFAULT_PAYLOAD = Payload(1)
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test [
+        (item.target_kind, item.target_name, item.text) for item in
+        parsed.syntax_facts.docstrings
+    ] == [
+        ("module", "Docs", "Package module docs."),
+        (
+            "function",
+            "run",
+            "Run a value.\n\nKeeps the first paragraph searchable.\n",
+        ),
+        ("struct", "Payload", "A named payload."),
+        ("const", "DEFAULT_PAYLOAD", "Public constant."),
+    ]
+end
+
 @testset "parser type facts" begin
     temp = mktempdir()
     source = joinpath(temp, "types.jl")

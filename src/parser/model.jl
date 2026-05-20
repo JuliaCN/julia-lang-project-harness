@@ -73,6 +73,15 @@ struct JuliaCallSyntax
     expression::String
 end
 
+struct JuliaDocstringSyntax
+    line::Int
+    column::Int
+    target_kind::String
+    target_name::String
+    text::String
+    expression::String
+end
+
 struct JuliaTestSyntax
     line::Int
     column::Int
@@ -97,6 +106,7 @@ struct JuliaNativeSyntaxFacts
     types::Vector{JuliaTypeSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     calls::Vector{JuliaCallSyntax}
+    docstrings::Vector{JuliaDocstringSyntax}
     tests::Vector{JuliaTestSyntax}
 end
 

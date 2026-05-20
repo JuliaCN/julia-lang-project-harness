@@ -13,11 +13,10 @@ end
 
 function string_literal_value(node::JuliaSyntax.SyntaxNode)
     syntax_kind(node) == "string" || return nothing
-    string_children = [
-        child for child in syntax_children(node) if syntax_kind(child) == "String"
-    ]
-    length(string_children) == 1 || return nothing
-    String(JuliaSyntax.sourcetext(only(string_children)))
+    children = syntax_children(node)
+    isempty(children) && return ""
+    all(child -> syntax_kind(child) == "String", children) || return nothing
+    join(String(JuliaSyntax.sourcetext(child)) for child in children)
 end
 
 function import_path_names(node::JuliaSyntax.SyntaxNode)

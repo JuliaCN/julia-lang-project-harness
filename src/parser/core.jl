@@ -51,6 +51,7 @@ function empty_julia_native_syntax_facts()
         JuliaTypeSyntax[],
         JuliaMacroInvocationSyntax[],
         JuliaCallSyntax[],
+        JuliaDocstringSyntax[],
         JuliaTestSyntax[],
     )
 end
@@ -65,6 +66,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaTypeSyntax[],
         JuliaMacroInvocationSyntax[],
         JuliaCallSyntax[],
+        JuliaDocstringSyntax[],
         JuliaTestSyntax[],
     )
     collect_julia_syntax_facts!(collector, syntax, source_path)
@@ -78,6 +80,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.types,
         collector.macro_invocations,
         collector.calls,
+        collector.docstrings,
         collector.tests,
     )
 end
@@ -91,6 +94,7 @@ mutable struct JuliaSyntaxFactCollector
     types::Vector{JuliaTypeSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
     calls::Vector{JuliaCallSyntax}
+    docstrings::Vector{JuliaDocstringSyntax}
     tests::Vector{JuliaTestSyntax}
 end
 
@@ -100,7 +104,10 @@ function collect_julia_syntax_facts!(
     source_path::AbstractString,
     parent::Union{Nothing,JuliaSyntax.SyntaxNode}=nothing,
 )
-    if is_module_node(node)
+    if syntax_kind(node) == "doc"
+        docstring_fact = docstring_syntax_from_node(node)
+        !isnothing(docstring_fact) && push!(collector.docstrings, docstring_fact)
+    elseif is_module_node(node)
         push!(collector.modules, module_syntax_from_node(node))
     elseif is_call_named(node, "include")
         push!(collector.includes, include_syntax_from_call(node, source_path))

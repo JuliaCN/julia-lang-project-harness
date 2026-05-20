@@ -83,6 +83,37 @@ end
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end
 
+@testset "parser control flow facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "flow.jl")
+    write(
+        source,
+        """
+        function nested(values)
+            if !isempty(values)
+                for value in values
+                    while value > 0
+                        try
+                            println(value)
+                            break
+                        catch
+                            break
+                        end
+                    end
+                end
+            end
+            values
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    function_fact = only(parsed.syntax_facts.functions)
+
+    @test function_fact.control_flow_depth == 4
+    @test function_fact.control_flow_kinds == ["if", "for", "while", "try"]
+end
+
 @testset "parser call facts" begin
     temp = mktempdir()
     source = joinpath(temp, "calls.jl")

@@ -341,7 +341,9 @@ function display_function_search_detail(function_fact::JuliaFunctionSyntax)
                   " bool=$(join(function_fact.bool_positional_args, ","))"
     stringly_suffix = isempty(function_fact.stringly_domain_args) ? "" :
                       " stringly=$(join(function_fact.stringly_domain_args, ","))"
-    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)$(stringly_suffix)"
+    flow_suffix = function_fact.control_flow_depth == 0 ? "" :
+                  " flow=$(function_fact.control_flow_depth):$(join(function_fact.control_flow_kinds, ","))"
+    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)$(stringly_suffix)$(flow_suffix)"
 end
 
 function display_call_search_detail(call_fact::JuliaCallSyntax)

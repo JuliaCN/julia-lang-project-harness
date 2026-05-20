@@ -29,6 +29,7 @@ const AGENT_JL_R003 = "AGENT-JL-R003"
 const AGENT_JL_R004 = "AGENT-JL-R004"
 const AGENT_JL_R005 = "AGENT-JL-R005"
 const AGENT_JL_R006 = "AGENT-JL-R006"
+const AGENT_JL_R007 = "AGENT-JL-R007"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -284,6 +285,14 @@ julia_agent_policy_rules() = [
         Info,
         "Module owner fans out without an intent doc",
         "Document module owner files that fan out to many local include owners so agents can understand the aggregation boundary.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R007,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public method hides deep control flow",
+        "Prefer named pipeline steps when exported Julia methods hide algorithm shape behind deeply nested control flow.",
         labels("agent-policy"),
     ),
 ]

@@ -280,7 +280,9 @@ function display_function_syntax(function_fact::JuliaFunctionSyntax)
                   ";bool=$(length(function_fact.bool_positional_args))"
     stringly_suffix = isempty(function_fact.stringly_domain_args) ? "" :
                       ";stringly=$(length(function_fact.stringly_domain_args))"
-    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(bool_suffix)$(stringly_suffix)"
+    flow_suffix = function_fact.control_flow_depth == 0 ? "" :
+                  ";flow=$(function_fact.control_flow_depth)"
+    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)"
 end
 
 function snapshot_test_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

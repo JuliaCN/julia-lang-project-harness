@@ -799,6 +799,46 @@ end
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
+@testset "project runner reports deep public control flow advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        \"\"\"Run values through a public algorithm.\"\"\"
+        function run(values)
+            result = 0
+            if !isempty(values)
+                for value in values
+                    while value > 0
+                        try
+                            result += value
+                            break
+                        catch
+                            break
+                        end
+                    end
+                end
+            end
+            result
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R007", rendered)
+    @test occursin("Public method hides deep control flow", rendered)
+    @test occursin("control-flow depth 4", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
 @testset "project runner reports include graph findings" begin
     root = mktempdir()
     write_project(root, "Example")

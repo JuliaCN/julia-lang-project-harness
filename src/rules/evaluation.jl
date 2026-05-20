@@ -82,11 +82,25 @@ function evaluate_agent_policy_rules(
                     ),
                 )
             end
+            if function_fact.kind == "function" &&
+               function_fact.control_flow_depth >= MAX_PUBLIC_METHOD_CONTROL_FLOW_DEPTH
+                push!(
+                    findings,
+                    finding_from_rule(
+                        rules[AGENT_JL_R007];
+                        summary="Exported/public method `$(function_fact.terminal_name)` has control-flow depth $(function_fact.control_flow_depth): $(join(function_fact.control_flow_kinds, ", ")).",
+                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
+                        source_line=source_line(parsed.source, function_fact.line),
+                        label="extract nested branches and loops into named pipeline steps",
+                    ),
+                )
+            end
         end
     end
     findings
 end
 
+const MAX_PUBLIC_METHOD_CONTROL_FLOW_DEPTH = 4
 const MAX_UNDOCUMENTED_MODULE_OWNER_INCLUDES = 4
 
 function module_owner_fanout_findings(

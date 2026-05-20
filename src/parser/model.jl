@@ -41,6 +41,8 @@ struct JuliaFunctionSyntax
     bool_positional_args::Vector{String}
     stringly_domain_args::Vector{String}
     keyword_args::Vector{String}
+    control_flow_depth::Int
+    control_flow_kinds::Vector{String}
     expression::String
 end
 

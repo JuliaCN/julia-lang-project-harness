@@ -398,8 +398,8 @@ Initial advisory rules:
 - `AGENT-JL-R002`: public method family has too many positional parameters.
 - `AGENT-JL-R003`: public method family exposes multiple `Bool` flags instead
   of a named option or keyword config shape.
-- `AGENT-JL-R004`: public API uses stringly state, mode, kind, type, tag,
-  phase, or status fields without a named domain carrier.
+- `AGENT-JL-R004`: public method uses stringly state, mode, kind, type, tag,
+  phase, or status arguments without a named domain carrier.
 - `AGENT-JL-R005`: exported names conflict across owner files or method
   families.
 - `AGENT-JL-R006`: owner file fans out to many local owners without an intent
@@ -412,9 +412,11 @@ Initial advisory rules:
   without a clear extension pattern.
 - `AGENT-JL-R010`: macro-heavy public API lacks a syntax-level contract note.
 - `AGENT-JL-R011`: public struct fields omit explicit type annotations.
+- `AGENT-JL-R012`: public struct exposes stringly domain fields such as mode,
+  status, category, or type.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R011`. Later advisory rules can land only after the needed
+`AGENT-JL-R012`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

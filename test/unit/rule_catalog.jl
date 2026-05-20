@@ -6,6 +6,12 @@
         "julia.modularity",
         "julia.agent_policy",
     ]
+    @test [descriptor.default_mode for descriptor in descriptors] == [
+        :blocking,
+        :blocking,
+        :blocking,
+        :advisory,
+    ]
 
     syntax_rules = julia_syntax_rules()
     @test length(syntax_rules) == 1
@@ -47,6 +53,7 @@
         "AGENT-JL-R009",
         "AGENT-JL-R010",
         "AGENT-JL-R011",
+        "AGENT-JL-R012",
     ]
 end
 

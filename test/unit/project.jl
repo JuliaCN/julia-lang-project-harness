@@ -777,6 +777,62 @@ end
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
+@testset "project runner reports public struct stringly field advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export Payload
+        \"\"\"Public payload shape.\"\"\"
+        struct Payload
+            id::Int
+            mode::String
+            category::AbstractString
+            payload_type::Union{Nothing,String}
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R012", rendered)
+    @test occursin("Public type exposes stringly domain fields", rendered)
+    @test occursin("mode, category, payload_type", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts symbol public domain fields" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export Payload
+        \"\"\"Public payload shape.\"\"\"
+        struct Payload
+            id::Int
+            mode::Symbol
+            status::Symbol
+            category::Symbol
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "project runner reports stringly public domain advice" begin
     root = mktempdir()
     write_project(root, "Example")

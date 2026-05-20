@@ -34,6 +34,7 @@ const AGENT_JL_R008 = "AGENT-JL-R008"
 const AGENT_JL_R009 = "AGENT-JL-R009"
 const AGENT_JL_R010 = "AGENT-JL-R010"
 const AGENT_JL_R011 = "AGENT-JL-R011"
+const AGENT_JL_R012 = "AGENT-JL-R012"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120
@@ -43,15 +44,15 @@ const MAX_THIN_RUNTESTS_NONBLANK_LINES = 80
 """Return rule pack metadata for the Julia project harness."""
 function julia_rule_pack_descriptors()
     [
-        RulePackDescriptor(JULIA_SYNTAX_PACK_ID, "1", ["julia", "syntax"], "blocking"),
+        RulePackDescriptor(JULIA_SYNTAX_PACK_ID, "1", ["julia", "syntax"], :blocking),
         RulePackDescriptor(
             JULIA_PROJECT_POLICY_PACK_ID,
             "1",
             ["julia", "project-policy", "tests"],
-            "blocking",
+            :blocking,
         ),
-        RulePackDescriptor(JULIA_MODULARITY_PACK_ID, "1", ["julia", "modularity"], "blocking"),
-        RulePackDescriptor(JULIA_AGENT_POLICY_PACK_ID, "1", ["julia", "agent-policy"], "advisory"),
+        RulePackDescriptor(JULIA_MODULARITY_PACK_ID, "1", ["julia", "modularity"], :blocking),
+        RulePackDescriptor(JULIA_AGENT_POLICY_PACK_ID, "1", ["julia", "agent-policy"], :advisory),
     ]
 end
 
@@ -329,6 +330,14 @@ julia_agent_policy_rules() = [
         Info,
         "Public type has untyped fields",
         "Give exported Julia struct fields explicit type annotations so agents can understand public data shape without inferring `Any` from implementation details.",
+        labels("agent-policy"),
+    ),
+    JuliaHarnessRule(
+        AGENT_JL_R012,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public type exposes stringly domain fields",
+        "Prefer Symbol, enum, or named value carriers when exported Julia structs expose mode, status, category, or type fields.",
         labels("agent-policy"),
     ),
 ]

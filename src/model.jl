@@ -17,7 +17,7 @@ struct RulePackDescriptor
     id::String
     version::String
     domains::Vector{String}
-    default_mode::String
+    default_mode::Symbol
 end
 
 """Rule contract used to create project harness findings."""

@@ -9,6 +9,8 @@ const EXTENSION_PATTERN_DOC_TOKENS = (
     "overloads",
 )
 const SYNTAX_CONTRACT_DOC_TOKENS = ("syntax", "macro", "expansion", "generated", "contract")
+const STRINGLY_DOMAIN_FIELD_NAME_PARTS = Set(["category", "mode", "status", "type"])
+const STRINGLY_DOMAIN_FIELD_TYPE_NAMES = Set(["AbstractString", "String"])
 
 function public_api_doc_findings(
     parsed_files::Vector{ParsedJuliaFile},
@@ -109,6 +111,65 @@ function public_type_field_shape_findings(
         )
     end
     findings
+end
+
+function public_type_stringly_field_findings(
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        append!(findings, public_type_stringly_field_findings(parsed, public_names, rules))
+    end
+    findings
+end
+
+function public_type_stringly_field_findings(
+    parsed::ParsedJuliaFile,
+    public_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    findings = JuliaHarnessFinding[]
+    for type_fact in parsed.syntax_facts.types
+        type_fact.kind == "struct" || continue
+        name = terminal_public_name(type_fact.name)
+        name in public_names || continue
+        stringly_fields = [
+            field for field in type_fact.field_facts if is_stringly_domain_field(field)
+        ]
+        isempty(stringly_fields) && continue
+        first_field = first(stringly_fields)
+        field_names = join([field.name for field in stringly_fields], ", ")
+        push!(
+            findings,
+            finding_from_rule(
+                rules[AGENT_JL_R012];
+                summary="Exported/public struct `$(name)` exposes stringly domain fields: $(field_names).",
+                location=SourceLocation(parsed.report.path, first_field.line, first_field.column),
+                source_line=source_line(parsed.source, first_field.line),
+                label="replace stringly domain fields with Symbol, enum, or named value carriers",
+            ),
+        )
+    end
+    findings
+end
+
+function is_stringly_domain_field(field::JuliaTypeFieldSyntax)
+    isnothing(field.type_annotation) && return false
+    is_stringly_field_type(field.type_annotation) || return false
+    is_stringly_domain_field_name(field.name)
+end
+
+function is_stringly_field_type(type_annotation::AbstractString)
+    tokens = split(replace(String(type_annotation), r"[^A-Za-z0-9_]+" => " "))
+    any(token -> token in STRINGLY_DOMAIN_FIELD_TYPE_NAMES, tokens)
+end
+
+function is_stringly_domain_field_name(name::AbstractString)
+    parts = split(lowercase(String(name)), "_")
+    any(part -> part in STRINGLY_DOMAIN_FIELD_NAME_PARTS, parts)
 end
 
 function has_extension_pattern_doc(

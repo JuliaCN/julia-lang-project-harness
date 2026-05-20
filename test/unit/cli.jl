@@ -71,14 +71,25 @@ end
     write_cli_project(root)
     out = IOBuffer()
     json_out = IOBuffer()
+    profile_out = IOBuffer()
+    profile_json_out = IOBuffer()
 
     status = run_julia_project_harness_cli(["--verification-tasks", root]; out)
     json_status = run_julia_project_harness_cli(["--verification-tasks-json", root]; out=json_out)
+    profile_status = run_julia_project_harness_cli(["--verification-profile", root]; out=profile_out)
+    profile_json_status = run_julia_project_harness_cli(
+        ["--verification-profile-json", root];
+        out=profile_json_out,
+    )
 
     @test status == 0
     @test occursin("VerificationTasks: count=1", String(take!(out)))
     @test json_status == 0
     @test occursin("\"records\"", String(take!(json_out)))
+    @test profile_status == 0
+    @test occursin("VerificationProfiles:", String(take!(profile_out)))
+    @test profile_json_status == 0
+    @test occursin("\"profile_index\"", String(take!(profile_json_out)))
 end
 
 @testset "cli rejects conflicting modes" begin

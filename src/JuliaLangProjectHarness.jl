@@ -12,6 +12,7 @@ include("search_index/functions.jl")
 include("search_render.jl")
 include("agent_snapshot.jl")
 include("verification.jl")
+include("verification/profile_index.jl")
 include("cli.jl")
 
 export JuliaDiagnosticSeverity,
@@ -22,6 +23,8 @@ export JuliaDiagnosticSeverity,
     JuliaFileReport,
     JuliaSearchIndexEntry,
     JuliaSearchResult,
+    JuliaVerificationProfileCandidate,
+    JuliaVerificationProfileIndex,
     JuliaVerificationTaskIndex,
     JuliaVerificationTaskRecord,
     JuliaVerificationProfile,
@@ -32,6 +35,7 @@ export JuliaDiagnosticSeverity,
     assert_julia_project_harness_pkg_test_clean,
     assert_julia_project_harness_test_profile_clean,
     build_julia_project_verification_profile,
+    build_julia_verification_profile_index,
     build_julia_verification_task_index,
     default_julia_harness_config,
     julia_agent_policy_rules,
@@ -46,6 +50,10 @@ export JuliaDiagnosticSeverity,
     render_julia_project_harness_agent_snapshot,
     render_julia_project_harness_json,
     render_julia_search_results,
+    render_julia_verification_profile,
+    render_julia_verification_profile_index,
+    render_julia_verification_profile_index_json,
+    render_julia_verification_profile_json,
     render_julia_verification_task_index,
     render_julia_verification_task_index_json,
     run_julia_project_harness_cli,

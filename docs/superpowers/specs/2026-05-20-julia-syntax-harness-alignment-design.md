@@ -436,6 +436,7 @@ run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_julia_har
 assert_julia_project_harness_clean(project_root::AbstractString; config=default_julia_harness_config())
 assert_julia_project_harness_pkg_test_clean(project_root::AbstractString; config=default_julia_harness_config())
 build_julia_project_verification_profile(project_root::AbstractString=pwd(); config=default_julia_harness_config())
+build_julia_verification_profile_index(project_root::AbstractString; config=default_julia_harness_config())
 assert_julia_project_harness_test_profile_clean(project_root::AbstractString=pwd(); config=default_julia_harness_config())
 render_julia_project_harness(report)
 render_julia_project_harness_json(report)
@@ -443,6 +444,10 @@ render_julia_project_harness_advice(report)
 render_julia_project_harness_agent_snapshot(project_root::AbstractString; config=default_julia_harness_config())
 render_julia_search_results(results::Vector{JuliaSearchResult}; project_root=nothing)
 build_julia_verification_task_index(project_root::AbstractString; config=default_julia_harness_config())
+render_julia_verification_profile(profile::JuliaVerificationProfile)
+render_julia_verification_profile_json(profile::JuliaVerificationProfile)
+render_julia_verification_profile_index(index::JuliaVerificationProfileIndex)
+render_julia_verification_profile_index_json(index::JuliaVerificationProfileIndex)
 render_julia_verification_task_index(index::JuliaVerificationTaskIndex)
 render_julia_verification_task_index_json(index::JuliaVerificationTaskIndex)
 julia_project_search_index(project_root::AbstractString; config=default_julia_harness_config())
@@ -484,6 +489,8 @@ The report model should be serializable and compact:
 - `JuliaFileReport`
 - `JuliaSearchIndexEntry`
 - `JuliaSearchResult`
+- `JuliaVerificationProfileCandidate`
+- `JuliaVerificationProfileIndex`
 - `JuliaVerificationTaskRecord`
 - `JuliaVerificationTaskIndex`
 - `JuliaVerificationProfile`

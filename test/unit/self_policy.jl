@@ -7,5 +7,6 @@
     @test JuliaLangProjectHarness.is_clean(report)
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
     @test !isempty(profile.task_index.records)
+    @test !isempty(profile.profile_index.candidates)
     @test render_julia_project_harness(report) == "[ok] julia\n"
 end

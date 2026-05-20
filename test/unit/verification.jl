@@ -88,4 +88,15 @@ end
     profile = assert_julia_project_harness_test_profile_clean(root)
     @test profile.report.project_scope.project_root == root
     @test [record.kind for record in profile.task_index.records] == kinds
+    @test length(profile.profile_index.candidates) == 3
+
+    profile_rendered = render_julia_verification_profile(profile)
+    profile_json = render_julia_verification_profile_json(profile)
+
+    @test occursin("VerificationProfiles: count=3", profile_rendered)
+    @test occursin("responsibilities=test_profile_gate", profile_rendered)
+    @test occursin("responsibilities=public_api", profile_rendered)
+    @test occursin("responsibilities=extension_boundary", profile_rendered)
+    @test occursin("\"profile_index\"", profile_json)
+    @test occursin("extension_boundary", profile_json)
 end

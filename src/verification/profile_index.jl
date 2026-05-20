@@ -1,0 +1,177 @@
+"""Build parser-derived verification profile candidates for a Julia project."""
+function build_julia_verification_profile_index(
+    project_root::AbstractString;
+    config=default_julia_harness_config(),
+)
+    scope = julia_project_harness_scope(project_root, config)
+    workspace_scopes = julia_workspace_member_scopes(scope, config)
+    candidates = JuliaVerificationProfileCandidate[]
+    for candidate_scope in vcat([scope], workspace_scopes)
+        parsed_files = [
+            parse_julia_file(path) for path in discover_julia_files(
+                scope_monitored_paths(candidate_scope),
+                config,
+            )
+        ]
+        append!(
+            candidates,
+            verification_profile_candidates_for_scope(candidate_scope, parsed_files),
+        )
+    end
+    sort!(
+        candidates;
+        by=candidate -> (
+            candidate.project_root,
+            candidate.owner_path,
+            join(candidate.responsibilities, ","),
+        ),
+    )
+    JuliaVerificationProfileIndex(scope.project_root, candidates)
+end
+
+function verification_profile_candidates_for_scope(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+)
+    candidates = JuliaVerificationProfileCandidate[]
+    if has_harness_dependency(scope)
+        push!(candidates, test_profile_gate_candidate(scope, parsed_files))
+    end
+    public_api_candidate = public_api_profile_candidate(scope, parsed_files)
+    !isnothing(public_api_candidate) && push!(candidates, public_api_candidate)
+    append!(candidates, extension_profile_candidates(scope))
+    candidates
+end
+
+function test_profile_gate_candidate(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+)
+    has_hook = has_test_profile_hook(scope, parsed_files)
+    JuliaVerificationProfileCandidate(
+        scope.project_root,
+        preferred_test_owner_path(scope),
+        has_hook ? "configured" : "missing_profile",
+        ["test_profile_gate"],
+        ["harness_policy", "pkg_test"],
+        verification_evidence(
+            "hook" => string(has_hook),
+            "dependency" => "JuliaLangProjectHarness",
+        ),
+    )
+end
+
+function public_api_profile_candidate(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+)
+    public_names = package_public_names(parsed_files)
+    isempty(public_names) && return nothing
+    JuliaVerificationProfileCandidate(
+        scope.project_root,
+        preferred_source_owner_path(scope),
+        "inferred",
+        ["public_api"],
+        ["pkg_test", "syntax_search"],
+        verification_evidence(
+            "public" => string(length(public_names)),
+            "exports" => join(first(sort!(collect(public_names)), min(8, length(public_names))), ","),
+        ),
+    )
+end
+
+function extension_profile_candidates(scope::JuliaProjectHarnessScope)
+    [
+        JuliaVerificationProfileCandidate(
+            scope.project_root,
+            extension_owner_path(scope, extension_name),
+            "inferred",
+            ["extension_boundary"],
+            ["extension_boundary", "pkg_test"],
+            verification_evidence(
+                "extension" => extension_name,
+                "weakdeps" => join(dependencies, ","),
+            ),
+        ) for (extension_name, dependencies) in sort(collect(scope.extensions); by=first)
+    ]
+end
+
+"""Render verification profile candidates as compact text for agents."""
+function render_julia_verification_profile_index(index::JuliaVerificationProfileIndex)
+    isempty(index.candidates) && return "[ok] julia verification profiles no-candidates\n"
+    lines = ["VerificationProfiles: count=$(length(index.candidates))"]
+    for candidate in index.candidates
+        push!(
+            lines,
+            "- state=$(candidate.state) owner=" *
+            verification_profile_owner_path(index, candidate) *
+            " responsibilities=$(join(candidate.responsibilities, ","))" *
+            " tasks=$(join(candidate.task_kinds, ","))",
+        )
+        if !isempty(candidate.evidence)
+            evidence = [
+                "$(key)=$(value)" for (key, value) in sort(collect(candidate.evidence); by=first)
+            ]
+            push!(lines, "  evidence=$(join(evidence, ";"))")
+        end
+    end
+    join(lines, "\n") * "\n"
+end
+
+"""Render the in-test verification profile as compact agent context."""
+function render_julia_verification_profile(profile::JuliaVerificationProfile)
+    parts = [
+        chomp(render_julia_project_harness(profile.report)),
+        chomp(render_julia_verification_task_index(profile.task_index)),
+        chomp(render_julia_verification_profile_index(profile.profile_index)),
+    ]
+    join(filter(!isempty, parts), "\n") * "\n"
+end
+
+"""Render verification profile candidates as JSON."""
+function render_julia_verification_profile_index_json(index::JuliaVerificationProfileIndex)
+    JSON3.write(verification_profile_index_dict(index))
+end
+
+"""Render the full in-test verification profile as JSON."""
+function render_julia_verification_profile_json(profile::JuliaVerificationProfile)
+    JSON3.write(verification_profile_dict(profile))
+end
+
+function verification_profile_dict(profile::JuliaVerificationProfile)
+    Dict(
+        "report" => report_dict(profile.report),
+        "task_index" => verification_task_index_dict(profile.task_index),
+        "profile_index" => verification_profile_index_dict(profile.profile_index),
+    )
+end
+
+function verification_profile_index_dict(index::JuliaVerificationProfileIndex)
+    Dict(
+        "project_root" => slash_path(index.project_root),
+        "candidates" => map(verification_profile_candidate_dict, index.candidates),
+    )
+end
+
+function verification_profile_candidate_dict(candidate::JuliaVerificationProfileCandidate)
+    Dict(
+        "project_root" => slash_path(candidate.project_root),
+        "owner_path" => slash_path(candidate.owner_path),
+        "state" => candidate.state,
+        "responsibilities" => candidate.responsibilities,
+        "task_kinds" => candidate.task_kinds,
+        "evidence" => candidate.evidence,
+    )
+end
+
+function verification_profile_owner_path(
+    index::JuliaVerificationProfileIndex,
+    candidate::JuliaVerificationProfileCandidate,
+)
+    relative_path = relpath(candidate.owner_path, index.project_root)
+    parts = splitpath(relative_path)
+    if !isabspath(relative_path) && (isempty(parts) || first(parts) != "..")
+        return slash_path(relative_path)
+    end
+    slash_path(candidate.owner_path)
+end

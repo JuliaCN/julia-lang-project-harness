@@ -87,6 +87,22 @@ struct JuliaVerificationTaskIndex
     records::Vector{JuliaVerificationTaskRecord}
 end
 
+"""Parser-suggested verification responsibility for one Julia owner."""
+struct JuliaVerificationProfileCandidate
+    project_root::String
+    owner_path::String
+    state::String
+    responsibilities::Vector{String}
+    task_kinds::Vector{String}
+    evidence::Dict{String,String}
+end
+
+"""Collection of parser-derived verification profile candidates."""
+struct JuliaVerificationProfileIndex
+    project_root::String
+    candidates::Vector{JuliaVerificationProfileCandidate}
+end
+
 """Pkg project scope resolved from Project.toml and Julia source layout."""
 struct JuliaProjectHarnessScope
     project_root::String
@@ -141,6 +157,7 @@ end
 struct JuliaVerificationProfile
     report::JuliaHarnessReport
     task_index::JuliaVerificationTaskIndex
+    profile_index::JuliaVerificationProfileIndex
 end
 
 const DEFAULT_IGNORED_DIR_NAMES = Set([

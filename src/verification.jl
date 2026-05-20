@@ -20,7 +20,8 @@ function build_julia_project_verification_profile(
 )
     report = run_julia_project_harness(project_root; config)
     task_index = build_julia_verification_task_index(project_root; config)
-    JuliaVerificationProfile(report, task_index)
+    profile_index = build_julia_verification_profile_index(project_root; config)
+    JuliaVerificationProfile(report, task_index, profile_index)
 end
 
 """Assert the package's JuliaSyntax policy and verification profile from Pkg.test."""
@@ -29,9 +30,11 @@ function assert_julia_project_harness_test_profile_clean(
     config=default_julia_harness_config(),
 )
     profile = build_julia_project_verification_profile(project_root; config)
-    assert_clean(profile.report)
-    if isempty(something(config.agent_advice_allow_explanation, ""))
-        assert_no_advisory_findings(profile.report)
+    has_blocking = !is_clean(profile.report)
+    has_advice = isempty(something(config.agent_advice_allow_explanation, "")) &&
+                 !isempty(advisory_findings(profile.report))
+    if has_blocking || has_advice
+        error(render_julia_verification_profile(profile))
     end
     profile
 end

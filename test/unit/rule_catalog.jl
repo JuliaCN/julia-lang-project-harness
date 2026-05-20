@@ -63,5 +63,8 @@ end
     @test isdefined(JuliaLangProjectHarness, :assert_julia_project_harness_pkg_test_clean)
     @test isdefined(JuliaLangProjectHarness, :assert_julia_project_harness_test_profile_clean)
     @test isdefined(JuliaLangProjectHarness, :build_julia_project_verification_profile)
+    @test isdefined(JuliaLangProjectHarness, :build_julia_verification_profile_index)
     @test isdefined(JuliaLangProjectHarness, :render_julia_project_harness_agent_snapshot)
+    @test isdefined(JuliaLangProjectHarness, :render_julia_verification_profile)
+    @test isdefined(JuliaLangProjectHarness, :render_julia_verification_profile_index)
 end

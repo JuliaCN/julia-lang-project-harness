@@ -19,6 +19,19 @@ function function_bool_positional_args(signature::JuliaSyntax.SyntaxNode)
     args
 end
 
+function function_typed_positional_args(signature::JuliaSyntax.SyntaxNode)
+    args = String[]
+    for argument in call_arguments(signature)
+        syntax_kind(argument) == "parameters" && continue
+        name = argument_name(argument)
+        type_annotation = argument_type_annotation(argument)
+        isnothing(name) && continue
+        isnothing(type_annotation) && continue
+        push!(args, "$(name)::$(type_annotation)")
+    end
+    args
+end
+
 const STRINGLY_DOMAIN_ARGUMENT_NAMES = Set([
     "kind",
     "mode",
@@ -102,6 +115,65 @@ function function_keyword_args(signature::JuliaSyntax.SyntaxNode)
         !isnothing(name) && push!(names, name)
     end
     names
+end
+
+function function_return_type(node::JuliaSyntax.SyntaxNode)
+    signature = function_signature_node(node)
+    isnothing(signature) && return nothing
+    return_type_annotation(signature)
+end
+
+function return_type_annotation(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "::"
+        children = syntax_children(node)
+        length(children) >= 2 || return nothing
+        !isnothing(first_call_child_in_signature(first(children))) || return nothing
+        return compact_syntax_text(children[2])
+    elseif kind == "where"
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return return_type_annotation(first(children))
+    end
+    nothing
+end
+
+function function_where_parameters(node::JuliaSyntax.SyntaxNode)
+    signature = function_signature_node(node)
+    isnothing(signature) && return String[]
+    parameters = String[]
+    collect_where_parameters!(parameters, signature)
+    parameters
+end
+
+function collect_where_parameters!(parameters::Vector{String}, node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "where"
+        children = syntax_children(node)
+        for child in children[2:end]
+            if syntax_kind(child) == "braces"
+                append!(parameters, [compact_syntax_text(param) for param in syntax_children(child)])
+            else
+                push!(parameters, compact_syntax_text(child))
+            end
+        end
+    end
+    for child in syntax_children(node)
+        collect_where_parameters!(parameters, child)
+    end
+end
+
+function argument_type_annotation(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "::"
+        children = syntax_children(node)
+        length(children) >= 2 || return nothing
+        return compact_syntax_text(children[2])
+    elseif kind == "="
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return argument_type_annotation(first(children))
+    end
+    nothing
 end
 
 function argument_name(node::JuliaSyntax.SyntaxNode)

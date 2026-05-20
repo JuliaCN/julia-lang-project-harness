@@ -18,7 +18,7 @@
     mkpath(joinpath(root, "test"))
     write(
         joinpath(root, "src", "Example.jl"),
-        "module Example\nexport run, Config, DEFAULT_LIMIT\nusing JSON3\ninclude(\"api.jl\")\n\"\"\"Runtime configuration.\"\"\"\nstruct Config\nvalue::Int\nend\n\"\"\"Default limit.\"\"\"\nconst DEFAULT_LIMIT::Int = 8\n\"\"\"Run a value.\"\"\"\nfunction run(value)\n@alpha value\nend\nend\n",
+        "module Example\nexport run, Config, DEFAULT_LIMIT\nusing JSON3\ninclude(\"api.jl\")\n\"\"\"Runtime configuration.\"\"\"\nstruct Config\nvalue::Int\nend\n\"\"\"Default limit.\"\"\"\nconst DEFAULT_LIMIT::Int = 8\n\"\"\"Run a value.\"\"\"\nfunction run(value::T)::T where {T}\n@alpha value\nend\nend\n",
     )
     write(joinpath(root, "src", "api.jl"), "internal_api() = 1\n")
     write(
@@ -47,6 +47,9 @@
     @test occursin("const=DEFAULT_LIMIT::Int", rendered)
     @test occursin("Methods:", rendered)
     @test occursin("function=run/1", rendered)
+    @test occursin("typed=1", rendered)
+    @test occursin("returns=T", rendered)
+    @test occursin("where=1", rendered)
     @test occursin("macros=1", rendered)
     @test occursin("Tests:", rendered)
     @test occursin("test/runtests.jl testsets=\"core\" test=1", rendered)

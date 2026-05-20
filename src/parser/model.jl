@@ -38,9 +38,12 @@ struct JuliaFunctionSyntax
     name::String
     terminal_name::String
     positional_args::Vector{String}
+    typed_positional_args::Vector{String}
     bool_positional_args::Vector{String}
     stringly_domain_args::Vector{String}
     keyword_args::Vector{String}
+    return_type::Union{Nothing,String}
+    where_parameters::Vector{String}
     control_flow_depth::Int
     control_flow_kinds::Vector{String}
     body_statement_count::Int

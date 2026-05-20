@@ -146,7 +146,9 @@ function collect_julia_syntax_facts!(
         identifier_fact = identifier_syntax_from_node(node, parent)
         !isnothing(identifier_fact) && push!(collector.identifiers, identifier_fact)
     end
+    signature = syntax_kind(node) in ("function", "macro") ? function_signature_node(node) : nothing
     for child in syntax_children(node)
+        child === signature && continue
         collect_julia_syntax_facts!(collector, child, source_path, node)
     end
 end

@@ -18,7 +18,7 @@ function function_control_flow_kinds(node::JuliaSyntax.SyntaxNode)
 end
 
 function function_body_nodes(node::JuliaSyntax.SyntaxNode)
-    signature = first_call_child(node)
+    signature = function_signature_node(node)
     [child for child in syntax_children(node) if child !== signature]
 end
 

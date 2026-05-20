@@ -358,6 +358,12 @@ function display_function_search_detail(function_fact::JuliaFunctionSyntax)
     positional = join(function_fact.positional_args, ",")
     keyword_suffix = isempty(function_fact.keyword_args) ? "" :
                      ";$(join(function_fact.keyword_args, ","))"
+    typed_suffix = isempty(function_fact.typed_positional_args) ? "" :
+                   " typed=$(join(function_fact.typed_positional_args, ","))"
+    return_suffix = isnothing(function_fact.return_type) ? "" :
+                    " returns=$(function_fact.return_type)"
+    where_suffix = isempty(function_fact.where_parameters) ? "" :
+                   " where=$(join(function_fact.where_parameters, ","))"
     bool_suffix = isempty(function_fact.bool_positional_args) ? "" :
                   " bool=$(join(function_fact.bool_positional_args, ","))"
     stringly_suffix = isempty(function_fact.stringly_domain_args) ? "" :
@@ -370,7 +376,7 @@ function display_function_search_detail(function_fact::JuliaFunctionSyntax)
                   " steps=$(join(function_fact.body_named_calls, ","))"
     macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
                    " macros=$(function_fact.macro_invocation_count):$(join(function_fact.macro_invocation_names, ","))"
-    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(step_suffix)$(macro_suffix)"
+    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(step_suffix)$(macro_suffix)"
 end
 
 function display_call_search_detail(call_fact::JuliaCallSyntax)

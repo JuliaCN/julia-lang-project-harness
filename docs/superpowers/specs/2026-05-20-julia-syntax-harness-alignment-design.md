@@ -141,6 +141,8 @@ The parser layer should classify these constructs in the first slice:
   surface
 - long-form function definitions
 - short-form function definitions
+- Julia dispatch signature facts for typed positional arguments, return
+  annotations, and `where` parameters
 - function and constructor call references, excluding definition signatures
 - docstring bindings through JuliaSyntax `doc` nodes for named modules,
   functions, macros, types, and constants

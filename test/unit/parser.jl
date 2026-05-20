@@ -83,6 +83,36 @@ end
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end
 
+@testset "parser function dispatch facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "dispatch.jl")
+    write(
+        source,
+        """
+        function run(x::T, y::Vector{T}; mode::Symbol=:fast)::T where {T<:Real}
+            x
+        end
+        short(x::Int)::String = string(x)
+        Base.show(io::IO, value::Thing{T}) where {T} = print(io, value)
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test [(item.name, item.return_type, item.where_parameters) for item in parsed.syntax_facts.functions] == [
+        ("run", "T", ["T<:Real"]),
+        ("short", "String", String[]),
+        ("Base.show", nothing, ["T"]),
+    ]
+    @test parsed.syntax_facts.functions[1].typed_positional_args == ["x::T", "y::Vector{T}"]
+    @test parsed.syntax_facts.functions[2].typed_positional_args == ["x::Int"]
+    @test parsed.syntax_facts.functions[3].typed_positional_args == ["io::IO", "value::Thing{T}"]
+    @test [(call.name, call.terminal_name) for call in parsed.syntax_facts.calls] == [
+        ("string", "string"),
+        ("print", "print"),
+    ]
+end
+
 @testset "parser binding facts" begin
     temp = mktempdir()
     source = joinpath(temp, "bindings.jl")

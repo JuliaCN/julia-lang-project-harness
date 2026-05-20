@@ -306,6 +306,12 @@ end
 function display_function_syntax(function_fact::JuliaFunctionSyntax)
     keyword_suffix = isempty(function_fact.keyword_args) ? "" :
                      ";kw=$(length(function_fact.keyword_args))"
+    typed_suffix = isempty(function_fact.typed_positional_args) ? "" :
+                   ";typed=$(length(function_fact.typed_positional_args))"
+    return_suffix = isnothing(function_fact.return_type) ? "" :
+                    ";returns=$(function_fact.return_type)"
+    where_suffix = isempty(function_fact.where_parameters) ? "" :
+                   ";where=$(length(function_fact.where_parameters))"
     bool_suffix = isempty(function_fact.bool_positional_args) ? "" :
                   ";bool=$(length(function_fact.bool_positional_args))"
     stringly_suffix = isempty(function_fact.stringly_domain_args) ? "" :
@@ -316,7 +322,7 @@ function display_function_syntax(function_fact::JuliaFunctionSyntax)
                   ";body=$(function_fact.body_statement_count)"
     macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
                    ";macros=$(function_fact.macro_invocation_count)"
-    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(macro_suffix)"
+    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(body_suffix)$(macro_suffix)"
 end
 
 function snapshot_test_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

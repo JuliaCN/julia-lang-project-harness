@@ -35,7 +35,7 @@
         joinpath(root, "src", "api.jl"),
         """
         \"\"\"Run a value through the public API.\"\"\"
-        function run(value; verbose=false)
+        function run(value::T; verbose=false)::String where {T<:Integer}
             @alpha helper(value)
         end
         helper(value) = string(value)
@@ -64,6 +64,9 @@
         entry -> entry.kind == "function" &&
                  entry.name == "run" &&
                  occursin("verbose", entry.search_text) &&
+                 occursin("typed=value::T", entry.detail) &&
+                 occursin("returns=String", entry.detail) &&
+                 occursin("where=T<:Integer", entry.detail) &&
                  occursin("macros=1:alpha", entry.detail) &&
                  "method" in entry.tags,
         entries,

@@ -83,9 +83,12 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         name,
         last(split(name, ".")),
         function_positional_args(signature),
+        function_typed_positional_args(signature),
         function_bool_positional_args(signature),
         function_stringly_domain_args(signature),
         function_keyword_args(signature),
+        function_return_type(node),
+        function_where_parameters(node),
         function_control_flow_depth(node),
         function_control_flow_kinds(node),
         function_body_statement_count(node),
@@ -379,8 +382,29 @@ function first_child_with_kind(node::JuliaSyntax.SyntaxNode, kind::AbstractStrin
 end
 
 function first_call_child(node::JuliaSyntax.SyntaxNode)
+    signature = function_signature_node(node)
+    !isnothing(signature) && return first_call_child_in_signature(signature)
+    first_call_child_in_signature(node)
+end
+
+function first_call_child_in_signature(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "call" && return node
     for child in syntax_children(node)
-        syntax_kind(child) == "call" && return child
+        kind = syntax_kind(child)
+        kind == "call" && return child
+        if kind in ("::", "where")
+            found = first_call_child_in_signature(child)
+            !isnothing(found) && return found
+        end
+    end
+    nothing
+end
+
+function function_signature_node(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) in ("function", "macro") || return nothing
+    for child in syntax_children(node)
+        syntax_kind(child) == "block" && continue
+        !isnothing(first_call_child_in_signature(child)) && return child
     end
     nothing
 end

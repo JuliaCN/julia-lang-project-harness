@@ -54,6 +54,7 @@ struct JuliaFunctionSyntax
     typed_positional_args::Vector{String}
     bool_positional_args::Vector{String}
     stringly_domain_args::Vector{String}
+    stringly_branch_literals::Vector{String}
     keyword_args::Vector{String}
     argument_facts::Vector{JuliaFunctionArgumentSyntax}
     return_type::Union{Nothing,String}
@@ -120,6 +121,7 @@ struct JuliaMoshiSyntax
     kind::String
     macro_name::String
     target_name::Union{Nothing,String}
+    variant_names::Vector{String}
     expression::String
 end
 

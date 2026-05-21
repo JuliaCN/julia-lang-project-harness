@@ -10,5 +10,6 @@ end
 
 function display_moshi_syntax(fact::JuliaMoshiSyntax)
     target_suffix = isnothing(fact.target_name) ? "" : "=$(fact.target_name)"
-    "@$(fact.kind)$(target_suffix)"
+    variant_suffix = isempty(fact.variant_names) ? "" : ";variants=$(join(fact.variant_names, ","))"
+    "@$(fact.kind)$(target_suffix)$(variant_suffix)"
 end

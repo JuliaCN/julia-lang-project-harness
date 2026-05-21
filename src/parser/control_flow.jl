@@ -1,6 +1,8 @@
 const CONTROL_FLOW_KINDS = Set(["for", "if", "let", "try", "while"])
 const LOOP_FLOW_KINDS = Set(["for", "while"])
 const BRANCH_FLOW_KINDS = Set(["if", "elseif", "try"])
+const STRINGLY_BRANCH_COMPARISON_OPERATORS = Set(["==", "!=", "===", "!=="])
+const STRINGLY_BRANCH_MEMBERSHIP_OPERATORS = Set(["in", "∈"])
 
 function function_control_flow_depth(node::JuliaSyntax.SyntaxNode)
     max_depth = 0
@@ -25,6 +27,20 @@ function function_branch_count(node::JuliaSyntax.SyntaxNode)
         count += control_flow_kind_count(child, BRANCH_FLOW_KINDS)
     end
     count
+end
+
+function function_stringly_branch_literals(
+    node::JuliaSyntax.SyntaxNode,
+    stringly_domain_args::Vector{String},
+)
+    isempty(stringly_domain_args) && return String[]
+    literals = String[]
+    seen = Set{String}()
+    domain_args = Set(stringly_domain_args)
+    for child in function_body_nodes(node)
+        collect_stringly_branch_literals!(literals, seen, child, domain_args)
+    end
+    literals
 end
 
 function function_loop_count(node::JuliaSyntax.SyntaxNode)
@@ -178,4 +194,113 @@ function collect_control_flow_kinds!(
     for child in syntax_children(node)
         collect_control_flow_kinds!(kinds, seen, child)
     end
+end
+
+function collect_stringly_branch_literals!(
+    literals::Vector{String},
+    seen::Set{String},
+    node::JuliaSyntax.SyntaxNode,
+    domain_args::Set{String},
+)
+    kind = syntax_kind(node)
+    kind in ("function", "macro") && return
+    if kind in ("if", "elseif")
+        children = syntax_children(node)
+        if !isempty(children)
+            collect_stringly_branch_condition_literals!(
+                literals,
+                seen,
+                first(children),
+                domain_args,
+            )
+        end
+    end
+    for child in syntax_children(node)
+        collect_stringly_branch_literals!(literals, seen, child, domain_args)
+    end
+end
+
+function collect_stringly_branch_condition_literals!(
+    literals::Vector{String},
+    seen::Set{String},
+    node::JuliaSyntax.SyntaxNode,
+    domain_args::Set{String},
+)
+    if syntax_kind(node) == "call"
+        for literal in stringly_branch_comparison_literals(node, domain_args)
+            literal in seen && continue
+            push!(seen, literal)
+            push!(literals, literal)
+        end
+    end
+    for child in syntax_children(node)
+        collect_stringly_branch_condition_literals!(literals, seen, child, domain_args)
+    end
+end
+
+function stringly_branch_comparison_literals(
+    node::JuliaSyntax.SyntaxNode,
+    domain_args::Set{String},
+)
+    children = syntax_children(node)
+    length(children) >= 3 || return String[]
+    operator = stringly_branch_operator(children[2])
+    isnothing(operator) && return String[]
+    left = children[1]
+    right = children[3]
+    if operator in STRINGLY_BRANCH_COMPARISON_OPERATORS
+        return stringly_equality_branch_literals(left, right, domain_args)
+    elseif operator in STRINGLY_BRANCH_MEMBERSHIP_OPERATORS
+        return stringly_membership_branch_literals(left, right, domain_args)
+    end
+    String[]
+end
+
+function stringly_branch_operator(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "Identifier" || return nothing
+    String(JuliaSyntax.sourcetext(node))
+end
+
+function stringly_equality_branch_literals(
+    left::JuliaSyntax.SyntaxNode,
+    right::JuliaSyntax.SyntaxNode,
+    domain_args::Set{String},
+)
+    literals = String[]
+    if is_stringly_domain_identifier(left, domain_args)
+        literal = string_literal_value(right)
+        !isnothing(literal) && push!(literals, literal)
+    end
+    if is_stringly_domain_identifier(right, domain_args)
+        literal = string_literal_value(left)
+        !isnothing(literal) && push!(literals, literal)
+    end
+    literals
+end
+
+function stringly_membership_branch_literals(
+    left::JuliaSyntax.SyntaxNode,
+    right::JuliaSyntax.SyntaxNode,
+    domain_args::Set{String},
+)
+    is_stringly_domain_identifier(left, domain_args) || return String[]
+    string_literal_values(right)
+end
+
+function is_stringly_domain_identifier(
+    node::JuliaSyntax.SyntaxNode,
+    domain_args::Set{String},
+)
+    syntax_kind(node) == "Identifier" || return false
+    String(JuliaSyntax.sourcetext(node)) in domain_args
+end
+
+function string_literal_values(node::JuliaSyntax.SyntaxNode)
+    literal = string_literal_value(node)
+    !isnothing(literal) && return [literal]
+    literals = String[]
+    for child in syntax_children(node)
+        append!(literals, string_literal_values(child))
+    end
+    literals
 end

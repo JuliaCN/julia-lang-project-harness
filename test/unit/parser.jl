@@ -75,6 +75,7 @@ end
     @test parsed.syntax_facts.functions[1].positional_args == ["x", "y", "force", "dry_run"]
     @test parsed.syntax_facts.functions[1].bool_positional_args == ["force", "dry_run"]
     @test parsed.syntax_facts.functions[1].stringly_domain_args == ["mode"]
+    @test isempty(parsed.syntax_facts.functions[1].stringly_branch_literals)
     @test parsed.syntax_facts.functions[1].keyword_args == ["verbose", "mode"]
     @test [
         (
@@ -97,6 +98,7 @@ end
     @test parsed.syntax_facts.functions[2].positional_args == ["a", "b", "c", "enabled"]
     @test parsed.syntax_facts.functions[2].bool_positional_args == ["enabled"]
     @test isempty(parsed.syntax_facts.functions[2].stringly_domain_args)
+    @test isempty(parsed.syntax_facts.functions[2].stringly_branch_literals)
     @test parsed.syntax_facts.functions[3].positional_args == ["io", "value"]
     @test parsed.syntax_facts.functions[4].positional_args == ["x"]
 end
@@ -192,6 +194,33 @@ end
     @test function_fact.loop_count == 2
     @test function_fact.loop_nesting_depth == 2
     @test function_fact.control_flow_kinds == ["if", "for", "while", "try"]
+end
+
+@testset "parser stringly branch literal facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "stringly_flow.jl")
+    write(
+        source,
+        """
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif "safe" == mode
+                value
+            elseif mode in ("debug", "safe")
+                value
+            else
+                value
+            end
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    function_fact = only(parsed.syntax_facts.functions)
+
+    @test function_fact.stringly_domain_args == ["mode"]
+    @test function_fact.stringly_branch_literals == ["fast", "safe", "debug"]
 end
 
 @testset "parser function body shape facts" begin
@@ -479,10 +508,13 @@ end
 
     parsed = parse_julia_file(source)
 
-    @test [(item.kind, item.macro_name, item.target_name) for item in parsed.syntax_facts.moshi] == [
-        ("data", "@data", "Message"),
-        ("derive", "@derive", "Message"),
-        ("match", "@match", "value"),
+    @test [
+        (item.kind, item.macro_name, item.target_name, item.variant_names) for item in
+        parsed.syntax_facts.moshi
+    ] == [
+        ("data", "@data", "Message", ["Quit", "Write"]),
+        ("derive", "@derive", "Message", String[]),
+        ("match", "@match", "value", String[]),
     ]
 end
 

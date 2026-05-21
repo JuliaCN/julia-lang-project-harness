@@ -251,6 +251,8 @@ function display_function_syntax(function_fact::JuliaFunctionSyntax)
                   ";bool=$(length(function_fact.bool_positional_args))"
     stringly_suffix = isempty(function_fact.stringly_domain_args) ? "" :
                       ";stringly=$(length(function_fact.stringly_domain_args))"
+    branch_literal_suffix = isempty(function_fact.stringly_branch_literals) ? "" :
+                            ";branch_literals=$(join(function_fact.stringly_branch_literals, ","))"
     flow_suffix = function_fact.control_flow_depth == 0 ? "" :
                   ";flow=$(function_fact.control_flow_depth)"
     branch_suffix = function_fact.branch_count == 0 ? "" :
@@ -263,7 +265,7 @@ function display_function_syntax(function_fact::JuliaFunctionSyntax)
                   ";body=$(function_fact.body_statement_count)"
     macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
                    ";macros=$(function_fact.macro_invocation_count)"
-    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(branch_suffix)$(loop_suffix)$(loop_depth_suffix)$(body_suffix)$(macro_suffix)"
+    "$(function_fact.kind)=$(function_fact.name)/$(length(function_fact.positional_args))$(keyword_suffix)$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(branch_literal_suffix)$(flow_suffix)$(branch_suffix)$(loop_suffix)$(loop_depth_suffix)$(body_suffix)$(macro_suffix)"
 end
 
 function snapshot_test_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

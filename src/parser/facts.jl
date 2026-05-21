@@ -76,6 +76,7 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     name = function_name_text(name_node)
     isnothing(name) && return nothing
     macro_facts = function_macro_invocation_facts(node)
+    stringly_domain_args = function_stringly_domain_args(signature)
     JuliaFunctionSyntax(
         location[1],
         location[2] - 1,
@@ -85,7 +86,8 @@ function function_syntax_from_node(node::JuliaSyntax.SyntaxNode)
         function_positional_args(signature),
         function_typed_positional_args(signature),
         function_bool_positional_args(signature),
-        function_stringly_domain_args(signature),
+        stringly_domain_args,
+        function_stringly_branch_literals(node, stringly_domain_args),
         function_keyword_args(signature),
         function_argument_facts(signature, name),
         function_return_type(node),
@@ -211,6 +213,7 @@ function moshi_syntax_from_macro_invocation(
         invocation.terminal_name,
         invocation.name,
         moshi_macro_target_name(node, invocation.terminal_name),
+        moshi_macro_variant_names(node, invocation.terminal_name),
         invocation.expression,
     )
 end
@@ -227,19 +230,6 @@ const TEST_MACRO_NAMES = Set([
     "test_warn",
     "testset",
 ])
-
-const MOSHI_MACRO_NAMES = Set(["data", "derive", "match"])
-
-function moshi_macro_target_name(node::JuliaSyntax.SyntaxNode, kind::AbstractString)
-    arguments = macro_arguments(node)
-    isempty(arguments) && return nothing
-    if kind in ("data", "derive")
-        return syntax_identifier_text(first(arguments))
-    elseif kind == "match"
-        return compact_syntax_text(first(arguments))
-    end
-    nothing
-end
 
 function syntax_identifier_text(node::JuliaSyntax.SyntaxNode)
     syntax_kind(node) == "Identifier" && return String(JuliaSyntax.sourcetext(node))

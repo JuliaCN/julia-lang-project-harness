@@ -369,37 +369,6 @@ function display_binding_search_detail(binding_fact::JuliaBindingSyntax)
     "$(binding_fact.kind) $(binding_fact.name)$(type_suffix)"
 end
 
-function display_function_search_detail(function_fact::JuliaFunctionSyntax)
-    positional = join(function_fact.positional_args, ",")
-    keyword_suffix = isempty(function_fact.keyword_args) ? "" :
-                     ";$(join(function_fact.keyword_args, ","))"
-    typed_suffix = isempty(function_fact.typed_positional_args) ? "" :
-                   " typed=$(join(function_fact.typed_positional_args, ","))"
-    return_suffix = isnothing(function_fact.return_type) ? "" :
-                    " returns=$(function_fact.return_type)"
-    where_suffix = isempty(function_fact.where_parameters) ? "" :
-                   " where=$(join(function_fact.where_parameters, ","))"
-    bool_suffix = isempty(function_fact.bool_positional_args) ? "" :
-                  " bool=$(join(function_fact.bool_positional_args, ","))"
-    stringly_suffix = isempty(function_fact.stringly_domain_args) ? "" :
-                      " stringly=$(join(function_fact.stringly_domain_args, ","))"
-    flow_suffix = function_fact.control_flow_depth == 0 ? "" :
-                  " flow=$(function_fact.control_flow_depth):$(join(function_fact.control_flow_kinds, ","))"
-    branch_suffix = function_fact.branch_count == 0 ? "" :
-                    " branches=$(function_fact.branch_count)"
-    loop_suffix = function_fact.loop_count == 0 ? "" :
-                  " loops=$(function_fact.loop_count)"
-    loop_depth_suffix = function_fact.loop_nesting_depth == 0 ? "" :
-                        " loop_depth=$(function_fact.loop_nesting_depth)"
-    body_suffix = function_fact.body_statement_count == 0 ? "" :
-                  " body=$(function_fact.body_statement_count)"
-    step_suffix = isempty(function_fact.body_named_calls) ? "" :
-                  " steps=$(join(function_fact.body_named_calls, ","))"
-    macro_suffix = function_fact.macro_invocation_count == 0 ? "" :
-                   " macros=$(function_fact.macro_invocation_count):$(join(function_fact.macro_invocation_names, ","))"
-    "$(function_fact.kind) $(function_fact.name)($(positional)$(keyword_suffix))$(typed_suffix)$(return_suffix)$(where_suffix)$(bool_suffix)$(stringly_suffix)$(flow_suffix)$(branch_suffix)$(loop_suffix)$(loop_depth_suffix)$(body_suffix)$(step_suffix)$(macro_suffix)"
-end
-
 function display_call_search_detail(call_fact::JuliaCallSyntax)
     keyword_suffix = isempty(call_fact.keyword_args) ? "" :
                      ";$(join(call_fact.keyword_args, ","))"

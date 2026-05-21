@@ -282,7 +282,8 @@ Already implemented or designed:
   Stringly-domain findings also carry project-local labels for the Moshi
   extension state and likely `ext/<PackageName>MoshiExt.jl` repair target.
   A configured extension is not enough to satisfy the policy: the parser must
-  see Moshi `@data` or `@match` modeling facts before R020 is suppressed.
+  see Moshi modeling facts that cover the extracted branch literals before
+  R020 is suppressed when those literals are available.
 
 Useful next policy slices:
 

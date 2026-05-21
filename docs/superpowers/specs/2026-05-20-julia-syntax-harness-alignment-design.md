@@ -463,8 +463,9 @@ Initial advisory rules:
   findings should include project-local labels for whether Moshi is missing,
   only a weak dependency, or already extension-backed, plus the likely extension
   repair target. Configuration alone must not silence the rule; R020 is
-  satisfied only when JuliaSyntax facts show a Moshi `@data` or `@match`
-  modeling surface.
+  satisfied only when JuliaSyntax facts show a Moshi modeling surface that
+  covers the parser-visible stringly branch literals when those literals can be
+  extracted from branch conditions.
 - `AGENT-JL-R021`: external method definitions lack a parser-visible
   package-owned dispatch type or a concrete interop/type-piracy contract.
 

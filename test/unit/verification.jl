@@ -176,6 +176,45 @@ function write_documenter_project(root::AbstractString)
     write(joinpath(root, "docs", "src", "index.md"), "# DocsExample\n")
 end
 
+function write_moshi_extension_verification_project(root::AbstractString)
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "MoshiVerifyExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [extensions]
+        VerifyMoshiExt = "Moshi"
+
+        [compat]
+        Moshi = "0.3"
+
+        [extras]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["Moshi", "Test"]
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    mkpath(joinpath(root, "ext"))
+    write(
+        joinpath(root, "src", "MoshiVerifyExample.jl"),
+        """
+        module MoshiVerifyExample
+        end
+        """,
+    )
+    write(joinpath(root, "test", "runtests.jl"), "using Test\n@test true\n")
+    write(joinpath(root, "ext", "VerifyMoshiExt.jl"), "module VerifyMoshiExt\nend\n")
+end
+
 @testset "verification task index" begin
     root = mktempdir()
     write_verification_project(root)
@@ -244,6 +283,34 @@ end
     @test occursin("\"profile_index\"", profile_json)
     @test occursin("\"receipt_reviews\"", profile_json)
     @test occursin("extension_boundary", profile_json)
+end
+
+@testset "verification task index carries Moshi extension capabilities" begin
+    root = mktempdir()
+    write_moshi_extension_verification_project(root)
+
+    index = build_julia_verification_task_index(root)
+    extension_task = only(record for record in index.records if record.kind == "extension_boundary")
+    profile_index = build_julia_verification_profile_index(root)
+    extension_candidate = only(
+        candidate for candidate in profile_index.candidates if
+        candidate.responsibilities == ["extension_boundary"]
+    )
+    rendered = render_julia_verification_task_index(index)
+    profile_rendered = render_julia_verification_profile_index(profile_index)
+
+    @test extension_task.evidence["capability_source"] == "Moshi"
+    @test extension_task.evidence["capabilities"] == "syntax,domain-model,search"
+    @test occursin("capability_source=Moshi", rendered)
+    @test occursin("capabilities=syntax,domain-model,search", rendered)
+    @test extension_candidate.evidence["capability_source"] == "Moshi"
+    @test extension_candidate.evidence["capabilities"] == "syntax,domain-model,search"
+    @test occursin("capabilities=syntax,domain-model,search", profile_rendered)
+
+    advice_out = IOBuffer()
+    assert_julia_project_harness_test_profile_clean(root; advice_io=advice_out)
+    advice = String(take!(advice_out))
+    @test occursin("capabilities=syntax,domain-model,search", advice)
 end
 
 @testset "verification task index marks activated package extensions" begin

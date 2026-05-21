@@ -18,12 +18,7 @@ function extension_verification_tasks(scope::JuliaProjectHarnessScope)
                 owner_path,
                 nothing,
                 extension_activation_command(scope, activation),
-                verification_evidence(
-                    "extension" => extension_name,
-                    "weakdeps" => join(dependencies, ","),
-                    "activation" => activation,
-                    "test_target" => extension_test_target_summary(scope),
-                ),
+                extension_boundary_evidence(scope, extension_name, dependencies, activation),
                 extension_boundary_reason(activation),
             ),
         )
@@ -48,6 +43,29 @@ end
 
 function extension_test_target_summary(scope::JuliaProjectHarnessScope)
     join(sort!(collect(test_target_import_roots(scope))), ",")
+end
+
+function extension_boundary_evidence(
+    scope::JuliaProjectHarnessScope,
+    extension_name::AbstractString,
+    dependencies::Vector{String},
+    activation::AbstractString,
+)
+    evidence = verification_evidence(
+        "extension" => extension_name,
+        "weakdeps" => join(dependencies, ","),
+        "activation" => activation,
+        "test_target" => extension_test_target_summary(scope),
+    )
+    merge!(evidence, extension_capability_evidence(scope, extension_name, dependencies))
+end
+
+function extension_capability_evidence(
+    scope::JuliaProjectHarnessScope,
+    extension_name::AbstractString,
+    dependencies::Vector{String},
+)
+    moshi_extension_capability_evidence(scope, extension_name, dependencies)
 end
 
 function extension_boundary_reason(activation::AbstractString)

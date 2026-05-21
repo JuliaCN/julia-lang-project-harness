@@ -25,7 +25,7 @@ function moshi_extension_search_entries(scope::JuliaProjectHarnessScope)
         JuliaSearchIndexEntry(
             SourceLocation(scope.project_toml_path, 1, 0),
             "moshi_extension",
-            "MoshiExtension:$(extension_name)",
+            "MoshiExtensionCapabilities:$(extension_name)",
             moshi_extension_search_detail(scope, dependencies),
             moshi_extension_search_text(extension_name, dependencies),
             [
@@ -48,6 +48,19 @@ function moshi_optional_extension_entries(scope::JuliaProjectHarnessScope)
         for (extension_name, dependencies) in sort(collect(scope.extensions); by=first)
         if "Moshi" in dependencies
     ]
+end
+
+function moshi_extension_capability_evidence(
+    scope::JuliaProjectHarnessScope,
+    extension_name::AbstractString,
+    dependencies::Vector{String},
+)
+    haskey(scope.weak_dependencies, "Moshi") || return Dict{String,String}()
+    "Moshi" in dependencies || return Dict{String,String}()
+    verification_evidence(
+        "capabilities" => join(moshi_extension_capability_names(), ","),
+        "capability_source" => "Moshi",
+    )
 end
 
 function moshi_extension_search_detail(

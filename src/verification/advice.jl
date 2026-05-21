@@ -4,6 +4,8 @@ const JULIA_VERIFICATION_ADVICE_EVIDENCE_KEYS = [
     "weakdeps",
     "activation",
     "test_target",
+    "capabilities",
+    "capability_source",
     "network_roots",
     "persistence_roots",
     "security_roots",

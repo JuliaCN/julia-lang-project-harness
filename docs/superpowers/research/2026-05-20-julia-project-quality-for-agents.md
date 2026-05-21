@@ -277,6 +277,8 @@ Already implemented or designed:
   Moshi to the core runtime dependencies. Agent snapshots and search entries
   expose the configured Moshi extension, activation state, and compact
   capability labels without requiring the core process to load Moshi first.
+  Verification tasks and profiles carry the same capability evidence, so an
+  agent can see typed-domain repair affordances directly in the test log.
 
 Useful next policy slices:
 

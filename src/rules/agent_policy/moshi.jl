@@ -38,9 +38,7 @@ function moshi_modeling_surface_exists(
     scope::JuliaProjectHarnessScope,
     parsed_files::Vector{ParsedJuliaFile},
 )
-    any(parsed -> any(is_moshi_modeling_fact, parsed.syntax_facts.moshi), parsed_files) &&
-        return true
-    has_moshi_optional_extension(scope)
+    any(parsed -> any(is_moshi_modeling_fact, parsed.syntax_facts.moshi), parsed_files)
 end
 
 function is_moshi_modeling_fact(fact::JuliaMoshiSyntax)
@@ -66,6 +64,8 @@ end
 
 function moshi_domain_model_label(scope::JuliaProjectHarnessScope)
     state = moshi_extension_repair_state(scope)
+    state == "extension_without_model" &&
+        return "add Moshi @data/@match domain modeling in `$(moshi_extension_repair_target(scope))`"
     state == "weakdep_without_extension" &&
         return "add `$(moshi_extension_repair_target(scope))` and model this domain with Moshi @data/@match"
     state == "direct_dep_without_extension" &&
@@ -75,7 +75,9 @@ end
 
 function moshi_domain_model_repair_path(scope::JuliaProjectHarnessScope)
     state = moshi_extension_repair_state(scope)
-    if state == "weakdep_without_extension"
+    if state == "extension_without_model"
+        return "Moshi is already configured as an optional extension; add a parser-visible `@data` carrier and `@match` branch surface in `$(moshi_extension_repair_target(scope))` instead of treating the config as the model."
+    elseif state == "weakdep_without_extension"
         return "Moshi is already a weak dependency; add an `[extensions]` entry such as `$(moshi_extension_repair_name(scope))` and place the ADT/pattern-match surface in `$(moshi_extension_repair_target(scope))`."
     elseif state == "direct_dep_without_extension"
         return "Moshi is a direct dependency; keep it only if it is core API, otherwise move the modeling surface behind `[weakdeps]` and `[extensions]`."
@@ -93,13 +95,15 @@ function moshi_domain_model_labels(scope::JuliaProjectHarnessScope)
 end
 
 function moshi_extension_repair_state(scope::JuliaProjectHarnessScope)
-    has_moshi_optional_extension(scope) && return "configured"
+    has_moshi_optional_extension(scope) && return "extension_without_model"
     haskey(scope.weak_dependencies, "Moshi") && return "weakdep_without_extension"
     haskey(scope.direct_dependencies, "Moshi") && return "direct_dep_without_extension"
     "missing_weakdep"
 end
 
 function moshi_extension_repair_name(scope::JuliaProjectHarnessScope)
+    entries = moshi_optional_extension_entries(scope)
+    !isempty(entries) && return first(first(entries))
     "$(something(scope.package_name, "<PackageName>"))MoshiExt"
 end
 

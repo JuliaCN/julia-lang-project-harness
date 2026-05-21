@@ -462,7 +462,9 @@ Initial advisory rules:
   the package-test loop can guide the agent toward the same repair path. R020
   findings should include project-local labels for whether Moshi is missing,
   only a weak dependency, or already extension-backed, plus the likely extension
-  repair target.
+  repair target. Configuration alone must not silence the rule; R020 is
+  satisfied only when JuliaSyntax facts show a Moshi `@data` or `@match`
+  modeling surface.
 - `AGENT-JL-R021`: external method definitions lack a parser-visible
   package-owned dispatch type or a concrete interop/type-piracy contract.
 

@@ -1485,6 +1485,70 @@ end
     @test occursin("AGENT-JL-R004", rendered)
 end
 
+@testset "project runner rejects empty Moshi extension as domain model escape" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+
+        [extensions]
+        ExampleMoshiExt = "Moshi"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export route
+
+        \"\"\"Route a value by mode.\"\"\"
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif mode == "safe"
+                value
+            else
+                value
+            end
+        end
+        end
+        """,
+    )
+    write(
+        joinpath(root, "ext", "ExampleMoshiExt.jl"),
+        """
+        module ExampleMoshiExt
+        using Example
+        using Moshi.Data: @data
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+    finding = only(
+        finding for finding in JuliaLangProjectHarness.advisory_findings(report) if
+        finding.rule_id == "AGENT-JL-R020"
+    )
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("add Moshi @data/@match domain modeling", rendered)
+    @test occursin("config as the model", rendered)
+    @test finding.labels["moshi_extension_state"] == "extension_without_model"
+    @test finding.labels["moshi_extension_target"] == "ext/ExampleMoshiExt.jl"
+end
+
 @testset "project runner reports external method type piracy risk" begin
     root = mktempdir()
     write_project(root, "Example")

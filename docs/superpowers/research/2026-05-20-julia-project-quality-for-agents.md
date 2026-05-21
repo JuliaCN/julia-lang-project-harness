@@ -281,6 +281,8 @@ Already implemented or designed:
   agent can see typed-domain repair affordances directly in the test log.
   Stringly-domain findings also carry project-local labels for the Moshi
   extension state and likely `ext/<PackageName>MoshiExt.jl` repair target.
+  A configured extension is not enough to satisfy the policy: the parser must
+  see Moshi `@data` or `@match` modeling facts before R020 is suppressed.
 
 Useful next policy slices:
 

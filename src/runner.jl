@@ -17,10 +17,7 @@ Errors if `project_root` does not name an existing package path.
 """
 function run_julia_project_harness(project_root::AbstractString; config=default_julia_harness_config())
     ispath(project_root) || error("project path does not exist: $(project_root)")
-    scope = julia_project_harness_scope(project_root, config)
-    workspace_member_scopes = julia_workspace_member_scopes(scope, config)
-    monitored_paths = vcat(scope_monitored_paths(scope), mapreduce(scope_monitored_paths, vcat, workspace_member_scopes; init=String[]))
-    run_paths(monitored_paths, config; scope, workspace_member_scopes)
+    harness_report_from_project_context(project_policy_context(project_root, config), config)
 end
 
 """Run explicit paths and throw when blocking Julia harness findings exist."""
@@ -54,21 +51,8 @@ function run_paths(
     scope=nothing,
     workspace_member_scopes=JuliaProjectHarnessScope[],
 )
-    parsed_files = [parse_julia_file(path) for path in discover_julia_files(paths, config)]
-    findings = evaluate_default_rule_packs(
-        scope,
-        parsed_files,
-        config;
-        workspace_member_scopes=workspace_member_scopes,
-    )
-    JuliaHarnessReport(
-        [parsed.report for parsed in parsed_files],
-        findings,
-        paths,
-        copy(config.blocking_severities),
-        scope,
-        workspace_member_scopes,
-    )
+    parsed_files = parse_julia_files_for_paths(paths, config)
+    harness_report_from_parsed(paths, parsed_files, config; scope, workspace_member_scopes)
 end
 
 function julia_project_harness_scope(project_root::AbstractString, config::JuliaHarnessConfig)

@@ -3,15 +3,7 @@ function build_julia_verification_task_index(
     project_root::AbstractString;
     config=default_julia_harness_config(),
 )
-    scope = julia_project_harness_scope(project_root, config)
-    workspace_scopes = julia_workspace_member_scopes(scope, config)
-    records = JuliaVerificationTaskRecord[]
-    for task_scope in vcat([scope], workspace_scopes)
-        parsed_files = parsed_julia_files_for_scope(task_scope, config)
-        append!(records, verification_task_records_for_scope(task_scope, config, parsed_files))
-    end
-    sort!(records; by=record -> (record.kind, record.owner_path, record.fingerprint))
-    JuliaVerificationTaskIndex(scope.project_root, records)
+    verification_task_index_from_context(project_policy_context(project_root, config), config)
 end
 
 """Build the in-test verification profile that agents should keep green."""
@@ -19,9 +11,10 @@ function build_julia_project_verification_profile(
     project_root::AbstractString=pwd();
     config=default_julia_harness_config(),
 )
-    report = run_julia_project_harness(project_root; config)
-    task_index = build_julia_verification_task_index(project_root; config)
-    profile_index = build_julia_verification_profile_index(project_root; config)
+    context = project_policy_context(project_root, config)
+    report = harness_report_from_project_context(context, config)
+    task_index = verification_task_index_from_context(context, config)
+    profile_index = verification_profile_index_from_context(context, config)
     receipt_reviews = review_julia_project_verification_receipts(task_index)
     JuliaVerificationProfile(report, task_index, profile_index, receipt_reviews)
 end

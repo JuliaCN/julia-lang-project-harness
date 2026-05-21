@@ -3,25 +3,7 @@ function build_julia_verification_profile_index(
     project_root::AbstractString;
     config=default_julia_harness_config(),
 )
-    scope = julia_project_harness_scope(project_root, config)
-    workspace_scopes = julia_workspace_member_scopes(scope, config)
-    candidates = JuliaVerificationProfileCandidate[]
-    for candidate_scope in vcat([scope], workspace_scopes)
-        parsed_files = parsed_julia_files_for_scope(candidate_scope, config)
-        append!(
-            candidates,
-            verification_profile_candidates_for_scope(candidate_scope, parsed_files),
-        )
-    end
-    sort!(
-        candidates;
-        by=candidate -> (
-            candidate.project_root,
-            candidate.owner_path,
-            join(candidate.responsibilities, ","),
-        ),
-    )
-    JuliaVerificationProfileIndex(scope.project_root, candidates)
+    verification_profile_index_from_context(project_policy_context(project_root, config), config)
 end
 
 function verification_profile_candidates_for_scope(

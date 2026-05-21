@@ -54,6 +54,8 @@ function reasoning_tree_owner_role(scope::JuliaProjectHarnessScope, path::Abstra
     is_test_path(scope, path) && return "test"
     any(extension_path -> is_path_under(path, extension_path), scope.extension_paths) && return "extension"
     any(source_path -> is_path_under(path, source_path), scope.source_paths) && return "source"
+    role = package_search_role(scope, path)
+    !isnothing(role) && return role
     "owner"
 end
 

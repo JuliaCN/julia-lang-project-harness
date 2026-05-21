@@ -15,8 +15,8 @@ function render_julia_project_harness_agent_snapshot(
     scope = julia_project_harness_scope(project_root, config)
     workspace_member_scopes = julia_workspace_member_scopes(scope, config)
     monitored_paths = vcat(
-        scope_monitored_paths(scope),
-        mapreduce(scope_monitored_paths, vcat, workspace_member_scopes; init=String[]),
+        scope_search_paths(scope),
+        mapreduce(scope_search_paths, vcat, workspace_member_scopes; init=String[]),
     )
     parsed_files = [parse_julia_file(path) for path in discover_julia_files(monitored_paths, config)]
     findings = evaluate_default_rule_packs(
@@ -27,7 +27,7 @@ function render_julia_project_harness_agent_snapshot(
     )
     render_julia_package_snapshot(
         scope,
-        parsed_files_for_scope(scope, parsed_files),
+        parsed_files_for_search_scope(scope, parsed_files),
         findings;
         workspace_member_scopes,
         config,
@@ -57,10 +57,15 @@ function render_julia_package_snapshot(
         ),
         parsed_files,
     )
+    package_count = count(
+        parsed -> any(package_path -> is_path_under(parsed.report.path, package_path), scope.package_paths),
+        parsed_files,
+    )
     uuid_suffix = isnothing(scope.package_uuid) ? "" : " uuid=$(scope.package_uuid)"
     rendered = "Package: $(something(scope.package_name, "<unknown>"))$(uuid_suffix)\n"
     extension_suffix = extension_count == 0 ? "" : " ext=$(extension_count)"
-    rendered *= "Files: source=$(source_count) test=$(test_count)$(extension_suffix)\n"
+    package_suffix = package_count == 0 ? "" : " package=$(package_count)"
+    rendered *= "Files: source=$(source_count) test=$(test_count)$(extension_suffix)$(package_suffix)\n"
     if !isnothing(scope.package_entry_path)
         rendered *= "Entry: $(display_project_path(scope, scope.package_entry_path))\n"
     end

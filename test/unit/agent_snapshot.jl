@@ -111,6 +111,40 @@ end
     @test occursin("requires=benchmark_command,baseline,regression_threshold", rendered)
 end
 
+@testset "agent snapshot includes package auxiliary syntax context" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "docs"))
+    mkpath(joinpath(root, "examples"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nexport run\nrun(x) = x\nend\n")
+    write(
+        joinpath(root, "docs", "Project.toml"),
+        """
+        [deps]
+        Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+        """,
+    )
+    write(
+        joinpath(root, "docs", "make.jl"),
+        "using Documenter\nfunction build_docs()\n    makedocs()\nend\n",
+    )
+    write(joinpath(root, "examples", "Project.toml"), "[deps]\n")
+    write(
+        joinpath(root, "examples", "runexamples.jl"),
+        "using Example\nscripted_example() = run(1)\n",
+    )
+
+    rendered = render_julia_project_harness_agent_snapshot(root)
+
+    @test occursin("Files: source=1 test=0 package=2", rendered)
+    @test occursin("- owner docs/make.jl role=docs imports=Documenter methods=build_docs", rendered)
+    @test occursin("- owner examples/runexamples.jl role=example imports=Example", rendered)
+    @test occursin("docs/make.jl function=build_docs/0", rendered)
+    @test occursin("examples/runexamples.jl function=scripted_example/0", rendered)
+    @test !occursin("JULIA-PROJ-R008", rendered)
+end
+
 @testset "agent snapshot finding groups" begin
     root = mktempdir()
     write_project(root, "Example")

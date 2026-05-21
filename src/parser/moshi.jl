@@ -43,6 +43,22 @@ function moshi_macro_case_names(node::JuliaSyntax.SyntaxNode, kind::AbstractStri
     names
 end
 
+function moshi_macro_case_patterns(node::JuliaSyntax.SyntaxNode, kind::AbstractString)
+    kind == "match" || return String[]
+    body = moshi_macro_block_node(node)
+    isnothing(body) && return String[]
+    patterns = String[]
+    seen = Set{String}()
+    for member in syntax_children(body)
+        pattern = moshi_match_case_pattern(member)
+        isnothing(pattern) && continue
+        pattern in seen && continue
+        push!(seen, pattern)
+        push!(patterns, pattern)
+    end
+    patterns
+end
+
 function moshi_data_body_node(node::JuliaSyntax.SyntaxNode)
     moshi_macro_block_node(node)
 end
@@ -78,6 +94,14 @@ function moshi_match_case_name(node::JuliaSyntax.SyntaxNode)
     moshi_match_pattern_name(first(children))
 end
 
+function moshi_match_case_pattern(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "call" || return nothing
+    children = syntax_children(node)
+    length(children) >= 3 || return nothing
+    moshi_case_arrow_operator(children[2]) || return nothing
+    moshi_match_pattern_text(first(children))
+end
+
 function moshi_case_arrow_operator(node::JuliaSyntax.SyntaxNode)
     syntax_kind(node) == "Identifier" && String(JuliaSyntax.sourcetext(node)) == "=>"
 end
@@ -91,6 +115,24 @@ function moshi_match_pattern_name(node::JuliaSyntax.SyntaxNode)
     elseif kind == "."
         names = identifier_texts(node)
         length(names) >= 2 && return last(names)
+    elseif kind == "Identifier"
+        name = String(JuliaSyntax.sourcetext(node))
+        name == "_" && return nothing
+        return name
+    end
+    nothing
+end
+
+function moshi_match_pattern_text(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "call"
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return moshi_match_pattern_text(first(children))
+    elseif kind == "."
+        names = identifier_texts(node)
+        isempty(names) && return nothing
+        return join(names, ".")
     elseif kind == "Identifier"
         name = String(JuliaSyntax.sourcetext(node))
         name == "_" && return nothing

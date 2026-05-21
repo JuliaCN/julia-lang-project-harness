@@ -121,8 +121,10 @@ function moshi_match_bridge_satisfied(
     if isempty(literal_tokens)
         return any(fact -> fact.kind == "match" && !isempty(fact.case_names), modeling_facts)
     end
-    case_tokens = moshi_match_case_tokens(modeling_facts)
-    !isempty(case_tokens) && all(token -> token in case_tokens, literal_tokens)
+    any(
+        target -> moshi_match_patterns_cover_target(target, literal_tokens, modeling_facts),
+        moshi_covered_data_targets(function_fact, modeling_facts),
+    )
 end
 
 function moshi_domain_model_summary(
@@ -220,6 +222,72 @@ function moshi_match_case_tokens(modeling_facts::Vector{JuliaMoshiSyntax})
     tokens
 end
 
+function moshi_covered_data_targets(
+    function_fact::JuliaFunctionSyntax,
+    modeling_facts::Vector{JuliaMoshiSyntax},
+)
+    literal_tokens = normalized_domain_tokens(function_fact.stringly_branch_literals)
+    isempty(literal_tokens) && return String[]
+    targets = String[]
+    seen = Set{String}()
+    for fact in modeling_facts
+        fact.kind == "data" || continue
+        isnothing(fact.target_name) && continue
+        variant_tokens = normalized_domain_tokens(fact.variant_names)
+        all(token -> token in variant_tokens, literal_tokens) || continue
+        fact.target_name in seen && continue
+        push!(seen, fact.target_name)
+        push!(targets, fact.target_name)
+    end
+    targets
+end
+
+function moshi_match_patterns_cover_target(
+    target_name::AbstractString,
+    literal_tokens::Vector{String},
+    modeling_facts::Vector{JuliaMoshiSyntax},
+)
+    pattern_tokens = moshi_match_pattern_tokens_for_target(target_name, modeling_facts)
+    !isempty(pattern_tokens) && all(token -> token in pattern_tokens, literal_tokens)
+end
+
+function moshi_match_pattern_tokens_for_target(
+    target_name::AbstractString,
+    modeling_facts::Vector{JuliaMoshiSyntax},
+)
+    target_token = normalized_terminal_domain_token(target_name)
+    tokens = Set{String}()
+    for fact in modeling_facts
+        fact.kind == "match" || continue
+        for pattern in fact.case_patterns
+            pattern_target = moshi_match_pattern_target_token(pattern)
+            pattern_case = moshi_match_pattern_case_token(pattern)
+            isnothing(pattern_target) && continue
+            isnothing(pattern_case) && continue
+            pattern_target == target_token || continue
+            push!(tokens, pattern_case)
+        end
+    end
+    tokens
+end
+
+function moshi_match_pattern_target_token(pattern::AbstractString)
+    parts = split(String(pattern), '.')
+    length(parts) >= 2 || return nothing
+    normalized_domain_token(parts[end - 1])
+end
+
+function moshi_match_pattern_case_token(pattern::AbstractString)
+    parts = split(String(pattern), '.')
+    isempty(parts) && return nothing
+    normalized_domain_token(last(parts))
+end
+
+function normalized_terminal_domain_token(value::AbstractString)
+    parts = split(String(value), '.')
+    normalized_domain_token(last(parts))
+end
+
 function moshi_domain_bridge_labels(
     scope::JuliaProjectHarnessScope,
     function_fact::JuliaFunctionSyntax,
@@ -238,6 +306,10 @@ function moshi_domain_bridge_labels(
             function_fact,
             modeling_facts,
         ),
+        "moshi_model_targets" => join(
+            moshi_covered_data_targets(function_fact, modeling_facts),
+            ",",
+        ),
     )
     if !isempty(function_fact.stringly_branch_literals)
         labels["stringly_branch_literals"] = join(function_fact.stringly_branch_literals, ",")
@@ -250,10 +322,14 @@ function moshi_match_coverage_label(
     modeling_facts::Vector{JuliaMoshiSyntax},
 )
     literal_tokens = normalized_domain_tokens(function_fact.stringly_branch_literals)
-    case_tokens = moshi_match_case_tokens(modeling_facts)
-    isempty(case_tokens) && return "missing_match_cases"
-    missing = [token for token in literal_tokens if !(token in case_tokens)]
-    isempty(missing) ? "covered" : "missing=$(join(missing, ","))"
+    targets = moshi_covered_data_targets(function_fact, modeling_facts)
+    isempty(targets) && return "missing_model_target"
+    for target in targets
+        pattern_tokens = moshi_match_pattern_tokens_for_target(target, modeling_facts)
+        missing = [token for token in literal_tokens if !(token in pattern_tokens)]
+        isempty(missing) && return "covered"
+    end
+    "missing=$(join(literal_tokens, ","))"
 end
 
 function normalized_domain_tokens(values::Vector{String})

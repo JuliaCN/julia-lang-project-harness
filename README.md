@@ -24,7 +24,8 @@ The core design target is quality for agents, not a generic style checklist.
 The harness makes important Julia project facts visible before an agent edits:
 
 - public API intent through docstrings, exports, `public`, and method families;
-- project ownership through entry modules, includes, modules, and source paths;
+- project ownership through entry modules, includes, modules, source paths,
+  extension owners, and test owners;
 - algorithm shape through control-flow depth, branch count, loops, pipeline
   calls, and macro-heavy public surfaces;
 - dependency shape through `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`,
@@ -71,7 +72,8 @@ Current rule packs are split by intent:
 - `julia.syntax`: blocking JuliaSyntax parse failures.
 - `julia.project_policy`: blocking package, dependency, extension, test target,
   and scope-policy checks.
-- `julia.modularity`: blocking source ownership and include-graph checks.
+- `julia.modularity`: blocking Project.toml-owned Julia owner and include-graph
+  checks across source, extension, and test scopes.
 - `julia.agent_policy`: advisory repair guidance for agent-friendly Julia APIs,
   tests, docs, mutation contracts, unsafe evidence, type coverage, Moshi domain
   modeling, and type-piracy risk.

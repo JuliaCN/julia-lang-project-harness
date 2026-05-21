@@ -34,14 +34,14 @@ function evaluate_modularity_rules(
             end
         end
     end
-    append!(findings, source_budget_findings(scope, parsed_files, rules))
+    append!(findings, project_jl_owner_budget_findings(scope, parsed_files, rules))
     append!(findings, include_cycle_findings(parsed_by_path, rules))
     append!(findings, orphan_source_findings(scope, parsed_files, parsed_by_path, rules))
     append!(findings, generic_owner_bucket_findings(scope, parsed_files, rules))
     findings
 end
 
-function source_budget_findings(
+function project_jl_owner_budget_findings(
     scope::JuliaProjectHarnessScope,
     parsed_files::Vector{ParsedJuliaFile},
     rules::Dict{String,JuliaHarnessRule},
@@ -49,8 +49,8 @@ function source_budget_findings(
     findings = JuliaHarnessFinding[]
     for parsed in parsed_files
         parsed.report.is_valid || continue
-        source_root = first_source_root(scope, parsed.report.path)
-        isnothing(source_root) && continue
+        owner_root = first_project_jl_owner_root(scope, parsed.report.path)
+        isnothing(owner_root) && continue
         if !isnothing(scope.package_entry_path) && parsed.report.path == scope.package_entry_path
             has_literal_includes(parsed) && continue
             parsed.metrics.nonblank_line_count > MAX_ENTRY_FACADE_NONBLANK_LINES || continue
@@ -71,14 +71,23 @@ function source_budget_findings(
             findings,
             finding_from_rule(
                 rules[JULIA_MOD_R002];
-                summary="Source file `$(parsed.report.path)` has $(parsed.metrics.nonblank_line_count) nonblank lines.",
+                summary="Julia owner file `$(parsed.report.path)` has $(parsed.metrics.nonblank_line_count) nonblank lines.",
                 location=SourceLocation(parsed.report.path, 1, 0),
                 source_line=source_line(parsed.source, 1),
-                label="split this file into named Julia owner files with literal includes",
+                label=project_jl_owner_budget_label(scope, parsed.report.path),
             ),
         )
     end
     findings
+end
+
+function project_jl_owner_budget_label(scope::JuliaProjectHarnessScope, path::AbstractString)
+    if any(test_path -> is_path_under(path, test_path), scope.test_paths)
+        return "split this test owner into focused included test files"
+    elseif any(extension_path -> is_path_under(path, extension_path), scope.extension_paths)
+        return "split this extension owner into focused extension files"
+    end
+    "split this file into named Julia owner files with literal includes"
 end
 
 function include_cycle_findings(
@@ -229,6 +238,13 @@ end
 function first_source_root(scope::JuliaProjectHarnessScope, path::AbstractString)
     for source_path in scope.source_paths
         is_path_under(path, source_path) && return source_path
+    end
+    nothing
+end
+
+function first_project_jl_owner_root(scope::JuliaProjectHarnessScope, path::AbstractString)
+    for owner_root in vcat(scope.source_paths, scope.extension_paths, scope.test_paths)
+        is_path_under(path, owner_root) && return owner_root
     end
     nothing
 end

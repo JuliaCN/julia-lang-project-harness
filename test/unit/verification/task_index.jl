@@ -1,0 +1,142 @@
+@testset "verification task index" begin
+    root = mktempdir()
+    write_verification_project(root)
+
+    index = build_julia_verification_task_index(root)
+    kinds = [record.kind for record in index.records]
+
+    @test index.project_root == root
+    @test kinds == ["extension_boundary", "harness_policy", "pkg_test", "stress", "syntax_search"]
+    @test all(record -> record.state == "pending", index.records)
+    @test any(record -> occursin("Pkg.test()", join(record.command, " ")), index.records)
+    @test any(
+        record -> record.kind == "harness_policy" &&
+                  occursin(
+                      "assert_julia_project_harness_test_profile_clean",
+                      join(record.command, " "),
+                  ),
+        index.records,
+    )
+    @test any(
+        record -> record.kind == "extension_boundary" &&
+                  record.evidence["extension"] == "VerifyJSONExt" &&
+                  record.evidence["activation"] == "missing_test_target" &&
+                  record.evidence["test_target"] == "Test",
+        index.records,
+    )
+
+    rendered = render_julia_verification_task_index(index)
+    json = render_julia_verification_task_index_json(index)
+    template = render_julia_verification_receipt_template(index)
+
+    @test occursin("VerificationTasks: count=5", rendered)
+    @test occursin("owner=test/runtests.jl", rendered)
+    @test occursin("fingerprint=", rendered)
+    @test occursin("kind=stress", rendered)
+    @test occursin("requires=scenario,load_steps,p50_ms,p99_ms,threshold,result", rendered)
+    @test occursin("\"records\"", json)
+    @test occursin("\"required_evidence\"", json)
+    @test occursin("VerifyJSONExt", json)
+    @test occursin("\"receipts\"", template)
+    @test occursin("\"scenario\":\"\"", template)
+    @test occursin("\"required_receipt\"", template)
+
+    advice_out = IOBuffer()
+    profile = assert_julia_project_harness_test_profile_clean(root; advice_io=advice_out)
+    advice = String(take!(advice_out))
+    @test profile.report.project_scope.project_root == root
+    @test [record.kind for record in profile.task_index.records] == kinds
+    @test length(profile.profile_index.candidates) == 3
+    @test isempty(profile.receipt_reviews)
+    @test occursin("[verify-advice] pending=2", advice)
+    @test occursin("kind=extension_boundary", advice)
+    @test occursin("activation=missing_test_target", advice)
+    @test occursin("kind=stress", advice)
+    @test occursin("fingerprint=stress", advice)
+    @test occursin("requires=scenario,load_steps,p50_ms,p99_ms,threshold,result", advice)
+
+    profile_rendered = render_julia_verification_profile(profile)
+    profile_json = render_julia_verification_profile_json(profile)
+
+    @test occursin("VerificationProfiles: count=3", profile_rendered)
+    @test occursin("responsibilities=test_profile_gate", profile_rendered)
+    @test occursin("responsibilities=public_api", profile_rendered)
+    @test occursin("state=missing_test_target", profile_rendered)
+    @test occursin("responsibilities=extension_boundary", profile_rendered)
+    @test occursin("\"profile_index\"", profile_json)
+    @test occursin("\"receipt_reviews\"", profile_json)
+    @test occursin("extension_boundary", profile_json)
+end
+
+@testset "verification task index carries Moshi extension capabilities" begin
+    root = mktempdir()
+    write_moshi_extension_verification_project(root)
+
+    index = build_julia_verification_task_index(root)
+    extension_task = only(record for record in index.records if record.kind == "extension_boundary")
+    profile_index = build_julia_verification_profile_index(root)
+    extension_candidate = only(
+        candidate for candidate in profile_index.candidates if
+        candidate.responsibilities == ["extension_boundary"]
+    )
+    rendered = render_julia_verification_task_index(index)
+    profile_rendered = render_julia_verification_profile_index(profile_index)
+
+    @test extension_task.evidence["capability_source"] == "Moshi"
+    @test extension_task.evidence["capabilities"] == "syntax,domain-model,search"
+    @test occursin("capability_source=Moshi", rendered)
+    @test occursin("capabilities=syntax,domain-model,search", rendered)
+    @test extension_candidate.evidence["capability_source"] == "Moshi"
+    @test extension_candidate.evidence["capabilities"] == "syntax,domain-model,search"
+    @test occursin("capabilities=syntax,domain-model,search", profile_rendered)
+
+    advice_out = IOBuffer()
+    assert_julia_project_harness_test_profile_clean(root; advice_io=advice_out)
+    advice = String(take!(advice_out))
+    @test occursin("capabilities=syntax,domain-model,search", advice)
+end
+
+@testset "verification task index marks activated package extensions" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ActivatedExtExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+
+        [extensions]
+        ActivatedJSONExt = ["JSON3"]
+
+        [compat]
+        JSON3 = "1"
+
+        [extras]
+        JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["JSON3", "Test"]
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(joinpath(root, "src", "ActivatedExtExample.jl"), "module ActivatedExtExample\nend\n")
+    write(joinpath(root, "ext", "ActivatedJSONExt.jl"), "module ActivatedJSONExt\nend\n")
+
+    index = build_julia_verification_task_index(root)
+    extension_task = only(record for record in index.records if record.kind == "extension_boundary")
+    profile_index = build_julia_verification_profile_index(root)
+    extension_candidate = only(
+        candidate for candidate in profile_index.candidates if
+        candidate.responsibilities == ["extension_boundary"]
+    )
+
+    @test extension_task.evidence["activation"] == "test_target"
+    @test extension_task.evidence["test_target"] == "JSON3,Test"
+    @test occursin("Pkg.test()", join(extension_task.command, " "))
+    @test extension_candidate.state == "test_target"
+end

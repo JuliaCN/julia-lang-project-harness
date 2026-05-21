@@ -215,6 +215,7 @@ function moshi_syntax_from_macro_invocation(
         moshi_macro_target_name(node, invocation.terminal_name),
         moshi_macro_variant_names(node, invocation.terminal_name),
         moshi_macro_case_names(node, invocation.terminal_name),
+        moshi_macro_case_patterns(node, invocation.terminal_name),
         invocation.expression,
     )
 end

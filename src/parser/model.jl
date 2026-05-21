@@ -123,6 +123,7 @@ struct JuliaMoshiSyntax
     target_name::Union{Nothing,String}
     variant_names::Vector{String}
     case_names::Vector{String}
+    case_patterns::Vector{String}
     expression::String
 end
 

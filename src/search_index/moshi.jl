@@ -18,5 +18,7 @@ function display_moshi_search_detail(moshi_fact::JuliaMoshiSyntax)
                      " variants=$(join(moshi_fact.variant_names, ","))"
     case_suffix = isempty(moshi_fact.case_names) ? "" :
                   " cases=$(join(moshi_fact.case_names, ","))"
-    "Moshi @$(moshi_fact.kind)$(target_suffix)$(variant_suffix)$(case_suffix)"
+    pattern_suffix = isempty(moshi_fact.case_patterns) ? "" :
+                     " patterns=$(join(moshi_fact.case_patterns, ","))"
+    "Moshi @$(moshi_fact.kind)$(target_suffix)$(variant_suffix)$(case_suffix)$(pattern_suffix)"
 end

@@ -201,6 +201,10 @@ an aggregate, split test files by owner or feature, and add tests with behavior
 changes. Documentation is not separate prose: docstrings, manual pages,
 examples, and doctests help keep public API behavior executable.
 
+Harness modularity should therefore apply to every project-owned Julia file
+discovered from `Project.toml` scope, not only `src/`. Oversized `ext/` and
+`test/` owners are just as costly for agents as oversized implementation files.
+
 Agent implication:
 
 - Pair new functionality with tests, and bug fixes with regression tests.

@@ -395,8 +395,9 @@ Initial rules:
 
 - `JULIA-MOD-R001`: `src/<PackageName>.jl` should act as a package facade,
   not a large implementation file.
-- `JULIA-MOD-R002`: source files should stay within a configured size and
-  responsibility budget.
+- `JULIA-MOD-R002`: every project-owned Julia file discovered from
+  `Project.toml` scope should stay within a configured size and responsibility
+  budget, including source, extension, and test owners.
 - `JULIA-MOD-R003`: dynamic `include(...)` hides the repair graph and should
   be replaced with parser-stable literal includes or a documented exception.
 - `JULIA-MOD-R004`: literal include targets must exist.

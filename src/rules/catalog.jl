@@ -215,8 +215,8 @@ julia_modularity_rules() = [
         JULIA_MOD_R002,
         JULIA_MODULARITY_PACK_ID,
         Warning,
-        "Source file exceeds the owner budget",
-        "Julia source files should stay within a bounded responsibility budget so agents can repair one owner at a time.",
+        "Julia owner file exceeds the owner budget",
+        "Julia owner files under project-owned source, extension, and test scopes should stay within a bounded responsibility budget so agents can repair one owner at a time.",
         labels("modularity"),
     ),
     JuliaHarnessRule(

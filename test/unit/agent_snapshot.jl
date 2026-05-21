@@ -23,7 +23,7 @@
     write(joinpath(root, "src", "api.jl"), "internal_api() = 1\n")
     write(
         joinpath(root, "test", "runtests.jl"),
-        "using Test\n@testset \"core\" begin\n@test run(1) == 1\nend\n",
+        "using Test\n@testset \"core\" begin\n@test run(1) == 1\n@test run(1.0) == 1.0\nend\n",
     )
 
     rendered = render_julia_project_harness_agent_snapshot(root)
@@ -42,7 +42,7 @@
         rendered,
     )
     @test occursin("- owner src/api.jl role=source methods=internal_api", rendered)
-    @test occursin("- owner test/runtests.jl role=test imports=Test tests=\"core\",direct=1", rendered)
+    @test occursin("- owner test/runtests.jl role=test imports=Test tests=\"core\",direct=2", rendered)
     @test occursin("Modules:", rendered)
     @test occursin("src/Example.jl module=Example", rendered)
     @test occursin("Public:", rendered)
@@ -64,7 +64,7 @@
     @test occursin("loop_depth=1", rendered)
     @test occursin("macros=1", rendered)
     @test occursin("Tests:", rendered)
-    @test occursin("test/runtests.jl testsets=\"core\" test=1", rendered)
+    @test occursin("test/runtests.jl testsets=\"core\" test=2", rendered)
     @test occursin("Includes:", rendered)
     @test occursin("src/Example.jl -> src/api.jl", rendered)
     @test !occursin("FindingGroups:", rendered)

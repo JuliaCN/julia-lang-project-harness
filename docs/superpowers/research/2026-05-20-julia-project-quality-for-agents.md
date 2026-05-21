@@ -250,7 +250,8 @@ Already implemented or designed:
   conflicts, large owner fanout, public algorithm shape, scattered method
   families, macro-heavy APIs, struct field contracts, mutable-struct mutation
   contracts, mutating-method mutation contracts, unsafe construct evidence
-  contracts, in-test verification hooks, and internal nested traversal shape.
+  contracts, public generic API type coverage, in-test verification hooks, and
+  internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.
@@ -260,8 +261,8 @@ Already implemented or designed:
 
 Useful next policy slices:
 
-- Public generic APIs should get type-coverage advice when tests only exercise
-  a single narrow input shape.
+- Public API examples in Documenter docs should get doctest advice when docs use
+  Documenter but examples are prose-only.
 
 ## Agent Operating Checklist
 

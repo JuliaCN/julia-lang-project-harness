@@ -1112,6 +1112,78 @@ end
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
+@testset "project runner reports public generic type coverage advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export normalize
+        \"\"\"Normalize a generic real value.\"\"\"
+        function normalize(value::T)::T where {T<:Real}
+            value
+        end
+        end
+        """,
+    )
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using Test
+        using Example
+
+        @test normalize(1) == 1
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R018", rendered)
+    @test occursin("Public generic API lacks type coverage", rendered)
+    @test occursin("where {T<:Real}", rendered)
+    @test occursin("only parser-visible input types: Int", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts public generic type coverage" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export normalize
+        \"\"\"Normalize a generic real value.\"\"\"
+        function normalize(value::T)::T where {T<:Real}
+            value
+        end
+        end
+        """,
+    )
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using Test
+        using Example
+
+        @test normalize(1) == 1
+        @test normalize(1.0) == 1.0
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "project runner reports stringly public domain advice" begin
     root = mktempdir()
     write_project(root, "Example")

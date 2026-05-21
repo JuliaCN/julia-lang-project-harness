@@ -136,4 +136,12 @@ julia_agent_policy_rules() = [
         "Document a concrete safety or performance reason and focused verification evidence when non-test Julia code uses `eval`, `ccall`, external process execution, `@eval`, or `@inbounds`.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R018,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public generic API lacks type coverage",
+        "Exercise exported Julia methods with explicit `where` type parameters against more than one relevant input type when the API claims generic behavior.",
+        labels("agent-policy"),
+    ),
 ]

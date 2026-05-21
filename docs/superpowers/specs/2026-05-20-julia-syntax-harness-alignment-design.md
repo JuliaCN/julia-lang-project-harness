@@ -444,9 +444,12 @@ Initial advisory rules:
 - `AGENT-JL-R017`: non-test code uses `eval`, `ccall`, external process
   execution, `@eval`, or `@inbounds` without a concrete safety/performance
   reason and focused verification evidence.
+- `AGENT-JL-R018`: exported generic methods with explicit `where` type
+  parameters lack parser-visible tests across more than one relevant input
+  type.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R017`. Later advisory rules can land only after the needed
+`AGENT-JL-R018`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

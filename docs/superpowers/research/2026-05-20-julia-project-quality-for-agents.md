@@ -134,9 +134,13 @@ Agent implication:
 Harness implication:
 
 - Public API, exported names, method families, argument facts, bool flags,
-  stringly domains, and docstring bindings are core parser facts.
+  stringly domains, concrete return annotations, and docstring bindings are
+  core parser facts.
 - Advisory policy should push agents toward explicit API intent, not merely
   toward shorter functions.
+- Exported methods with concrete return annotations should document the return
+  or type-stability contract so agents do not add narrow runtime assertions as
+  cosmetic precision.
 
 ### 4. Algorithm Shape Must Be Agent-Readable
 
@@ -263,12 +267,12 @@ Already implemented or designed:
   tags.
 - Advisory rules cover public docs, bool/stringly arguments, exported-name
   conflicts, large owner fanout, public algorithm shape, scattered method
-  families, macro-heavy APIs, struct field contracts, mutable-struct mutation
-  contracts, mutating-method mutation contracts, unsafe construct evidence
-  contracts, public generic API type coverage, Documenter public API doctest
-  examples, Moshi-optional typed domain modeling advice, external-method
-  type-piracy risk, in-test verification hooks, and internal nested traversal
-  shape.
+  families, macro-heavy APIs, public return contracts, struct field contracts,
+  mutable-struct mutation contracts, mutating-method mutation contracts, unsafe
+  construct evidence contracts, public generic API type coverage, Documenter
+  public API doctest examples, Moshi-optional typed domain modeling advice,
+  external-method type-piracy risk, in-test verification hooks, and internal
+  nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.

@@ -24,6 +24,8 @@ The core design target is quality for agents, not a generic style checklist.
 The harness makes important Julia project facts visible before an agent edits:
 
 - public API intent through docstrings, exports, `public`, and method families;
+- public return contracts when exported methods use concrete return
+  annotations;
 - project ownership through Pkg entry files, local source dependencies,
   declared extensions, test owners, includes, and modules;
 - algorithm shape through control-flow depth, branch count, loops, pipeline

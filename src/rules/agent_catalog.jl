@@ -176,4 +176,12 @@ julia_agent_policy_rules() = [
         "When Moshi `@data` covers a stringly branch domain, add parser-visible `@match` cases or typed methods so agents see how the real project logic uses the domain model.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R023,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public return annotation lacks a contract",
+        "Document concrete return annotations on exported Julia methods so agents do not add narrow runtime assertions without understanding the API contract.",
+        labels("agent-policy"),
+    ),
 ]

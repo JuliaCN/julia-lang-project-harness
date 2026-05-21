@@ -18,6 +18,7 @@ end
 include("project/core.jl")
 include("project/policy.jl")
 include("project/agent_api.jl")
+include("project/return_contracts.jl")
 include("project/agent_verification.jl")
 include("project/moshi.jl")
 include("project/ownership_api.jl")

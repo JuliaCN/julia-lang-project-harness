@@ -477,9 +477,13 @@ Initial advisory rules:
   literals lack parser-visible `@match` cases or typed methods that show how
   the real project logic uses the model. This prevents agents from stopping at
   an unused ADT and guides them toward a Moshi-backed branch bridge.
+- `AGENT-JL-R023`: exported methods with concrete return annotations lack a
+  return/type-stability contract. This keeps agents from adding narrow runtime
+  return assertions as cosmetic precision when the public API does not state
+  that contract.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R022`. Later advisory rules can land only after the needed
+`AGENT-JL-R023`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

@@ -108,6 +108,35 @@ end
     @test function_fact.macro_invocation_names == ["alpha", "beta", "gamma"]
 end
 
+@testset "parser testset control flow facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "test_shape.jl")
+    write(
+        source,
+        """
+        using Test
+        @testset "matrix scenarios" begin
+            for group in groups
+                for value in group
+                    if value > 0
+                        @test value > 0
+                    end
+                end
+            end
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    test_fact = first(test for test in parsed.syntax_facts.tests if test.kind == "testset")
+
+    @test test_fact.control_flow_depth == 3
+    @test test_fact.branch_count == 1
+    @test test_fact.loop_count == 2
+    @test test_fact.loop_nesting_depth == 2
+    @test test_fact.control_flow_kinds == ["for", "if"]
+end
+
 @testset "parser call facts" begin
     temp = mktempdir()
     source = joinpath(temp, "calls.jl")

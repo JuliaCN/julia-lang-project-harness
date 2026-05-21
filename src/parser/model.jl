@@ -162,6 +162,11 @@ struct JuliaTestSyntax
     kind::String
     name::String
     label::Union{Nothing,String}
+    control_flow_depth::Int
+    branch_count::Int
+    loop_count::Int
+    loop_nesting_depth::Int
+    control_flow_kinds::Vector{String}
     expression::String
 end
 

@@ -170,6 +170,9 @@ Harness implication:
   `broad-body`, `macro`, and `pipeline` are quality-navigation signals.
 - Advisory rules should separate public API algorithm shape from internal
   traversal shape. The repair advice for each is different.
+- Testset facts should carry the same parser-visible shape signals so `Pkg.test`
+  can point agents away from broad nested scenario scaffolding and toward named
+  behavioral cases.
 
 ### 5. Performance Quality Is Evidence-Driven
 
@@ -221,6 +224,9 @@ Harness implication:
   contracts by parser-visible call names.
 - Test call facts should connect public `!` method contracts back to package
   tests that actually exercise the mutating API.
+- Testset shape facts should flag nested loops plus guard branches in package
+  tests, because those broad scenario matrices are hard for agents to repair
+  one behavior at a time.
 - Unsafe and escape-like constructs should require explanation and evidence,
   not a silent config disable.
 
@@ -294,10 +300,11 @@ Already implemented or designed:
   contracts, public failure `@test_throws` coverage, mutable global state,
   public abstract field types, struct field contracts, mutable-struct mutation
   contracts, mutating-method mutation contracts, mutating-method test
-  coverage, unsafe construct evidence contracts, public generic API type
-  coverage, Documenter public API doctest examples, Moshi-optional typed domain
-  modeling advice, external-method type-piracy risk, in-test verification
-  hooks, and internal nested traversal shape.
+  coverage, parser-visible testset scenario-shape advice, unsafe construct
+  evidence contracts, public generic API type coverage, Documenter public API
+  doctest examples, Moshi-optional typed domain modeling advice,
+  external-method type-piracy risk, in-test verification hooks, and internal
+  nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.

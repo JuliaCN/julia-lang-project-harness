@@ -200,6 +200,11 @@ function test_syntax_from_macro_invocation(
         invocation.terminal_name,
         invocation.name,
         first_string_literal_argument(node),
+        syntax_control_flow_depth(node),
+        syntax_branch_count(node),
+        syntax_loop_count(node),
+        syntax_loop_nesting_depth(node),
+        syntax_control_flow_kinds(node),
         invocation.expression,
     )
 end

@@ -282,6 +282,58 @@
     @test isempty(search_julia_index(entries, "run"; limit=0))
 end
 
+@testset "project search index tags testset control flow" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [extras]
+        Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+        [targets]
+        test = ["Test"]
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nexport run\nrun(x)=x\nend\n")
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using Test
+        using Example
+
+        @testset "matrix scenarios" begin
+            for group in ([1, 2], [3, 4])
+                for value in group
+                    if value > 0
+                        @test run(value) == value
+                    end
+                end
+            end
+        end
+        """,
+    )
+
+    entries = julia_project_search_index(root)
+
+    @test any(
+        entry -> entry.kind == "testset" &&
+                 entry.name == "matrix scenarios" &&
+                 "control-flow" in entry.tags &&
+                 "nested-loop" in entry.tags &&
+                 "branch" in entry.tags &&
+                 occursin("flow=3:for,if", entry.detail) &&
+                 occursin("loops=2", entry.detail) &&
+                 occursin("loop_depth=2", entry.detail),
+        entries,
+    )
+end
+
 @testset "project search index includes workspace owner entries" begin
     root = mktempdir()
     write(

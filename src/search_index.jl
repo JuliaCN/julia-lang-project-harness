@@ -266,20 +266,6 @@ function identifier_search_entries(parsed::ParsedJuliaFile)
     ]
 end
 
-function test_search_entries(parsed::ParsedJuliaFile)
-    [
-        search_index_entry(
-            parsed,
-            test_fact.line,
-            test_fact.column,
-            test_fact.kind,
-            something(test_fact.label, test_fact.name);
-            detail=test_fact.expression,
-            tags=["test", test_fact.kind],
-        ) for test_fact in parsed.syntax_facts.tests
-    ]
-end
-
 function include_search_entries(parsed::ParsedJuliaFile)
     [
         search_index_entry(

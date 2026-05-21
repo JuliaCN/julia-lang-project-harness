@@ -12,6 +12,25 @@ function function_control_flow_depth(node::JuliaSyntax.SyntaxNode)
     max_depth
 end
 
+syntax_control_flow_depth(node::JuliaSyntax.SyntaxNode) =
+    control_flow_depth_from_node(node, 0)
+
+syntax_branch_count(node::JuliaSyntax.SyntaxNode) =
+    control_flow_kind_count(node, BRANCH_FLOW_KINDS)
+
+syntax_loop_count(node::JuliaSyntax.SyntaxNode) =
+    control_flow_kind_count(node, LOOP_FLOW_KINDS)
+
+syntax_loop_nesting_depth(node::JuliaSyntax.SyntaxNode) =
+    loop_nesting_depth_from_node(node, 0)
+
+function syntax_control_flow_kinds(node::JuliaSyntax.SyntaxNode)
+    kinds = String[]
+    seen = Set{String}()
+    collect_control_flow_kinds!(kinds, seen, node)
+    kinds
+end
+
 function function_control_flow_kinds(node::JuliaSyntax.SyntaxNode)
     kinds = String[]
     seen = Set{String}()

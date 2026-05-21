@@ -224,4 +224,12 @@ julia_agent_policy_rules() = [
         "Cover documented exported mutating Julia methods with parser-visible package tests that call the `!` API.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R029,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Testset nests scenario scaffolding",
+        "Split parser-visible package testsets with nested loops and branches into named scenario testsets or helpers so agents can repair one behavior at a time.",
+        labels("agent-policy"),
+    ),
 ]

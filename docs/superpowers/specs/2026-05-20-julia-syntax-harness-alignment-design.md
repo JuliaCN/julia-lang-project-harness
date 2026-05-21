@@ -500,9 +500,12 @@ Initial advisory rules:
 - `AGENT-JL-R028`: documented public `!` mutation contracts lack
   parser-visible package tests that call the mutating API. This keeps in-place
   behavior executable in `Pkg.test` instead of stopping at doc text.
+- `AGENT-JL-R029`: parser-visible package testsets nest loops plus guard
+  branches. This pushes agents to split broad scenario scaffolding into named
+  testsets or helper assertions that can be repaired one behavior at a time.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R028`. Later advisory rules can land only after the needed
+`AGENT-JL-R029`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

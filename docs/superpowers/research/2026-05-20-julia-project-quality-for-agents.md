@@ -284,6 +284,10 @@ Already implemented or designed:
   A configured extension is not enough to satisfy the policy: the parser must
   see Moshi modeling facts that cover the extracted branch literals before
   R020 is suppressed when those literals are available.
+  A covered `@data` surface is still only the first step. The harness also
+  advises agents to add parser-visible `@match` cases or typed methods that
+  use the model, so real project logic moves away from repeated string
+  comparisons instead of merely parking an unused ADT in an extension.
 
 Useful next policy slices:
 

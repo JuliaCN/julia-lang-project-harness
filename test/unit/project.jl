@@ -1485,6 +1485,145 @@ end
     @test occursin("AGENT-JL-R004", rendered)
 end
 
+@testset "project runner advises Moshi match bridge for covered stringly domains" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+
+        [extensions]
+        ExampleMoshiExt = "Moshi"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export route
+
+        \"\"\"Route a value by mode.\"\"\"
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif mode == "safe"
+                value
+            else
+                value
+            end
+        end
+        end
+        """,
+    )
+    write(
+        joinpath(root, "ext", "ExampleMoshiExt.jl"),
+        """
+        module ExampleMoshiExt
+        using Example
+        using Moshi.Data: @data
+
+        @data Mode begin
+            Fast
+            Safe
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+    finding = only(
+        finding for finding in JuliaLangProjectHarness.advisory_findings(report) if
+        finding.rule_id == "AGENT-JL-R022"
+    )
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test !occursin("AGENT-JL-R020", rendered)
+    @test occursin("AGENT-JL-R022", rendered)
+    @test occursin("Moshi domain model lacks a match bridge", rendered)
+    @test finding.labels["moshi_model_coverage"] == "covered"
+    @test finding.labels["moshi_match_coverage"] == "missing_match_cases"
+end
+
+@testset "project runner accepts Moshi match bridge for stringly domains" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+
+        [extensions]
+        ExampleMoshiExt = "Moshi"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export route
+
+        \"\"\"Route a value by mode.\"\"\"
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif mode == "safe"
+                value
+            else
+                value
+            end
+        end
+        end
+        """,
+    )
+    write(
+        joinpath(root, "ext", "ExampleMoshiExt.jl"),
+        """
+        module ExampleMoshiExt
+        using Example
+        using Moshi.Data: @data
+        using Moshi.Match: @match
+
+        @data Mode begin
+            Fast
+            Safe
+        end
+
+        route_mode(mode) = @match mode begin
+            Mode.Fast() => :fast
+            Mode.Safe() => :safe
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test !occursin("AGENT-JL-R020", rendered)
+    @test !occursin("AGENT-JL-R022", rendered)
+end
+
 @testset "project runner rejects unrelated Moshi model as domain model escape" begin
     root = mktempdir()
     write(

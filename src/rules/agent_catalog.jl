@@ -168,4 +168,12 @@ julia_agent_policy_rules() = [
         "Extending an external Julia function should dispatch on at least one package-owned type, or carry a concrete interop/type-piracy contract for why the foreign-function/foreign-type method is intentional.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R022,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Moshi domain model lacks a match bridge",
+        "When Moshi `@data` covers a stringly branch domain, add parser-visible `@match` cases or typed methods so agents see how the real project logic uses the domain model.",
+        labels("agent-policy"),
+    ),
 ]

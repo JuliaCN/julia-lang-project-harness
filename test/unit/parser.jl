@@ -500,6 +500,7 @@ end
             @match value begin
                 Message.Quit() => nothing
                 Message.Write(text) => text
+                _ => nothing
             end
         end
         end
@@ -509,12 +510,18 @@ end
     parsed = parse_julia_file(source)
 
     @test [
-        (item.kind, item.macro_name, item.target_name, item.variant_names) for item in
+        (
+            item.kind,
+            item.macro_name,
+            item.target_name,
+            item.variant_names,
+            item.case_names,
+        ) for item in
         parsed.syntax_facts.moshi
     ] == [
-        ("data", "@data", "Message", ["Quit", "Write"]),
-        ("derive", "@derive", "Message", String[]),
-        ("match", "@match", "value", String[]),
+        ("data", "@data", "Message", ["Quit", "Write"], String[]),
+        ("derive", "@derive", "Message", String[], String[]),
+        ("match", "@match", "value", String[], ["Quit", "Write"]),
     ]
 end
 

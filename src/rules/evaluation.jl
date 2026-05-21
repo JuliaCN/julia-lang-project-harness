@@ -73,6 +73,7 @@ function evaluate_agent_policy_rules(
         ))
         append!(findings, public_documenter_example_findings(scope, public_names, rules))
         append!(findings, moshi_domain_model_findings(scope, parsed_files, public_names, rules))
+        append!(findings, moshi_domain_bridge_findings(scope, parsed_files, public_names, rules))
     end
     append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
     append!(findings, unsafe_construct_findings(scope, parsed_files, rules))

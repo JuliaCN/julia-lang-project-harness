@@ -468,9 +468,13 @@ Initial advisory rules:
   extracted from branch conditions.
 - `AGENT-JL-R021`: external method definitions lack a parser-visible
   package-owned dispatch type or a concrete interop/type-piracy contract.
+- `AGENT-JL-R022`: Moshi `@data` domain models that cover stringly branch
+  literals lack parser-visible `@match` cases or typed methods that show how
+  the real project logic uses the model. This prevents agents from stopping at
+  an unused ADT and guides them toward a Moshi-backed branch bridge.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R021`. Later advisory rules can land only after the needed
+`AGENT-JL-R022`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

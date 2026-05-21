@@ -39,6 +39,46 @@ function moshi_domain_model_findings(
     findings
 end
 
+function moshi_domain_bridge_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    modeling_facts = moshi_modeling_facts(parsed_files)
+    findings = JuliaHarnessFinding[]
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        is_test_path(scope, parsed.report.path) && continue
+        for function_fact in parsed.syntax_facts.functions
+            function_fact.terminal_name in public_names || continue
+            is_stringly_branch_dispatch(function_fact) || continue
+            moshi_domain_model_satisfied(function_fact, modeling_facts) || continue
+            moshi_match_bridge_satisfied(function_fact, modeling_facts) && continue
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[AGENT_JL_R022];
+                    summary=moshi_domain_bridge_summary(function_fact),
+                    location=SourceLocation(
+                        parsed.report.path,
+                        function_fact.line,
+                        function_fact.column,
+                    ),
+                    source_line=source_line(parsed.source, function_fact.line),
+                    label="route this domain through Moshi @match cases or typed methods",
+                    extra_labels=moshi_domain_bridge_labels(
+                        scope,
+                        function_fact,
+                        modeling_facts,
+                    ),
+                ),
+            )
+        end
+    end
+    findings
+end
+
 function moshi_modeling_facts(parsed_files::Vector{ParsedJuliaFile})
     [
         fact for parsed in parsed_files for fact in parsed.syntax_facts.moshi if
@@ -72,6 +112,19 @@ function moshi_domain_model_satisfied(
     !isempty(modeled_tokens) && all(token -> token in modeled_tokens, literal_tokens)
 end
 
+function moshi_match_bridge_satisfied(
+    function_fact::JuliaFunctionSyntax,
+    modeling_facts::Vector{JuliaMoshiSyntax},
+)
+    isempty(modeling_facts) && return false
+    literal_tokens = normalized_domain_tokens(function_fact.stringly_branch_literals)
+    if isempty(literal_tokens)
+        return any(fact -> fact.kind == "match" && !isempty(fact.case_names), modeling_facts)
+    end
+    case_tokens = moshi_match_case_tokens(modeling_facts)
+    !isempty(case_tokens) && all(token -> token in case_tokens, literal_tokens)
+end
+
 function moshi_domain_model_summary(
     scope::JuliaProjectHarnessScope,
     function_fact::JuliaFunctionSyntax,
@@ -102,6 +155,12 @@ function moshi_domain_model_repair_path(scope::JuliaProjectHarnessScope)
         return "Moshi is a direct dependency; keep it only if it is core API, otherwise move the modeling surface behind `[weakdeps]` and `[extensions]`."
     end
     "If Moshi is chosen, add it through `[weakdeps]`, `[compat]`, and `[extensions]`; otherwise use a package-owned enum, Symbol, or value type."
+end
+
+function moshi_domain_bridge_summary(function_fact::JuliaFunctionSyntax)
+    literal_suffix = isempty(function_fact.stringly_branch_literals) ? "" :
+                     " Covered literals: $(join(function_fact.stringly_branch_literals, ", "))."
+    "Exported/public method `$(function_fact.terminal_name)` has a Moshi `@data` domain model but no parser-visible `@match` cases covering its stringly branch domain.$(literal_suffix) Convert the stringly boundary once, then branch on the Moshi domain model instead of repeating string comparisons."
 end
 
 function moshi_domain_model_labels(
@@ -146,6 +205,55 @@ function moshi_modeling_tokens(modeling_facts::Vector{JuliaMoshiSyntax})
         end
     end
     tokens
+end
+
+function moshi_match_case_tokens(modeling_facts::Vector{JuliaMoshiSyntax})
+    tokens = Set{String}()
+    for fact in modeling_facts
+        fact.kind == "match" || continue
+        for case_name in fact.case_names
+            token = normalized_domain_token(case_name)
+            isempty(token) && continue
+            push!(tokens, token)
+        end
+    end
+    tokens
+end
+
+function moshi_domain_bridge_labels(
+    scope::JuliaProjectHarnessScope,
+    function_fact::JuliaFunctionSyntax,
+    modeling_facts::Vector{JuliaMoshiSyntax},
+)
+    labels = Dict(
+        "capability_source" => "Moshi",
+        "capabilities" => join(moshi_extension_capability_names(), ","),
+        "moshi_extension_state" => moshi_extension_repair_state(scope),
+        "moshi_extension_target" => moshi_extension_repair_target(scope),
+        "moshi_model_coverage" => moshi_model_coverage_label(
+            function_fact,
+            modeling_facts,
+        ),
+        "moshi_match_coverage" => moshi_match_coverage_label(
+            function_fact,
+            modeling_facts,
+        ),
+    )
+    if !isempty(function_fact.stringly_branch_literals)
+        labels["stringly_branch_literals"] = join(function_fact.stringly_branch_literals, ",")
+    end
+    labels
+end
+
+function moshi_match_coverage_label(
+    function_fact::JuliaFunctionSyntax,
+    modeling_facts::Vector{JuliaMoshiSyntax},
+)
+    literal_tokens = normalized_domain_tokens(function_fact.stringly_branch_literals)
+    case_tokens = moshi_match_case_tokens(modeling_facts)
+    isempty(case_tokens) && return "missing_match_cases"
+    missing = [token for token in literal_tokens if !(token in case_tokens)]
+    isempty(missing) ? "covered" : "missing=$(join(missing, ","))"
 end
 
 function normalized_domain_tokens(values::Vector{String})

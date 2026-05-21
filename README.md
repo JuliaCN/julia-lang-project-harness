@@ -121,7 +121,9 @@ Moshi is optional. The harness models it with Julia package extension mechanics:
 Moshi facts are parser-visible through `@data`, `@match`, and `@derive`.
 Stringly branch dispatch is not satisfied by any random Moshi macro: when branch
 literals are parser-visible, the Moshi `@data` variants must cover those domain
-literals.
+literals. A covered `@data` model should then be wired into real project logic
+with parser-visible `@match` cases or typed methods, so agents use Moshi as a
+domain bridge rather than as an unused policy token.
 
 ## Documentation Map
 

@@ -86,3 +86,39 @@ end
     @test occursin("example_project=examples/Project.toml", entry.detail)
     @test occursin("command=julia --project=examples -e", entry.detail)
 end
+
+@testset "project search index tags docs verification tasks" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "DocsSearch"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "docs"))
+    write(joinpath(root, "src", "DocsSearch.jl"), "module DocsSearch\nend\n")
+    write(
+        joinpath(root, "docs", "Project.toml"),
+        """
+        [deps]
+        Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+        """,
+    )
+    write(joinpath(root, "docs", "make.jl"), "using Documenter\nmakedocs()\n")
+
+    results = search_julia_project(root, "documenter"; tags=["verification", "docs"], limit=1)
+
+    @test length(results) == 1
+    entry = only(results).entry
+    @test entry.kind == "verification"
+    @test entry.name == "docs_build docs/make.jl"
+    @test "docs" in entry.tags
+    @test "documenter" in entry.tags
+    @test "runnable" in entry.tags
+    @test occursin("tool=Documenter", entry.detail)
+    @test occursin("docs_project=docs/Project.toml", entry.detail)
+    @test occursin("make=docs/make.jl", entry.detail)
+end

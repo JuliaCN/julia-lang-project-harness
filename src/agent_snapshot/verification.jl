@@ -61,6 +61,9 @@ function snapshot_verification_evidence(record::JuliaVerificationTaskRecord)
     keys = [
         "benchmark_project",
         "example_project",
+        "docs_project",
+        "make",
+        "tool",
         "entry",
         "activation",
         "responsibilities",

@@ -275,7 +275,7 @@ end
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R005", placeholder_report.findings) == 1
 end
 
-@testset "project runner reports conventional source scope exclusion" begin
+@testset "project runner accepts Pkg entryfile source without conventional src" begin
     root = mktempdir()
     write(
         joinpath(root, "Project.toml"),
@@ -289,10 +289,38 @@ end
     mkpath(joinpath(root, "src"))
     mkpath(joinpath(root, "lib"))
     write(joinpath(root, "lib", "Example.jl"), "module Example\nend\n")
-    config = default_julia_harness_config()
-    empty!(config.source_dir_names)
-    push!(config.source_dir_names, "lib")
-    config.source_path_explanations["lib"] = "project uses a package-local lib source root"
+    write(joinpath(root, "src", "Stale.jl"), "module Stale\nusing MissingPkg\nend\n")
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test report.project_scope.source_paths == [joinpath(root, "lib")]
+end
+
+@testset "project runner reports conventional test scope exclusion" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    default_config = default_julia_harness_config()
+    config = JuliaHarnessConfig(
+        copy(default_config.ignored_dir_names),
+        copy(default_config.blocking_severities),
+        copy(default_config.disabled_rules),
+        copy(default_config.disabled_rule_explanations),
+        copy(default_config.rule_severity_overrides),
+        copy(default_config.rule_severity_override_explanations),
+        copy(default_config.blocking_severity_explanations),
+        false,
+        copy(default_config.source_dir_names),
+        copy(default_config.test_dir_names),
+        copy(default_config.source_path_explanations),
+        copy(default_config.test_path_explanations),
+        copy(default_config.source_path_exclusion_explanations),
+        copy(default_config.test_path_exclusion_explanations),
+        default_config.agent_advice_allow_explanation,
+    )
 
     report = run_julia_project_harness(root; config)
     rendered = render_julia_project_harness(report)

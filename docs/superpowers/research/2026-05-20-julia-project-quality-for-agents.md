@@ -57,15 +57,19 @@ verification receipts over universal formatting taste.
 High-quality Julia project work starts from the active package environment, not
 from a loose directory scan. `Project.toml` owns package identity, direct
 dependencies, weak dependencies, extensions, compatibility, extras, targets,
-and workspace membership. `Manifest.toml` can be important evidence for
-applications or shared workspaces, but harness policy should not invent a
-version lock where the package intends resolver-compatible library behavior.
+local source dependencies, and workspace membership. `Manifest.toml` can be
+important evidence for applications or shared workspaces, but harness policy
+should not invent a version lock where the package intends resolver-compatible
+library behavior.
 
 Agent implication:
 
 - Discover the project root from `Project.toml`.
 - Read `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`, `[extras]`,
-  `[targets]`, and `[workspace]` as structured package facts.
+  `[targets]`, `[sources]`, and `[workspace]` as structured package facts.
+- Use `entryfile`, declared extensions, `[sources].path`, and workspace
+  members to decide the harness scope before falling back to configured
+  directories.
 - Treat `test/`, `docs/`, and `benchmarks/` projects as first-class package
   environments when they have their own `Project.toml`.
 - Prefer compat and resolver facts over arbitrary branch or version pinning.

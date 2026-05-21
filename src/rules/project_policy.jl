@@ -167,6 +167,9 @@ function conventional_scope_exclusion_findings(
 )
     full_path = joinpath(scope.project_root, conventional_name)
     ispath(full_path) || return JuliaHarnessFinding[]
+    label == "source" && !pkg_owns_conventional_source_scope(scope, full_path) &&
+        return JuliaHarnessFinding[]
+    conventional_scope_is_monitored(scope, full_path, label) && return JuliaHarnessFinding[]
     conventional_name in configured_names && return JuliaHarnessFinding[]
     has_path_explanation(explanations, scope.project_root, conventional_name) &&
         return JuliaHarnessFinding[]
@@ -178,6 +181,36 @@ function conventional_scope_exclusion_findings(
             label="add a concrete exclusion explanation or restore the conventional scope",
         ),
     ]
+end
+
+function conventional_scope_is_monitored(
+    scope::JuliaProjectHarnessScope,
+    full_path::AbstractString,
+    label::AbstractString,
+)
+    monitored_paths = label == "test" ? scope.test_paths : scope.source_paths
+    any(path -> same_project_policy_path(path, full_path), monitored_paths)
+end
+
+function same_project_policy_path(left::AbstractString, right::AbstractString)
+    normpath(left) == normpath(right)
+end
+
+function pkg_owns_conventional_source_scope(
+    scope::JuliaProjectHarnessScope,
+    conventional_path::AbstractString,
+)
+    if !isnothing(scope.project_entryfile)
+        entry_path = isabspath(scope.project_entryfile) ? normpath(scope.project_entryfile) :
+                     normpath(joinpath(scope.project_root, scope.project_entryfile))
+        return project_policy_path_under(entry_path, conventional_path)
+    end
+    true
+end
+
+function project_policy_path_under(path::AbstractString, root::AbstractString)
+    relative = relpath(path, root)
+    relative == "." || (!startswith(relative, "..") && !isabspath(relative))
 end
 
 function has_path_explanation(

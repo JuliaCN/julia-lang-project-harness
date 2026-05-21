@@ -18,6 +18,8 @@ function reasoning_tree_root_detail(scope::JuliaProjectHarnessScope)
         push!(segments, "entry=$(display_project_path(scope, scope.package_entry_path))")
     !isempty(scope.workspace_projects) &&
         push!(segments, "workspace=$(length(scope.workspace_projects))")
+    !isempty(scope.source_dependency_projects) &&
+        push!(segments, "source-deps=$(length(scope.source_dependency_projects))")
     join(segments, " ")
 end
 

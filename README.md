@@ -8,8 +8,8 @@ verified through the same `Pkg.test` loop the package already owns.
 This is not a Rust harness port. The Rust harness is an experience source; this
 package translates the useful ideas into Julia's own project model:
 
-- `Project.toml` and `Pkg` define package roots, dependencies, weakdeps,
-  extensions, test targets, and workspace members.
+- `Project.toml` and `Pkg` define package roots, dependency scopes, weakdeps,
+  extensions, test targets, local source dependencies, and workspace members.
 - `JuliaSyntax.jl` defines syntax facts for policy, search, snapshots, and
   repair advice.
 - Literal `include(...)` graphs and package entry modules define practical
@@ -24,12 +24,12 @@ The core design target is quality for agents, not a generic style checklist.
 The harness makes important Julia project facts visible before an agent edits:
 
 - public API intent through docstrings, exports, `public`, and method families;
-- project ownership through entry modules, includes, modules, source paths,
-  extension owners, and test owners;
+- project ownership through Pkg entry files, local source dependencies,
+  declared extensions, test owners, includes, and modules;
 - algorithm shape through control-flow depth, branch count, loops, pipeline
   calls, and macro-heavy public surfaces;
 - dependency shape through `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`,
-  `[extras]`, `[targets]`, and `[workspace]`;
+  `[extras]`, `[targets]`, `[sources]`, and `[workspace]`;
 - verification duties through package tests, syntax search, docs/doctests,
   extension boundaries, performance, stress, and chaos task advice;
 - policy escape surfaces that require concrete explanations instead of silent

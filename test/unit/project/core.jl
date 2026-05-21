@@ -54,6 +54,30 @@ end
     @test occursin("entryfile=src/Entry.jl", snapshot)
 end
 
+@testset "project runner uses Pkg entryfile as source scope" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+        entryfile = "lib/Entry.jl"
+        """,
+    )
+    mkpath(joinpath(root, "lib"))
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "lib", "Entry.jl"), "module Example\nend\n")
+    write(joinpath(root, "src", "Stale.jl"), "module Stale\nusing MissingPkg\nend\n")
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test report.project_scope.source_paths == [joinpath(root, "lib")]
+    @test any(file -> file.path == joinpath(root, "lib", "Entry.jl"), report.files)
+    @test !any(file -> file.path == joinpath(root, "src", "Stale.jl"), report.files)
+end
+
 @testset "project runner captures Project.toml dependency facts" begin
     root = mktempdir()
     write(
@@ -106,6 +130,7 @@ end
     @test scope.compat["WeakThing"] == "1"
     @test scope.sources["JuliaSyntax"]["rev"] == "a713779e3a8dbf1fe03c659009dab6eb006cbb31"
     @test scope.extensions["ExampleWeakExt"] == ["WeakThing"]
+    @test isempty(scope.source_dependency_projects)
     @test scope.extension_paths == [joinpath(root, "ext")]
 end
 
@@ -220,6 +245,21 @@ end
     @test occursin("ext/ExampleMoshiExt.jl @data=Mode", snapshot)
 end
 
+@testset "project runner ignores ext files without Pkg extensions" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(joinpath(root, "ext", "LooseExt.jl"), "module LooseExt\nusing MissingPkg\nend\n")
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(report.project_scope.extension_paths)
+    @test !any(file -> file.path == joinpath(root, "ext", "LooseExt.jl"), report.files)
+end
+
 @testset "project runner reports weakdep imports outside extensions" begin
     root = mktempdir()
     write(
@@ -251,6 +291,42 @@ end
     @test occursin("JULIA-PROJ-R008", rendered)
     @test occursin("Imported package is missing from Project.toml", rendered)
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R008", report.findings) == 1
+end
+
+@testset "project runner evaluates local Pkg source dependency scopes" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Root"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        LocalDep = "22222222-2222-2222-2222-222222222222"
+
+        [sources]
+        LocalDep = {path = "deps/LocalDep"}
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "deps", "LocalDep", "src"))
+    write(joinpath(root, "src", "Root.jl"), "module Root\nusing LocalDep\nend\n")
+    write_project(joinpath(root, "deps", "LocalDep"), "LocalDep")
+    write(
+        joinpath(root, "deps", "LocalDep", "src", "LocalDep.jl"),
+        "module LocalDep\nusing JSON3\nend\n",
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test !JuliaLangProjectHarness.is_clean(report)
+    @test report.project_scope.source_dependency_projects == ["deps/LocalDep"]
+    @test length(report.workspace_member_scopes) == 1
+    @test only(report.workspace_member_scopes).package_name == "LocalDep"
+    @test occursin("JULIA-PROJ-R008", rendered)
+    @test occursin("deps/LocalDep/src/LocalDep.jl", rendered)
 end
 
 @testset "project runner captures workspace member scopes" begin

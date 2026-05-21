@@ -5,6 +5,8 @@ function snapshot_project_lines(scope::JuliaProjectHarnessScope)
     !isnothing(scope.project_entryfile) && push!(lines, "- entryfile=$(scope.project_entryfile)")
     !isempty(scope.workspace_projects) &&
         push!(lines, "- workspace=$(join(scope.workspace_projects, ","))")
+    !isempty(scope.source_dependency_projects) &&
+        push!(lines, "- source-deps=$(join(scope.source_dependency_projects, ","))")
     dependency_line = compact_project_dependency_line(scope)
     !isempty(dependency_line) && push!(lines, "- $(dependency_line)")
     target_line = compact_project_targets_line(scope)

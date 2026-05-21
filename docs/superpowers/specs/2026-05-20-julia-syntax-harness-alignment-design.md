@@ -176,23 +176,27 @@ valid and avoid inventing policy from partial knowledge.
 
 Project runner mode starts from a project root.
 
-Discovery should treat `Project.toml` as the package authority. It should parse
-the manifest facts through a parser-owned TOML helper, not by ad hoc string
-search. The first facts needed are:
+Discovery should treat `Project.toml` as the package authority. It should read
+project facts through `Pkg.Types.read_project`, not by ad hoc string search.
+The first facts needed are:
 
 - package name;
 - uuid when present;
 - direct dependencies;
 - weak dependencies when present;
 - extras and targets used by tests;
-- configured test target shape when present.
+- configured test target shape when present;
+- local source dependencies from `[sources].path`;
+- workspace member projects.
 
-Default project scope:
+Default project scope should be Pkg-derived:
 
-- `src/`
-- package entry file `src/<PackageName>.jl` when present
-- `test/runtests.jl`
-- additional `.jl` files under `test/`
+- the package entry root from `entryfile` or `src/<PackageName>.jl`;
+- declared package extension roots when `[extensions]` is present;
+- `test/runtests.jl` and additional `.jl` files under `test/` when tests are
+  included;
+- workspace members from `[workspace]`;
+- local package dependencies from `[sources].path`;
 - optional `examples/` only as package examples, not public source API
 - optional `benchmark/` and `perf/` later through verification policy, not in
   the first blocking rule set

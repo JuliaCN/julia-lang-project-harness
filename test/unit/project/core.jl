@@ -78,6 +78,42 @@ end
     @test !any(file -> file.path == joinpath(root, "src", "Stale.jl"), report.files)
 end
 
+@testset "project runner records package-owned auxiliary paths for search" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "docs"))
+    mkpath(joinpath(root, "examples"))
+    mkpath(joinpath(root, "benchmark"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(
+        joinpath(root, "docs", "Project.toml"),
+        """
+        [deps]
+        Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+        """,
+    )
+    write(joinpath(root, "docs", "make.jl"), "using Documenter\nmakedocs()\n")
+    write(joinpath(root, "examples", "Project.toml"), "[deps]\n")
+    write(joinpath(root, "examples", "runexamples.jl"), "println(\"example\")\n")
+    write(joinpath(root, "benchmark", "runbenchmarks.jl"), "println(\"benchmark\")\n")
+
+    report = run_julia_project_harness(root)
+    scope = report.project_scope
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test scope.package_paths == sort!(
+        [
+            joinpath(root, "benchmark"),
+            joinpath(root, "docs"),
+            joinpath(root, "examples"),
+        ],
+    )
+    @test !any(file -> startswith(file.path, joinpath(root, "docs")), report.files)
+    @test !any(file -> startswith(file.path, joinpath(root, "examples")), report.files)
+    @test !any(file -> startswith(file.path, joinpath(root, "benchmark")), report.files)
+end
+
 @testset "project runner captures Project.toml dependency facts" begin
     root = mktempdir()
     write(

@@ -48,7 +48,24 @@ function owner_search_role(scope::JuliaProjectHarnessScope, path::AbstractString
     is_test_path(scope, path) && return "test"
     any(extension_path -> is_path_under(path, extension_path), scope.extension_paths) && return "extension"
     any(source_path -> is_path_under(path, source_path), scope.source_paths) && return "source"
+    role = package_search_role(scope, path)
+    !isnothing(role) && return role
     "owner"
+end
+
+function package_search_role(scope::JuliaProjectHarnessScope, path::AbstractString)
+    for package_path in scope.package_paths
+        is_path_under(path, package_path) || continue
+        relative_root = slash_path(relpath(package_path, scope.project_root))
+        top_segment = first(split(relative_root, '/'))
+        top_segment == "docs" && return "docs"
+        top_segment == "examples" && return "example"
+        if relative_root in ("benchmark", "benchmarks", "perf", "test/perf")
+            return "benchmark"
+        end
+        return "package"
+    end
+    nothing
 end
 
 function owner_search_tags(role::AbstractString, parsed::ParsedJuliaFile)

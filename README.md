@@ -86,6 +86,10 @@ modes when a tool needs structured records.
 index exposes the same task records as `verification` entries, so an agent can
 query for `example`, `benchmark`, `docs`, `extension`, or `receipt` duties before it
 decides what to edit or test.
+Project search also parses package-owned Julia files in docs, examples, and
+benchmark roots with source tags such as `docs`, `example`, and `benchmark`.
+Those paths enrich agent context without turning auxiliary Documenter/example
+imports into blocking main-package policy findings.
 
 ## Rule Packs
 

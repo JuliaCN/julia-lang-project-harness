@@ -77,6 +77,7 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
     source_paths = pkg_source_paths(root, project_facts, config)
     extension_paths = pkg_extension_paths(root, project_facts)
     test_paths = config.include_tests ? pkg_test_paths(root, project_facts, config) : String[]
+    package_paths = pkg_package_paths(root)
     JuliaProjectHarnessScope(
         root,
         project_facts.path,
@@ -97,7 +98,7 @@ function julia_project_harness_scope(project_root::AbstractString, config::Julia
         source_paths,
         extension_paths,
         test_paths,
-        String[],
+        package_paths,
         String[],
     )
 end

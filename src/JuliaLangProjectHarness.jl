@@ -21,6 +21,7 @@ include("verification/receipt_templates.jl")
 include("verification/receipts.jl")
 include("verification/advice.jl")
 include("verification/profile_index.jl")
+include("moshi_extension.jl")
 include("cli.jl")
 
 export JuliaDiagnosticSeverity,
@@ -55,6 +56,7 @@ export JuliaDiagnosticSeverity,
     julia_rule_pack_descriptors,
     julia_syntax_rules,
     julia_lang_search_index,
+    moshi_extension_capabilities,
     read_julia_verification_receipts_json,
     render_julia_project_harness,
     render_julia_project_harness_advice,

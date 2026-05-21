@@ -453,7 +453,9 @@ Initial advisory rules:
   or `@repl` examples for exported/public API names.
 - `AGENT-JL-R020`: exported stringly domain methods with branch dispatch lack a
   typed domain model; if Moshi is chosen, it should stay optional through
-  `[weakdeps]` and `[extensions]` unless it is core API.
+  `[weakdeps]` and `[extensions]` unless it is core API. The harness self-applies
+  this by exposing `JuliaLangProjectHarnessMoshiExt`, which uses Moshi only when
+  the weak dependency is loaded.
 - `AGENT-JL-R021`: external method definitions lack a parser-visible
   package-owned dispatch type or a concrete interop/type-piracy contract.
 

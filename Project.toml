@@ -7,14 +7,22 @@ JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 JuliaSyntax = "70703baa-626e-46a2-a12c-08ffd08c73b4"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
+[weakdeps]
+Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+[extensions]
+JuliaLangProjectHarnessMoshiExt = "Moshi"
+
 [sources]
 JuliaSyntax = {rev = "a713779e3a8dbf1fe03c659009dab6eb006cbb31", url = "https://github.com/JuliaLang/JuliaSyntax.jl"}
 
 [compat]
 JSON3 = "1"
+Moshi = "0.3"
 
 [extras]
+Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Moshi", "Test"]

@@ -267,6 +267,9 @@ Already implemented or designed:
 - Documenter docs projects with `docs/Project.toml` and `docs/make.jl` produce
   a `docs_build` verification task so agents can run docs and doctest checks as
   part of project verification.
+- Package extensions produce `extension_boundary` verification advice with
+  parser/Pkg evidence about whether weakdeps are activated by the package test
+  target or still need an Agent-added activation path.
 - Moshi is treated as an optional expression layer for ADTs and pattern
   matching. The harness parses `@data`, `@match`, and `@derive` as JuliaSyntax
   facts, but policy tells agents to keep Moshi behind `[weakdeps]` and
@@ -274,9 +277,9 @@ Already implemented or designed:
 
 Useful next policy slices:
 
-- Package extension verification should distinguish optional weakdep extension
-  paths from core API paths and ask agents to run both default and extension
-  activation checks when the project exposes extension owners.
+- Workspace-level verification receipts should distinguish root package tasks
+  from member package tasks so agents can close multi-package evidence without
+  confusing owners.
 
 ## Agent Operating Checklist
 

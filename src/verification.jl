@@ -156,36 +156,6 @@ function syntax_search_verification_task(scope::JuliaProjectHarnessScope)
     )
 end
 
-function extension_verification_tasks(scope::JuliaProjectHarnessScope)
-    records = JuliaVerificationTaskRecord[]
-    for (extension_name, dependencies) in sort(collect(scope.extensions); by=first)
-        owner_path = extension_owner_path(scope, extension_name)
-        push!(
-            records,
-            JuliaVerificationTaskRecord(
-                verification_fingerprint(
-                    "extension",
-                    verification_scope_fingerprint(scope),
-                    verification_owner_fingerprint_part(scope, owner_path),
-                ),
-                "extension_boundary",
-                "pending",
-                "after_unit_tests_pass",
-                scope.project_root,
-                owner_path,
-                nothing,
-                ["julia", "--project=$(scope.project_root)", "-e", "using Pkg; Pkg.test()"],
-                verification_evidence(
-                    "extension" => extension_name,
-                    "weakdeps" => join(dependencies, ","),
-                ),
-                "Run package tests with extension dependency boundaries in scope.",
-            ),
-        )
-    end
-    records
-end
-
 function docs_verification_tasks(scope::JuliaProjectHarnessScope)
     docs_root = joinpath(scope.project_root, "docs")
     docs_project = joinpath(docs_root, "Project.toml")
@@ -227,6 +197,7 @@ end
 
 const JULIA_AGENT_VERIFICATION_TASK_KINDS = Set([
     "chaos",
+    "extension_boundary",
     "performance",
     "security",
     "stress",

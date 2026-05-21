@@ -61,12 +61,14 @@ function extension_profile_candidates(scope::JuliaProjectHarnessScope)
         JuliaVerificationProfileCandidate(
             scope.project_root,
             extension_owner_path(scope, extension_name),
-            "inferred",
+            extension_activation_state(scope, dependencies),
             ["extension_boundary"],
             ["extension_boundary", "pkg_test"],
             verification_evidence(
                 "extension" => extension_name,
                 "weakdeps" => join(dependencies, ","),
+                "activation" => extension_activation_state(scope, dependencies),
+                "test_target" => extension_test_target_summary(scope),
             ),
         ) for (extension_name, dependencies) in sort(collect(scope.extensions); by=first)
     ]

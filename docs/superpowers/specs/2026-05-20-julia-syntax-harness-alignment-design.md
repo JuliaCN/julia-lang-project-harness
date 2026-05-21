@@ -333,7 +333,9 @@ The first Julia-native task families are:
 - `syntax_search`: smoke the JuliaSyntax-derived search index when this harness
   is available in the project;
 - `extension_boundary`: run package tests with package extension weakdeps in
-  scope.
+  scope; if the extension weakdeps are not mounted in the test target, emit
+  Agent advice to add or run an extension activation path before treating the
+  package test gate as complete.
 - `docs_build`: run a Documenter docs build, including doctests, when
   `docs/Project.toml` depends on Documenter and `docs/make.jl` exists.
 

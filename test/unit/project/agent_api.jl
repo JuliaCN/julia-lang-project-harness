@@ -329,6 +329,7 @@ end
     root = mktempdir()
     write_project(root, "Example")
     mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
     write(
         joinpath(root, "src", "Example.jl"),
         """
@@ -343,6 +344,16 @@ end
             values
         end
         end
+        """,
+    )
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using Test
+        using Example
+
+        values = [1.0, 2.0]
+        @test normalize!(values) === values
         """,
     )
 

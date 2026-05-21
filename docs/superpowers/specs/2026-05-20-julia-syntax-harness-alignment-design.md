@@ -497,9 +497,12 @@ Initial advisory rules:
 - `AGENT-JL-R027`: documented public failure contracts lack parser-visible
   `@test_throws` coverage in package tests. This keeps invalid-input behavior
   executable in `Pkg.test` instead of stopping at doc text.
+- `AGENT-JL-R028`: documented public `!` mutation contracts lack
+  parser-visible package tests that call the mutating API. This keeps in-place
+  behavior executable in `Pkg.test` instead of stopping at doc text.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R027`. Later advisory rules can land only after the needed
+`AGENT-JL-R028`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

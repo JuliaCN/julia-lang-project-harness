@@ -216,4 +216,12 @@ julia_agent_policy_rules() = [
         "Cover documented exported Julia failure contracts with parser-visible `@test_throws` tests so invalid-input behavior stays executable in `Pkg.test`.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R028,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public mutation contract lacks a test",
+        "Cover documented exported mutating Julia methods with parser-visible package tests that call the `!` API.",
+        labels("agent-policy"),
+    ),
 ]

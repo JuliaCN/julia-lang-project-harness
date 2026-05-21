@@ -60,7 +60,17 @@ function verification_task_records_for_scope(
         push!(records, harness_self_policy_verification_task(scope))
         push!(records, syntax_search_verification_task(scope))
     end
-    append!(records, inferred_verification_task_records(scope, parsed_files))
+    benchmark_records = benchmark_verification_tasks(scope)
+    append!(records, benchmark_records)
+    excluded_inferred_task_kinds = Set{String}(record.kind for record in benchmark_records)
+    append!(
+        records,
+        inferred_verification_task_records(
+            scope,
+            parsed_files;
+            exclude_task_kinds=excluded_inferred_task_kinds,
+        ),
+    )
     append!(records, extension_verification_tasks(scope))
     append!(records, docs_verification_tasks(scope))
     filter(!isnothing, records)
@@ -205,13 +215,16 @@ const JULIA_AGENT_VERIFICATION_TASK_KINDS = Set([
 
 function inferred_verification_task_records(
     scope::JuliaProjectHarnessScope,
-    parsed_files::Vector{ParsedJuliaFile},
+    parsed_files::Vector{ParsedJuliaFile};
+    exclude_task_kinds::Set{String}=Set{String}(),
 )
     candidate = project_responsibility_profile_candidate(scope, parsed_files)
     isnothing(candidate) && return JuliaVerificationTaskRecord[]
     [
         inferred_verification_task_record(scope, candidate, task_kind) for
-        task_kind in candidate.task_kinds if task_kind in JULIA_AGENT_VERIFICATION_TASK_KINDS
+        task_kind in candidate.task_kinds if
+        task_kind in JULIA_AGENT_VERIFICATION_TASK_KINDS &&
+        !(task_kind in exclude_task_kinds)
     ]
 end
 

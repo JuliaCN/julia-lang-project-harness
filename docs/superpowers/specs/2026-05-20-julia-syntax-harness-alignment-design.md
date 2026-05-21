@@ -344,6 +344,10 @@ The first Julia-native task families are:
   package test gate as complete.
 - `docs_build`: run a Documenter docs build, including doctests, when
   `docs/Project.toml` depends on Documenter and `docs/make.jl` exists.
+- `performance`: run a project-owned benchmark or strict perf entry discovered
+  from `benchmark/`, `benchmarks/`, `perf/`, or `test/perf/`. A local benchmark
+  `Project.toml` owns activation when present; otherwise the root package
+  project owns the command.
 
 Each task should carry a stable fingerprint, kind, state, phase, project root,
 owner path, command, compact evidence, and short reason. This is intentionally
@@ -671,7 +675,9 @@ exception.
 
 The task index should project these inferred responsibilities into pending
 agent obligations. Ordinary `pkg_test`, self-policy, extension, and syntax-search
-records can carry runnable commands. External evidence families such as
+records can carry runnable commands. Explicit benchmark/perf records should also
+carry runnable commands and should replace duplicate inferred performance
+records for the same scope. External evidence families such as
 `stress`, `performance`, `chaos`, and `security` should carry owner path,
 fingerprint, lifecycle phase, compact parser/project evidence, and a reason for
 what the agent should add or run next. They should also expose required evidence

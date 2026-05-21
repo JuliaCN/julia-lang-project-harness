@@ -140,3 +140,48 @@ end
     @test occursin("Pkg.test()", join(extension_task.command, " "))
     @test extension_candidate.state == "test_target"
 end
+
+@testset "verification task index includes project-owned benchmark gates" begin
+    root = mktempdir()
+    write_benchmark_verification_project(root)
+
+    index = build_julia_verification_task_index(root)
+    performance_tasks = [record for record in index.records if record.kind == "performance"]
+    rendered = render_julia_verification_task_index(index)
+    advice = render_julia_verification_pending_advice(
+        build_julia_project_verification_profile(root),
+    )
+
+    @test [record.kind for record in index.records] == [
+        "performance",
+        "performance",
+        "pkg_test",
+    ]
+    @test [relpath(record.owner_path, root) for record in performance_tasks] == [
+        joinpath("benchmark", "runbenchmarks.jl"),
+        joinpath("test", "perf", "runtests.jl"),
+    ]
+    @test performance_tasks[1].command == [
+        "julia",
+        "--project=$(joinpath(root, "benchmark"))",
+        "-e",
+        "cd($(repr(root))) do; include(\"benchmark/runbenchmarks.jl\"); end",
+    ]
+    @test performance_tasks[2].command == [
+        "julia",
+        "--project=$(root)",
+        "-e",
+        "cd($(repr(root))) do; include(\"test/perf/runtests.jl\"); end",
+    ]
+    @test performance_tasks[1].evidence["benchmark_project"] == "benchmark/Project.toml"
+    @test performance_tasks[1].evidence["activation"] == "local_project"
+    @test performance_tasks[2].evidence["benchmark_project"] == "root"
+    @test performance_tasks[2].evidence["activation"] == "root_project"
+    @test occursin("kind=performance", rendered)
+    @test occursin("owner=benchmark/runbenchmarks.jl", rendered)
+    @test occursin("benchmark_command=julia", rendered)
+    @test !occursin("algorithm_shapes=branchy,nested-loop", rendered)
+    @test occursin("[verify-advice] pending=2", advice)
+    @test occursin("entry=benchmark/runbenchmarks.jl", advice)
+    @test occursin("benchmark_command=julia", advice)
+end

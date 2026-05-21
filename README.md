@@ -45,7 +45,8 @@ The harness makes important Julia project facts visible before an agent edits:
 - dependency shape through `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`,
   `[extras]`, `[targets]`, `[sources]`, and `[workspace]`;
 - verification duties through package tests, syntax search, docs/doctests,
-  extension boundaries, performance, stress, and chaos task advice;
+  extension boundaries, project-owned benchmark/perf gates, performance,
+  stress, and chaos task advice;
 - policy escape surfaces that require concrete explanations instead of silent
   suppression.
 

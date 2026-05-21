@@ -322,6 +322,13 @@ Already implemented or designed:
 - Documenter docs projects with `docs/Project.toml` and `docs/make.jl` produce
   a `docs_build` verification task so agents can run docs and doctest checks as
   part of project verification.
+- Conventional Julia benchmark and strict performance entries under
+  `benchmark/`, `benchmarks/`, `perf/`, and `test/perf/` produce explicit
+  `performance` tasks. If a local benchmark `Project.toml` exists, the command
+  activates that environment; otherwise it runs from the package root project.
+  These runnable tasks suppress duplicate inferred performance advice while
+  still requiring receipts for benchmark command, baseline, threshold, runtime
+  or allocation metric, and artifact.
 - Package extensions produce `extension_boundary` verification advice with
   parser/Pkg evidence about whether weakdeps are activated by the package test
   target or still need an Agent-added activation path.

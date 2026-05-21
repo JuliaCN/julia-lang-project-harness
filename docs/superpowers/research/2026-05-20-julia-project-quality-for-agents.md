@@ -321,6 +321,9 @@ Already implemented or designed:
 - Agent snapshots include compact verification tasks so a single context packet
   can show package ownership, syntax facts, findings, and the next runnable
   gates an agent should use.
+- Search index entries include verification tasks in Project.toml-rooted mode,
+  allowing agents to retrieve benchmark, docs, extension, and receipt-required
+  gates with the same search API used for syntax facts.
 - Config escape surfaces require explanations.
 - Documenter docs projects with `docs/Project.toml` and `docs/make.jl` produce
   a `docs_build` verification task so agents can run docs and doctest checks as

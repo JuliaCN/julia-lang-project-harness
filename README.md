@@ -47,6 +47,8 @@ The harness makes important Julia project facts visible before an agent edits:
 - verification duties through package tests, syntax search, docs/doctests,
   extension boundaries, project-owned benchmark/perf gates, performance,
   stress, and chaos task advice;
+- verification duties as searchable agent context, so `search_julia_project`
+  can find benchmark, docs, extension, and receipt-required gates;
 - policy escape surfaces that require concrete explanations instead of silent
   suppression.
 
@@ -80,9 +82,10 @@ julia --project=. bin/julia-project-harness.jl --search route --tag method .
 Use compact text first when another agent needs to repair the project. Use JSON
 modes when a tool needs structured records.
 
-`--agent-snapshot` also includes a compact `Verification:` section. That lets an
-agent see the package reasoning tree and the next runnable gates in one context
-packet before it decides what to edit or test.
+`--agent-snapshot` also includes a compact `Verification:` section. The search
+index exposes the same task records as `verification` entries, so an agent can
+query for `benchmark`, `docs`, `extension`, or `receipt` duties before it
+decides what to edit or test.
 
 ## Rule Packs
 

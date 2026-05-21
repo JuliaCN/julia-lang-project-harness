@@ -402,3 +402,5 @@ end
     @test_throws ErrorException julia_project_search_index(missing)
     @test_throws ErrorException search_julia_index(JuliaSearchIndexEntry[], "run"; limit=-1)
 end
+
+include("search_index/verification.jl")

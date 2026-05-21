@@ -282,23 +282,25 @@ LLM context selection and ordinary project lookup. The index must be derived
 from `JuliaSyntax` facts owned by the parser layer, so search behavior and
 policy behavior agree on source locations and syntax classification.
 
-Initial entries should cover project owners, definitions, public API
-declarations, imports, tests, includes, call references, bindings, docstrings,
-and identifier occurrences. Owner entries are only emitted in
+Initial entries should cover project owners, verification tasks, definitions,
+public API declarations, imports, tests, includes, call references, bindings,
+docstrings, and identifier occurrences. Owner and verification entries are only emitted in
 Project.toml-rooted mode, where the runner has enough scope facts to identify
-entry, source, extension, and test owners. A call reference is a real invocation
-in code, macro arguments, or test expressions. Function and macro definition
-signatures are not call references. A docstring entry is only emitted from a
-JuliaSyntax `doc` node with a named target; ordinary string literals are not
-treated as documentation. An identifier entry is a syntax occurrence with its
-immediate parent kind; it is intentionally low-level so later reference
-classifiers can build on real syntax facts instead of rescanning text.
+entry, source, extension, test owners, and project-owned verification gates. A
+verification entry should reuse the task index rather than reconstructing
+project policy from strings. A call reference is a real invocation in code,
+macro arguments, or test expressions. Function and macro definition signatures
+are not call references. A docstring entry is only emitted from a JuliaSyntax
+`doc` node with a named target; ordinary string literals are not treated as
+documentation. An identifier entry is a syntax occurrence with its immediate
+parent kind; it is intentionally low-level so later reference classifiers can
+build on real syntax facts instead of rescanning text.
 
 Each search entry should carry:
 
 - stable source location;
-- kind, such as `owner`, `module`, `function`, `struct`, `call`, `doc`,
-  `identifier`, `include`, or `test`;
+- kind, such as `owner`, `verification`, `module`, `function`, `struct`,
+  `call`, `doc`, `identifier`, `include`, or `test`;
 - name;
 - detail text for disambiguation;
 - combined search text;

@@ -201,6 +201,8 @@ Agent implication:
   behavior remains executable in the same package test loop.
 - Cover documented public mutation contracts by calling the `!` API in package
   tests, so in-place behavior is not only described in prose.
+- Cover documented concrete return/type-stability contracts with `@inferred`
+  tests so public precision remains executable in `Pkg.test`.
 - Cover public safety or performance evidence contracts by calling the unsafe
   owner API in package tests, so risky implementation choices stay executable
   in `Pkg.test`.
@@ -227,6 +229,8 @@ Harness implication:
   contracts by parser-visible call names.
 - Test call facts should connect public `!` method contracts back to package
   tests that actually exercise the mutating API.
+- Test facts should connect `@inferred` coverage back to public concrete
+  return/type-stability contracts.
 - Testset shape facts should flag nested loops plus guard branches in package
   tests, because those broad scenario matrices are hard for agents to repair
   one behavior at a time.
@@ -303,14 +307,15 @@ Already implemented or designed:
 - Advisory rules cover public docs, bool/stringly arguments, exported-name
   conflicts, large owner fanout, public algorithm shape, scattered method
   families, macro-heavy APIs, public return contracts, public failure
-  contracts, public failure `@test_throws` coverage, mutable global state,
-  public abstract field types, struct field contracts, mutable-struct mutation
-  contracts, mutating-method mutation contracts, mutating-method test
-  coverage, parser-visible testset scenario-shape advice, unsafe construct
-  evidence contracts, unsafe evidence test coverage, public generic API type
-  coverage, Documenter public API doctest examples, Moshi-optional typed domain
-  modeling advice, external-method type-piracy risk, in-test verification
-  hooks, and internal nested traversal shape.
+  contracts, public return `@inferred` coverage, public failure contracts,
+  public failure `@test_throws` coverage, mutable global state, public abstract
+  field types, struct field contracts, mutable-struct mutation contracts,
+  mutating-method mutation contracts, mutating-method test coverage,
+  parser-visible testset scenario-shape advice, unsafe construct evidence
+  contracts, unsafe evidence test coverage, public generic API type coverage,
+  Documenter public API doctest examples, Moshi-optional typed domain modeling
+  advice, external-method type-piracy risk, in-test verification hooks, and
+  internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.

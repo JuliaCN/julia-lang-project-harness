@@ -507,9 +507,12 @@ Initial advisory rules:
   for unsafe constructs lack parser-visible package tests that call the public
   API. This prevents agents from satisfying risky code paths with prose-only
   verification claims.
+- `AGENT-JL-R031`: documented concrete return/type-stability contracts lack
+  parser-visible `@inferred` package tests. This keeps public return precision
+  executable in `Pkg.test` instead of stopping at doc text.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R030`. Later advisory rules can land only after the needed
+`AGENT-JL-R031`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

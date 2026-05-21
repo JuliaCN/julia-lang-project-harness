@@ -23,7 +23,7 @@
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
 end
 
-@testset "project runner accepts documented public return annotation contract" begin
+@testset "project runner reports documented public return contract without inferred test" begin
     root = mktempdir()
     write_project(root, "Example")
     mkpath(joinpath(root, "src"))
@@ -34,6 +34,43 @@ end
         export encode
         \"\"\"Return contract: returns a String payload for the wire format.\"\"\"
         encode(payload)::String = string(payload)
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R031", rendered)
+    @test occursin("Public return contract lacks an inferred test", rendered)
+    @test occursin("return/type-stability contract `::String`", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts inferred public return contract test" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export encode
+        \"\"\"Return contract: returns a String payload for the wire format.\"\"\"
+        encode(payload)::String = string(payload)
+        end
+        """,
+    )
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using Test
+        using Example
+
+        @testset "return contract" begin
+            @inferred encode(:payload)
         end
         """,
     )

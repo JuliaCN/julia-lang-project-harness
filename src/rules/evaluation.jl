@@ -72,6 +72,13 @@ function evaluate_agent_policy_rules(
             function_docs_by_name,
             rules,
         ))
+        append!(findings, public_return_contract_test_findings(
+            scope,
+            parsed_files,
+            public_names,
+            function_docs_by_name,
+            rules,
+        ))
         append!(findings, public_failure_contract_findings(
             parsed_files,
             public_names,

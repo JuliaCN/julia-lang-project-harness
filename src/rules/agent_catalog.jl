@@ -240,4 +240,12 @@ julia_agent_policy_rules() = [
         "Cover documented exported Julia safety or performance evidence contracts with parser-visible package tests that call the public API.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R031,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public return contract lacks an inferred test",
+        "Cover documented concrete return/type-stability contracts with parser-visible `@inferred` package tests.",
+        labels("agent-policy"),
+    ),
 ]

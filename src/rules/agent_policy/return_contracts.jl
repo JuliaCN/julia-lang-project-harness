@@ -45,6 +45,47 @@ function public_return_contract_findings(
     findings
 end
 
+function public_return_contract_test_findings(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+    public_names::Set{String},
+    function_docs_by_name::Dict{String,Vector{String}},
+    rules::Dict{String,JuliaHarnessRule},
+)
+    inferred_names = inferred_test_call_names(scope, parsed_files)
+    findings = JuliaHarnessFinding[]
+    reported = Set{String}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        is_test_path(scope, parsed.report.path) && continue
+        for function_fact in parsed.syntax_facts.functions
+            function_fact.kind == "function" || continue
+            name = function_fact.terminal_name
+            name in public_names || continue
+            is_narrow_public_return_annotation(function_fact) || continue
+            has_return_contract_doc(function_docs_by_name, name) || continue
+            name in inferred_names && continue
+            name in reported && continue
+            push!(reported, name)
+            push!(
+                findings,
+                finding_from_rule(
+                    rules[AGENT_JL_R031];
+                    summary="Exported/public method `$(name)` documents return/type-stability contract `::$(function_fact.return_type)` but package tests do not cover it with `@inferred`.",
+                    location=SourceLocation(
+                        parsed.report.path,
+                        function_fact.line,
+                        function_fact.column,
+                    ),
+                    source_line=source_line(parsed.source, function_fact.line),
+                    label="add an @inferred package test for this public return contract",
+                ),
+            )
+        end
+    end
+    findings
+end
+
 function is_narrow_public_return_annotation(function_fact::JuliaFunctionSyntax)
     isnothing(function_fact.return_type) && return false
     return_type = strip(function_fact.return_type)
@@ -57,6 +98,44 @@ function is_narrow_public_return_annotation(function_fact::JuliaFunctionSyntax)
         where_parameter_names(function_fact.where_parameters),
     ) && return false
     true
+end
+
+function inferred_test_call_names(
+    scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
+)
+    names = Set{String}()
+    for parsed in parsed_files
+        parsed.report.is_valid || continue
+        is_test_path(scope, parsed.report.path) || continue
+        for test_fact in parsed.syntax_facts.tests
+            test_fact.kind == "inferred" || continue
+            union!(names, inferred_test_call_names(test_fact))
+        end
+    end
+    names
+end
+
+function inferred_test_call_names(test_fact::JuliaTestSyntax)
+    try
+        syntax = JuliaSyntax.parseall(JuliaSyntax.SyntaxNode, test_fact.expression)
+        names = Set{String}()
+        collect_inferred_test_call_names!(names, syntax)
+        names
+    catch
+        Set{String}()
+    end
+end
+
+function collect_inferred_test_call_names!(names::Set{String}, node::JuliaSyntax.SyntaxNode)
+    if syntax_kind(node) == "call"
+        name = call_expression_name(node)
+        !isnothing(name) && push!(names, terminal_public_name(name))
+    end
+    for child in syntax_children(node)
+        collect_inferred_test_call_names!(names, child)
+    end
+    names
 end
 
 function where_parameter_names(parameters::Vector{String})

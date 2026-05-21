@@ -597,9 +597,11 @@ which responsibility family is present:
 This is an adaptation of the Rust harness verification profile design, but the
 signals are Julia-native: package dependencies, stdlibs such as `SHA` or
 `LinearAlgebra`, data/persistence packages such as `JSON3`, network packages
-such as `HTTP`, file/process calls, and performance-related calls/macros. The
-agent should use this inferred profile as the default verification plan and only
-write explicit config when it needs to explain a true exception.
+such as `HTTP`, file/process calls, performance-related calls/macros, and
+parser-visible algorithm shapes such as `branchy`, `nested-loop`, and
+`broad-body`. The agent should use this inferred profile as the default
+verification plan and only write explicit config when it needs to explain a true
+exception.
 
 The task index should project these inferred responsibilities into pending
 agent obligations. Ordinary `pkg_test`, self-policy, extension, and syntax-search

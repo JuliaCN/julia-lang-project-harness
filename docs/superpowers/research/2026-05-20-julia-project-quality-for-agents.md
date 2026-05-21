@@ -179,9 +179,10 @@ Agent implication:
 
 Harness implication:
 
-- Performance rules should be advisory until there is project evidence:
-  benchmark files, test receipts, JET/profile receipts, or explicit hot-owner
-  tags.
+- Performance verification should be inferred from project evidence: benchmark
+  files, test receipts, JET/profile receipts, explicit hot-owner tags, or
+  parser-visible algorithm shapes such as `nested-loop`, `branchy`, and
+  `broad-body`.
 - Unsafe and escape-like constructs should require explanation and evidence,
   not a silent config disable.
 
@@ -259,9 +260,6 @@ Already implemented or designed:
 
 Useful next policy slices:
 
-- Hot owners with `nested-loop`, `branchy`, or `broad-body` search tags should
-  receive performance-verification advice when benchmarks or profiling tools
-  exist in the project.
 - Public generic APIs should get type-coverage advice when tests only exercise
   a single narrow input shape.
 

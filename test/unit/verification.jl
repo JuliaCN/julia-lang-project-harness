@@ -94,6 +94,39 @@ function write_responsibility_project(root::AbstractString)
     )
 end
 
+function write_algorithm_shape_project(root::AbstractString)
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ShapeExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "ShapeExample.jl"),
+        """
+        module ShapeExample
+        function scan_values(rows)
+            total = 0
+            for row in rows
+                for value in row
+                    if value > 0
+                        total += value
+                    end
+                    if isodd(value)
+                        total += 1
+                    end
+                end
+            end
+            total
+        end
+        end
+        """,
+    )
+end
+
 function write_documenter_project(root::AbstractString)
     write(
         joinpath(root, "Project.toml"),
@@ -230,6 +263,37 @@ end
     @test occursin("kind=docs_build", rendered)
     @test occursin("owner=docs/make.jl", rendered)
     @test occursin("Build Documenter docs and run doctests", rendered)
+end
+
+@testset "verification profile infers performance from algorithm shape" begin
+    root = mktempdir()
+    write_algorithm_shape_project(root)
+
+    index = build_julia_verification_profile_index(root)
+    candidate = only(index.candidates)
+    rendered = render_julia_verification_profile_index(index)
+
+    @test candidate.responsibilities == ["latency_sensitive"]
+    @test candidate.task_kinds == ["pkg_test", "performance"]
+    @test candidate.evidence["algorithm_shapes"] == "branchy,nested-loop"
+    @test candidate.evidence["hot_function_count"] == "1"
+    @test candidate.evidence["hot_functions"] ==
+          "src/ShapeExample.jl:scan_values:branchy+nested-loop"
+    @test occursin("responsibilities=latency_sensitive", rendered)
+    @test occursin("algorithm_shapes=branchy,nested-loop", rendered)
+
+    task_index = build_julia_verification_task_index(root)
+    task_kinds = [record.kind for record in task_index.records]
+    task_rendered = render_julia_verification_task_index(task_index)
+    advice = render_julia_verification_pending_advice(
+        build_julia_project_verification_profile(root),
+    )
+
+    @test task_kinds == ["performance", "pkg_test"]
+    @test occursin("kind=performance", task_rendered)
+    @test occursin("algorithm_shapes=branchy,nested-loop", task_rendered)
+    @test occursin("hot_functions=src/ShapeExample.jl:scan_values", advice)
+    @test occursin("requires=benchmark_command,baseline,regression_threshold", advice)
 end
 
 @testset "verification profile infers agent responsibilities from project facts" begin

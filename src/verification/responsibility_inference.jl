@@ -88,6 +88,10 @@ const JULIA_PERFORMANCE_CALLS = Set([
     "reduce",
 ])
 const JULIA_PERFORMANCE_MACROS = Set(["distributed", "simd", "spawn", "threads"])
+const JULIA_ALGORITHM_SHAPE_LABEL_ORDER = ["branchy", "nested-loop", "broad-body"]
+const MIN_VERIFICATION_BRANCHY_BRANCH_COUNT = 2
+const MIN_VERIFICATION_LOOP_NESTING_DEPTH = 2
+const MIN_VERIFICATION_BROAD_BODY_STATEMENTS = 8
 
 Base.@kwdef mutable struct JuliaVerificationResponsibilitySignals
     public_names::Set{String} = Set{String}()
@@ -101,6 +105,8 @@ Base.@kwdef mutable struct JuliaVerificationResponsibilitySignals
     process_calls::Set{String} = Set{String}()
     performance_calls::Set{String} = Set{String}()
     performance_macros::Set{String} = Set{String}()
+    algorithm_shapes::Set{String} = Set{String}()
+    hot_functions::Set{String} = Set{String}()
 end
 
 function project_responsibility_profile_candidate(
@@ -136,6 +142,7 @@ function julia_verification_responsibility_signals(
         parsed.report.is_valid || continue
         collect_import_responsibility_signals!(signals, parsed, direct_roots)
         collect_call_responsibility_signals!(signals, parsed)
+        collect_algorithm_shape_responsibility_signals!(signals, scope, parsed)
     end
     signals
 end
@@ -181,6 +188,45 @@ function collect_call_responsibility_signals!(
     end
 end
 
+function collect_algorithm_shape_responsibility_signals!(
+    signals::JuliaVerificationResponsibilitySignals,
+    scope::JuliaProjectHarnessScope,
+    parsed::ParsedJuliaFile,
+)
+    is_test_path(scope, parsed.report.path) && return signals
+    for function_fact in parsed.syntax_facts.functions
+        labels = algorithm_shape_labels(function_fact)
+        isempty(labels) && continue
+        union!(signals.algorithm_shapes, labels)
+        push!(
+            signals.hot_functions,
+            algorithm_shape_owner_label(scope, parsed, function_fact, labels),
+        )
+    end
+    signals
+end
+
+function algorithm_shape_labels(function_fact::JuliaFunctionSyntax)
+    labels = Set{String}()
+    function_fact.branch_count >= MIN_VERIFICATION_BRANCHY_BRANCH_COUNT &&
+        push!(labels, "branchy")
+    function_fact.loop_nesting_depth >= MIN_VERIFICATION_LOOP_NESTING_DEPTH &&
+        push!(labels, "nested-loop")
+    function_fact.body_statement_count >= MIN_VERIFICATION_BROAD_BODY_STATEMENTS &&
+        push!(labels, "broad-body")
+    ordered_labels(labels, JULIA_ALGORITHM_SHAPE_LABEL_ORDER)
+end
+
+function algorithm_shape_owner_label(
+    scope::JuliaProjectHarnessScope,
+    parsed::ParsedJuliaFile,
+    function_fact::JuliaFunctionSyntax,
+    labels::Vector{String},
+)
+    owner = verification_owner_fingerprint_part(scope, parsed.report.path)
+    "$(owner):$(function_fact.terminal_name):$(join(labels, "+"))"
+end
+
 function add_julia_dependency_root_signal!(
     signals::JuliaVerificationResponsibilitySignals,
     root::AbstractString,
@@ -222,7 +268,8 @@ function inferred_julia_verification_responsibilities(
         push!(responsibilities, "security_boundary")
     if !isempty(signals.performance_roots) ||
        !isempty(signals.performance_calls) ||
-       !isempty(signals.performance_macros)
+       !isempty(signals.performance_macros) ||
+       !isempty(signals.algorithm_shapes)
         push!(responsibilities, "latency_sensitive")
     end
     !isempty(signals.network_roots) && push!(responsibilities, "availability_critical")
@@ -253,6 +300,9 @@ function verification_responsibility_evidence(
     add_set_evidence!(evidence, "process_calls", signals.process_calls)
     add_set_evidence!(evidence, "performance_calls", signals.performance_calls)
     add_set_evidence!(evidence, "performance_macros", signals.performance_macros)
+    add_set_evidence!(evidence, "algorithm_shapes", signals.algorithm_shapes)
+    add_count_evidence!(evidence, "hot_function_count", length(signals.hot_functions))
+    add_capped_set_evidence!(evidence, "hot_functions", signals.hot_functions, 4)
     evidence
 end
 

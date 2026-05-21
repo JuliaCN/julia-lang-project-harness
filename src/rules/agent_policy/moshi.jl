@@ -18,14 +18,15 @@ function moshi_domain_model_findings(
                 findings,
                 finding_from_rule(
                     rules[AGENT_JL_R020];
-                    summary=moshi_domain_model_summary(function_fact),
+                    summary=moshi_domain_model_summary(scope, function_fact),
                     location=SourceLocation(
                         parsed.report.path,
                         function_fact.line,
                         function_fact.column,
                     ),
                     source_line=source_line(parsed.source, function_fact.line),
-                    label="model the domain with a typed carrier, or make Moshi an optional extension",
+                    label=moshi_domain_model_label(scope),
+                    extra_labels=moshi_domain_model_labels(scope),
                 ),
             )
         end
@@ -56,6 +57,52 @@ function is_stringly_branch_dispatch(function_fact::JuliaFunctionSyntax)
         function_fact.branch_count >= MOSHI_DOMAIN_BRANCH_THRESHOLD
 end
 
-function moshi_domain_model_summary(function_fact::JuliaFunctionSyntax)
-    "Exported/public method `$(function_fact.terminal_name)` branches over stringly domain arguments: $(join(function_fact.stringly_domain_args, ", ")). Prefer a typed domain carrier; Moshi `@data`/`@match` is optional and should stay behind `[weakdeps]`/`[extensions]` when it is not required by core API."
+function moshi_domain_model_summary(
+    scope::JuliaProjectHarnessScope,
+    function_fact::JuliaFunctionSyntax,
+)
+    "Exported/public method `$(function_fact.terminal_name)` branches over stringly domain arguments: $(join(function_fact.stringly_domain_args, ", ")). Prefer a typed domain carrier. $(moshi_domain_model_repair_path(scope))"
+end
+
+function moshi_domain_model_label(scope::JuliaProjectHarnessScope)
+    state = moshi_extension_repair_state(scope)
+    state == "weakdep_without_extension" &&
+        return "add `$(moshi_extension_repair_target(scope))` and model this domain with Moshi @data/@match"
+    state == "direct_dep_without_extension" &&
+        return "move Moshi behind weakdeps/extensions or document why it is core API"
+    "model the domain with a package-owned value type, or add a Moshi weakdep extension first"
+end
+
+function moshi_domain_model_repair_path(scope::JuliaProjectHarnessScope)
+    state = moshi_extension_repair_state(scope)
+    if state == "weakdep_without_extension"
+        return "Moshi is already a weak dependency; add an `[extensions]` entry such as `$(moshi_extension_repair_name(scope))` and place the ADT/pattern-match surface in `$(moshi_extension_repair_target(scope))`."
+    elseif state == "direct_dep_without_extension"
+        return "Moshi is a direct dependency; keep it only if it is core API, otherwise move the modeling surface behind `[weakdeps]` and `[extensions]`."
+    end
+    "If Moshi is chosen, add it through `[weakdeps]`, `[compat]`, and `[extensions]`; otherwise use a package-owned enum, Symbol, or value type."
+end
+
+function moshi_domain_model_labels(scope::JuliaProjectHarnessScope)
+    Dict(
+        "capability_source" => "Moshi",
+        "capabilities" => join(moshi_extension_capability_names(), ","),
+        "moshi_extension_state" => moshi_extension_repair_state(scope),
+        "moshi_extension_target" => moshi_extension_repair_target(scope),
+    )
+end
+
+function moshi_extension_repair_state(scope::JuliaProjectHarnessScope)
+    has_moshi_optional_extension(scope) && return "configured"
+    haskey(scope.weak_dependencies, "Moshi") && return "weakdep_without_extension"
+    haskey(scope.direct_dependencies, "Moshi") && return "direct_dep_without_extension"
+    "missing_weakdep"
+end
+
+function moshi_extension_repair_name(scope::JuliaProjectHarnessScope)
+    "$(something(scope.package_name, "<PackageName>"))MoshiExt"
+end
+
+function moshi_extension_repair_target(scope::JuliaProjectHarnessScope)
+    "ext/$(moshi_extension_repair_name(scope)).jl"
 end

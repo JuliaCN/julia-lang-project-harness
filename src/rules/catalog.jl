@@ -275,7 +275,14 @@ function rules_by_id()
     )
 end
 
-function finding_from_rule(rule::JuliaHarnessRule; summary, location, source_line=nothing, label)
+function finding_from_rule(
+    rule::JuliaHarnessRule;
+    summary,
+    location,
+    source_line=nothing,
+    label,
+    extra_labels=Dict{String,String}(),
+)
     JuliaHarnessFinding(
         rule.rule_id,
         rule.pack_id,
@@ -286,6 +293,6 @@ function finding_from_rule(rule::JuliaHarnessRule; summary, location, source_lin
         rule.requirement,
         source_line,
         label,
-        copy(rule.labels),
+        merge(copy(rule.labels), extra_labels),
     )
 end

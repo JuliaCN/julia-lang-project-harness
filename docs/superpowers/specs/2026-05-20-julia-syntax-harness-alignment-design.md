@@ -459,7 +459,10 @@ Initial advisory rules:
   the Moshi extension activation state and capability labels from project facts
   so agents can plan the typed-domain repair before loading the weak dependency.
   Verification task/profile evidence should include those capability labels so
-  the package-test loop can guide the agent toward the same repair path.
+  the package-test loop can guide the agent toward the same repair path. R020
+  findings should include project-local labels for whether Moshi is missing,
+  only a weak dependency, or already extension-backed, plus the likely extension
+  repair target.
 - `AGENT-JL-R021`: external method definitions lack a parser-visible
   package-owned dispatch type or a concrete interop/type-piracy contract.
 

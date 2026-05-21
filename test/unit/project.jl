@@ -1360,7 +1360,66 @@ end
     @test JuliaLangProjectHarness.is_clean(report)
     @test occursin("AGENT-JL-R020", rendered)
     @test occursin("Stringly branch dispatch lacks a typed domain model", rendered)
-    @test occursin("Moshi `@data`/`@match` is optional", rendered)
+    @test occursin("add it through `[weakdeps]`, `[compat]`, and `[extensions]`", rendered)
+    finding = only(
+        finding for finding in JuliaLangProjectHarness.advisory_findings(report) if
+        finding.rule_id == "AGENT-JL-R020"
+    )
+    @test finding.labels["capability_source"] == "Moshi"
+    @test finding.labels["capabilities"] == "syntax,domain-model,search"
+    @test finding.labels["moshi_extension_state"] == "missing_weakdep"
+    @test finding.labels["moshi_extension_target"] == "ext/ExampleMoshiExt.jl"
+end
+
+@testset "project runner advises Moshi weakdep extension repair target" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export route
+
+        \"\"\"Route a value by mode.\"\"\"
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif mode == "safe"
+                value
+            else
+                value
+            end
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+    finding = only(
+        finding for finding in JuliaLangProjectHarness.advisory_findings(report) if
+        finding.rule_id == "AGENT-JL-R020"
+    )
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("Moshi is already a weak dependency", rendered)
+    @test occursin("ext/ExampleMoshiExt.jl", rendered)
+    @test finding.labels["moshi_extension_state"] == "weakdep_without_extension"
+    @test finding.labels["moshi_extension_target"] == "ext/ExampleMoshiExt.jl"
 end
 
 @testset "project runner suppresses Moshi domain advice with optional extension model" begin

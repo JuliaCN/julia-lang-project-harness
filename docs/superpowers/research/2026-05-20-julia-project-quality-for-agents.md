@@ -279,6 +279,8 @@ Already implemented or designed:
   capability labels without requiring the core process to load Moshi first.
   Verification tasks and profiles carry the same capability evidence, so an
   agent can see typed-domain repair affordances directly in the test log.
+  Stringly-domain findings also carry project-local labels for the Moshi
+  extension state and likely `ext/<PackageName>MoshiExt.jl` repair target.
 
 Useful next policy slices:
 

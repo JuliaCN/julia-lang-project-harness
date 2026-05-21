@@ -318,6 +318,9 @@ Already implemented or designed:
   internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
+- Agent snapshots include compact verification tasks so a single context packet
+  can show package ownership, syntax facts, findings, and the next runnable
+  gates an agent should use.
 - Config escape surfaces require explanations.
 - Documenter docs projects with `docs/Project.toml` and `docs/make.jl` produce
   a `docs_build` verification task so agents can run docs and doctest checks as

@@ -30,6 +30,7 @@ function render_julia_project_harness_agent_snapshot(
         parsed_files_for_scope(scope, parsed_files),
         findings;
         workspace_member_scopes,
+        config,
     )
 end
 
@@ -39,6 +40,7 @@ function render_julia_package_snapshot(
     findings::Vector{JuliaHarnessFinding},
     ;
     workspace_member_scopes=JuliaProjectHarnessScope[],
+    config=default_julia_harness_config(),
 )
     source_count = count(
         parsed -> any(source_path -> is_path_under(parsed.report.path, source_path), scope.source_paths),
@@ -116,6 +118,11 @@ function render_julia_package_snapshot(
     if !isempty(test_lines)
         rendered *= "Tests:\n"
         rendered *= join(test_lines, "\n") * "\n"
+    end
+    verification_lines = snapshot_verification_lines(scope, parsed_files, config)
+    if !isempty(verification_lines)
+        rendered *= "Verification:\n"
+        rendered *= join(verification_lines, "\n") * "\n"
     end
     include_lines = compact_include_lines(scope, parsed_files)
     if !isempty(include_lines)
@@ -362,3 +369,4 @@ end
 include("agent_snapshot/reasoning_tree.jl")
 include("agent_snapshot/moshi.jl")
 include("agent_snapshot/project.jl")
+include("agent_snapshot/verification.jl")

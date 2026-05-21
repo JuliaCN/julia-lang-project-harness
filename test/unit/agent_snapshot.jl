@@ -65,9 +65,50 @@
     @test occursin("macros=1", rendered)
     @test occursin("Tests:", rendered)
     @test occursin("test/runtests.jl testsets=\"core\" test=2", rendered)
+    @test occursin("Verification:", rendered)
+    @test occursin("kind=chaos", rendered)
+    @test occursin("kind=pkg_test", rendered)
+    @test occursin("command=julia --project=. -e", rendered)
+    @test occursin("kind=stress", rendered)
+    @test occursin("requires=scenario,load_steps,p50_ms,p99_ms,threshold,result", rendered)
     @test occursin("Includes:", rendered)
     @test occursin("src/Example.jl -> src/api.jl", rendered)
     @test !occursin("FindingGroups:", rendered)
+end
+
+@testset "agent snapshot verification includes benchmark gates" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "benchmark"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        \"\"\"Run a value.\"\"\"
+        run(value) = value
+        end
+        """,
+    )
+    write(
+        joinpath(root, "benchmark", "Project.toml"),
+        """
+        [deps]
+        BenchmarkTools = "6e4b80f9-dd2c-5a6d-8f14-7f3c1d9e8f4a"
+        """,
+    )
+    write(joinpath(root, "benchmark", "runbenchmarks.jl"), "println(\"benchmark\")\n")
+
+    rendered = render_julia_project_harness_agent_snapshot(root)
+
+    @test occursin("Verification:", rendered)
+    @test occursin("kind=performance", rendered)
+    @test occursin("owner=benchmark/runbenchmarks.jl", rendered)
+    @test occursin("command=julia --project=benchmark -e", rendered)
+    @test occursin("evidence=benchmark_project=benchmark/Project.toml", rendered)
+    @test occursin("entry=benchmark/runbenchmarks.jl", rendered)
+    @test occursin("requires=benchmark_command,baseline,regression_threshold", rendered)
 end
 
 @testset "agent snapshot finding groups" begin

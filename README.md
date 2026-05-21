@@ -80,6 +80,10 @@ julia --project=. bin/julia-project-harness.jl --search route --tag method .
 Use compact text first when another agent needs to repair the project. Use JSON
 modes when a tool needs structured records.
 
+`--agent-snapshot` also includes a compact `Verification:` section. That lets an
+agent see the package reasoning tree and the next runnable gates in one context
+packet before it decides what to edit or test.
+
 ## Rule Packs
 
 Current rule packs are split by intent:

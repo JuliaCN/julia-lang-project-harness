@@ -268,7 +268,10 @@ Imports:
 ```
 
 The exact text can change during implementation, but the contract is stable:
-agents get owner and dependency shape without reading a full JSON report.
+agents get owner, dependency, and verification shape without reading a full JSON
+report. The snapshot should include a compact `Verification:` section with task
+kind, phase, owner, command when runnable, selected evidence, and required
+receipt keys when external evidence is needed.
 
 ## Search Index
 

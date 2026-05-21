@@ -199,6 +199,22 @@ function test_syntax_from_macro_invocation(
     )
 end
 
+function moshi_syntax_from_macro_invocation(
+    node::JuliaSyntax.SyntaxNode,
+    invocation::JuliaMacroInvocationSyntax,
+)
+    invocation.terminal_name in MOSHI_MACRO_NAMES || return nothing
+    location = JuliaSyntax.source_location(node)
+    JuliaMoshiSyntax(
+        location[1],
+        location[2] - 1,
+        invocation.terminal_name,
+        invocation.name,
+        moshi_macro_target_name(node, invocation.terminal_name),
+        invocation.expression,
+    )
+end
+
 const TEST_MACRO_NAMES = Set([
     "inferred",
     "test",
@@ -211,6 +227,24 @@ const TEST_MACRO_NAMES = Set([
     "test_warn",
     "testset",
 ])
+
+const MOSHI_MACRO_NAMES = Set(["data", "derive", "match"])
+
+function moshi_macro_target_name(node::JuliaSyntax.SyntaxNode, kind::AbstractString)
+    arguments = macro_arguments(node)
+    isempty(arguments) && return nothing
+    if kind in ("data", "derive")
+        return syntax_identifier_text(first(arguments))
+    elseif kind == "match"
+        return compact_syntax_text(first(arguments))
+    end
+    nothing
+end
+
+function syntax_identifier_text(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "Identifier" && return String(JuliaSyntax.sourcetext(node))
+    first_identifier_text(node)
+end
 
 function terminal_macro_name(node::JuliaSyntax.SyntaxNode)
     names = identifier_texts(node)

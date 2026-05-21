@@ -99,6 +99,7 @@ function julia_search_index(
         append!(entries, type_search_entries(parsed))
         append!(entries, type_field_search_entries(parsed))
         append!(entries, binding_search_entries(parsed))
+        append!(entries, moshi_search_entries(parsed))
         append!(entries, function_search_entries(parsed))
         append!(entries, function_argument_search_entries(parsed))
         append!(entries, call_search_entries(parsed))

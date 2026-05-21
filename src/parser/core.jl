@@ -51,6 +51,7 @@ function empty_julia_native_syntax_facts()
         JuliaTypeSyntax[],
         JuliaBindingSyntax[],
         JuliaMacroInvocationSyntax[],
+        JuliaMoshiSyntax[],
         JuliaCallSyntax[],
         JuliaDocstringSyntax[],
         JuliaIdentifierSyntax[],
@@ -68,6 +69,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaTypeSyntax[],
         JuliaBindingSyntax[],
         JuliaMacroInvocationSyntax[],
+        JuliaMoshiSyntax[],
         JuliaCallSyntax[],
         JuliaDocstringSyntax[],
         JuliaIdentifierSyntax[],
@@ -84,6 +86,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.types,
         collector.bindings,
         collector.macro_invocations,
+        collector.moshi,
         collector.calls,
         collector.docstrings,
         collector.identifiers,
@@ -100,6 +103,7 @@ mutable struct JuliaSyntaxFactCollector
     types::Vector{JuliaTypeSyntax}
     bindings::Vector{JuliaBindingSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
+    moshi::Vector{JuliaMoshiSyntax}
     calls::Vector{JuliaCallSyntax}
     docstrings::Vector{JuliaDocstringSyntax}
     identifiers::Vector{JuliaIdentifierSyntax}
@@ -136,6 +140,8 @@ function collect_julia_syntax_facts!(
         macro_invocation = macro_invocation_syntax_from_node(node)
         if !isnothing(macro_invocation)
             push!(collector.macro_invocations, macro_invocation)
+            moshi_fact = moshi_syntax_from_macro_invocation(node, macro_invocation)
+            !isnothing(moshi_fact) && push!(collector.moshi, moshi_fact)
             test_fact = test_syntax_from_macro_invocation(node, macro_invocation)
             !isnothing(test_fact) && push!(collector.tests, test_fact)
         end

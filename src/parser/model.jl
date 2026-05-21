@@ -114,6 +114,15 @@ struct JuliaMacroInvocationSyntax
     expression::String
 end
 
+struct JuliaMoshiSyntax
+    line::Int
+    column::Int
+    kind::String
+    macro_name::String
+    target_name::Union{Nothing,String}
+    expression::String
+end
+
 struct JuliaCallSyntax
     line::Int
     column::Int
@@ -165,6 +174,7 @@ struct JuliaNativeSyntaxFacts
     types::Vector{JuliaTypeSyntax}
     bindings::Vector{JuliaBindingSyntax}
     macro_invocations::Vector{JuliaMacroInvocationSyntax}
+    moshi::Vector{JuliaMoshiSyntax}
     calls::Vector{JuliaCallSyntax}
     docstrings::Vector{JuliaDocstringSyntax}
     identifiers::Vector{JuliaIdentifierSyntax}

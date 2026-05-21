@@ -449,9 +449,12 @@ Initial advisory rules:
   type.
 - `AGENT-JL-R019`: Documenter docs lack executable `jldoctest`, `@example`,
   or `@repl` examples for exported/public API names.
+- `AGENT-JL-R020`: exported stringly domain methods with branch dispatch lack a
+  typed domain model; if Moshi is chosen, it should stay optional through
+  `[weakdeps]` and `[extensions]` unless it is core API.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R019`. Later advisory rules can land only after the needed
+`AGENT-JL-R020`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API
@@ -588,9 +591,9 @@ for the common repair loop.
 
 The harness is primarily run by agents, so verification configuration should be
 derived before it is hand-authored. Project facts from `Project.toml` and native
-JuliaSyntax facts from imports, calls, macros, exports, extensions, and test
-entrypoints should produce compact `VerificationProfiles` that tell an agent
-which responsibility family is present:
+JuliaSyntax facts from imports, calls, macros, Moshi modeling forms, exports,
+extensions, and test entrypoints should produce compact `VerificationProfiles`
+that tell an agent which responsibility family is present:
 
 - `public_api` asks for ordinary package tests, syntax-search smoke coverage,
   and stress-style API validation;

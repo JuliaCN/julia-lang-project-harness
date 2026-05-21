@@ -324,12 +324,13 @@ function undeclared_import_findings(
         allowed = allowed_import_roots(scope, parsed.report.path, stdlib_roots)
         for imported in parsed.syntax_facts.imports
             is_relative_import(imported) && continue
-            imported.root in allowed && continue
+            dependency_root = imported_dependency_root(imported)
+            dependency_root in allowed && continue
             push!(
                 findings,
                 finding_from_rule(
                     rules[JULIA_PROJ_R008];
-                    summary="`$(imported.expression)` imports `$(imported.root)`, but `$(imported.root)` is not declared for this project scope.",
+                    summary="`$(imported.expression)` imports `$(imported.root)`, but package root `$(dependency_root)` is not declared for this project scope.",
                     location=SourceLocation(parsed.report.path, imported.line, imported.column),
                     source_line=source_line(parsed.source, imported.line),
                     label="add the package to Project.toml or make the import relative if it is project-local",
@@ -361,6 +362,10 @@ end
 function is_relative_import(imported::JuliaImportSyntax)
     expression = strip(imported.expression)
     startswith(expression, "using .") || startswith(expression, "import .")
+end
+
+function imported_dependency_root(imported::JuliaImportSyntax)
+    first(split(imported.root, "."))
 end
 
 function is_test_path(scope::JuliaProjectHarnessScope, path::AbstractString)

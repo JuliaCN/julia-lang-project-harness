@@ -152,4 +152,12 @@ julia_agent_policy_rules() = [
         "When a Julia package uses Documenter, document exported/public API with executable `jldoctest`, `@example`, or `@repl` examples instead of prose-only references.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R020,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Stringly branch dispatch lacks a typed domain model",
+        "When exported Julia methods branch over stringly domains, prefer a typed carrier; if Moshi ADTs or pattern matching are chosen, keep Moshi optional through `[weakdeps]` and `[extensions]` unless it is core API.",
+        labels("agent-policy"),
+    ),
 ]

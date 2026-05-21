@@ -186,6 +186,53 @@ end
     @test occursin("ext/ExampleJSONExt.jl module=ExampleJSONExt", snapshot)
 end
 
+@testset "project runner accepts optional Moshi extension imports" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+
+        [extensions]
+        ExampleMoshiExt = "Moshi"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(
+        joinpath(root, "ext", "ExampleMoshiExt.jl"),
+        """
+        module ExampleMoshiExt
+        using Example
+        using Moshi.Data: @data
+
+        @data Mode begin
+            Fast
+            Safe
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    snapshot = render_julia_project_harness_agent_snapshot(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("weakdeps=Moshi", snapshot)
+    @test occursin("extensions=ExampleMoshiExt=Moshi", snapshot)
+    @test occursin("Moshi:", snapshot)
+    @test occursin("ext/ExampleMoshiExt.jl @data=Mode", snapshot)
+end
+
 @testset "project runner reports weakdep imports outside extensions" begin
     root = mktempdir()
     write(
@@ -1277,6 +1324,102 @@ end
 
     @test JuliaLangProjectHarness.is_clean(report)
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
+@testset "project runner advises typed or optional Moshi domain model" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export route
+
+        \"\"\"Route a value by mode.\"\"\"
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif mode == "safe"
+                value
+            else
+                value
+            end
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R020", rendered)
+    @test occursin("Stringly branch dispatch lacks a typed domain model", rendered)
+    @test occursin("Moshi `@data`/`@match` is optional", rendered)
+end
+
+@testset "project runner suppresses Moshi domain advice with optional extension model" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+
+        [extensions]
+        ExampleMoshiExt = "Moshi"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export route
+
+        \"\"\"Route a value by mode.\"\"\"
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif mode == "safe"
+                value
+            else
+                value
+            end
+        end
+        end
+        """,
+    )
+    write(
+        joinpath(root, "ext", "ExampleMoshiExt.jl"),
+        """
+        module ExampleMoshiExt
+        using Example
+        using Moshi.Data: @data
+
+        @data Mode begin
+            Fast
+            Safe
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test !occursin("AGENT-JL-R020", rendered)
+    @test occursin("AGENT-JL-R004", rendered)
 end
 
 @testset "project runner reports stringly public domain advice" begin

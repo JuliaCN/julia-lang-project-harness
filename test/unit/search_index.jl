@@ -22,7 +22,12 @@
         module Example
         export run, Config, DEFAULT_LIMIT
         using Dates
+        using Moshi.Data: @data
         include("api.jl")
+        @data Mode begin
+            Fast
+            Safe
+        end
         Base.@kwdef struct Config
             value::Int
             mode::Symbol = :fast
@@ -117,6 +122,14 @@
                  "binding" in entry.tags &&
                  "constant" in entry.tags &&
                  occursin("::Int", entry.detail),
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "moshi" &&
+                 entry.name == "Mode" &&
+                 "moshi" in entry.tags &&
+                 "data" in entry.tags &&
+                 occursin("Moshi @data target=Mode", entry.detail),
         entries,
     )
     @test any(
@@ -221,6 +234,10 @@
     binding_results = search_julia_project(root, "DEFAULT_LIMIT"; tags=["binding"], limit=1)
     @test length(binding_results) == 1
     @test only(binding_results).entry.kind == "const"
+    moshi_results = search_julia_project(root, "Mode"; tags=["moshi"], limit=1)
+    @test length(moshi_results) == 1
+    @test only(moshi_results).entry.kind == "moshi"
+    @test only(moshi_results).entry.name == "Mode"
     shape_results = search_julia_project(root, "scan"; tags=["nested-loop"], limit=1)
     @test length(shape_results) == 1
     @test only(shape_results).entry.kind == "function"

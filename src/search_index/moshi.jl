@@ -1,0 +1,18 @@
+function moshi_search_entries(parsed::ParsedJuliaFile)
+    [
+        search_index_entry(
+            parsed,
+            moshi_fact.line,
+            moshi_fact.column,
+            "moshi",
+            something(moshi_fact.target_name, moshi_fact.kind);
+            detail=display_moshi_search_detail(moshi_fact),
+            tags=["macro", "moshi", moshi_fact.kind],
+        ) for moshi_fact in parsed.syntax_facts.moshi
+    ]
+end
+
+function display_moshi_search_detail(moshi_fact::JuliaMoshiSyntax)
+    target_suffix = isnothing(moshi_fact.target_name) ? "" : " target=$(moshi_fact.target_name)"
+    "Moshi @$(moshi_fact.kind)$(target_suffix)"
+end

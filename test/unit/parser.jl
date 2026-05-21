@@ -449,6 +449,43 @@ end
     ]
 end
 
+@testset "parser Moshi syntax facts" begin
+    temp = mktempdir()
+    source = joinpath(temp, "moshi.jl")
+    write(
+        source,
+        """
+        module MoshiShape
+        using Moshi.Data: @data
+        using Moshi.Match: @match
+        using Moshi.Derive: @derive
+
+        @data Message begin
+            Quit
+            Write(String)
+        end
+
+        @derive Message[Show, Hash]
+
+        function route(value)
+            @match value begin
+                Message.Quit() => nothing
+                Message.Write(text) => text
+            end
+        end
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+
+    @test [(item.kind, item.macro_name, item.target_name) for item in parsed.syntax_facts.moshi] == [
+        ("data", "@data", "Message"),
+        ("derive", "@derive", "Message"),
+        ("match", "@match", "value"),
+    ]
+end
+
 @testset "parser include facts" begin
     temp = mktempdir()
     source = joinpath(temp, "entry.jl")

@@ -44,6 +44,7 @@ Mature project and ecosystem references:
 - [JuMP Contributing Guide](https://jump.dev/JuMP.jl/stable/developers/contributing/)
 - [JuMP AI Policy](https://jump.dev/JuMP.jl/stable/developers/ai_policy/)
 - [DataFrames.jl contributing guide](https://raw.githubusercontent.com/JuliaData/DataFrames.jl/main/CONTRIBUTING.md)
+- [Moshi.jl](https://rogerluo.dev/Moshi.jl/)
 
 These sources do not fully agree on every style detail. That is useful signal:
 the harness should prefer project-local consistency, parser-visible intent, and
@@ -257,13 +258,18 @@ Already implemented or designed:
   families, macro-heavy APIs, struct field contracts, mutable-struct mutation
   contracts, mutating-method mutation contracts, unsafe construct evidence
   contracts, public generic API type coverage, Documenter public API doctest
-  examples, in-test verification hooks, and internal nested traversal shape.
+  examples, Moshi-optional typed domain modeling advice, in-test verification
+  hooks, and internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.
 - Documenter docs projects with `docs/Project.toml` and `docs/make.jl` produce
   a `docs_build` verification task so agents can run docs and doctest checks as
   part of project verification.
+- Moshi is treated as an optional expression layer for ADTs and pattern
+  matching. The harness parses `@data`, `@match`, and `@derive` as JuliaSyntax
+  facts, but policy tells agents to keep Moshi behind `[weakdeps]` and
+  `[extensions]` when it is not required by the core API.
 
 Useful next policy slices:
 

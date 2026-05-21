@@ -1,0 +1,137 @@
+# JuliaLangProjectHarness
+
+JuliaLangProjectHarness is a JuliaSyntax-native project harness for coding
+agents. Its purpose is to help an agent write higher-quality Julia project code:
+parser-stable, package-aware, easier for the next agent to understand, and
+verified through the same `Pkg.test` loop the package already owns.
+
+This is not a Rust harness port. The Rust harness is an experience source; this
+package translates the useful ideas into Julia's own project model:
+
+- `Project.toml` and `Pkg` define package roots, dependencies, weakdeps,
+  extensions, test targets, and workspace members.
+- `JuliaSyntax.jl` defines syntax facts for policy, search, snapshots, and
+  repair advice.
+- Literal `include(...)` graphs and package entry modules define practical
+  owner boundaries.
+- Compact text output is the primary agent surface; JSON remains available for
+  tools.
+- Self-apply stays active, so new policy must also keep this harness repairable.
+
+## Quality For Agents
+
+The core design target is quality for agents, not a generic style checklist.
+The harness makes important Julia project facts visible before an agent edits:
+
+- public API intent through docstrings, exports, `public`, and method families;
+- project ownership through entry modules, includes, modules, and source paths;
+- algorithm shape through control-flow depth, branch count, loops, pipeline
+  calls, and macro-heavy public surfaces;
+- dependency shape through `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`,
+  `[extras]`, `[targets]`, and `[workspace]`;
+- verification duties through package tests, syntax search, docs/doctests,
+  extension boundaries, performance, stress, and chaos task advice;
+- policy escape surfaces that require concrete explanations instead of silent
+  suppression.
+
+The intended reader of the output is an agent. A Julia package can compile and
+still be difficult for an agent to repair safely if intent, ownership,
+verification, or domain modeling is hidden in broad stringly code.
+
+## Agent Surfaces
+
+The package exposes several low-noise surfaces:
+
+```julia
+using JuliaLangProjectHarness
+
+run_julia_project_harness(pwd())
+render_julia_project_harness(run_julia_project_harness(pwd()))
+render_julia_project_harness_agent_snapshot(pwd())
+render_julia_verification_task_index(build_julia_verification_task_index(pwd()))
+search_julia_project(pwd(), "Mode"; tags=["moshi", "method"])
+```
+
+The CLI has the same shape:
+
+```sh
+julia --project=. bin/julia-project-harness.jl .
+julia --project=. bin/julia-project-harness.jl --agent-snapshot .
+julia --project=. bin/julia-project-harness.jl --verification-tasks .
+julia --project=. bin/julia-project-harness.jl --search route --tag method .
+```
+
+Use compact text first when another agent needs to repair the project. Use JSON
+modes when a tool needs structured records.
+
+## Rule Packs
+
+Current rule packs are split by intent:
+
+- `julia.syntax`: blocking JuliaSyntax parse failures.
+- `julia.project_policy`: blocking package, dependency, extension, test target,
+  and scope-policy checks.
+- `julia.modularity`: blocking source ownership and include-graph checks.
+- `julia.agent_policy`: advisory repair guidance for agent-friendly Julia APIs,
+  tests, docs, mutation contracts, unsafe evidence, type coverage, Moshi domain
+  modeling, and type-piracy risk.
+
+Advisory does not mean cosmetic. It means the package remains runnable while the
+harness tells the agent what would make the next repair safer.
+
+## Verification Loop
+
+For this harness repository, use:
+
+```sh
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
+julia --project=. -e 'using Pkg; Pkg.instantiate(); using JuliaLangProjectHarness; assert_julia_project_harness_test_profile_clean(pwd())'
+```
+
+`Manifest.toml` is generated locally by `Pkg.instantiate()` and `Pkg.test()`.
+This repository is a library-like harness, so the root manifest should not be
+committed unless the project policy changes deliberately.
+
+Downstream packages should mount the in-test profile when they depend on this
+harness:
+
+```julia
+using JuliaLangProjectHarness
+using Test
+
+@testset "package" begin
+    # package tests
+end
+
+assert_julia_project_harness_test_profile_clean(dirname(@__DIR__))
+```
+
+That lets `Pkg.test()` show the agent policy findings and verification duties
+in the same loop the agent already runs.
+
+## Moshi Extension
+
+Moshi is optional. The harness models it with Julia package extension mechanics:
+
+- root `[weakdeps]` declares `Moshi`;
+- `[extensions]` declares `JuliaLangProjectHarnessMoshiExt = "Moshi"`;
+- `[targets] test` activates Moshi for package tests;
+- core harness code does not require Moshi to load first.
+
+Moshi facts are parser-visible through `@data`, `@match`, and `@derive`.
+Stringly branch dispatch is not satisfied by any random Moshi macro: when branch
+literals are parser-visible, the Moshi `@data` variants must cover those domain
+literals.
+
+## Documentation Map
+
+Start here:
+
+- `docs/superpowers/research/2026-05-20-julia-project-quality-for-agents.md`
+  explains the quality model calibrated from Julia, Pkg, Documenter, and mature
+  package practices.
+- `docs/superpowers/specs/2026-05-20-julia-syntax-harness-alignment-design.md`
+  explains the parser-first harness design and current policy roadmap.
+
+When adding new policy, prefer parser facts first, then compact agent output,
+then tests that prove the advice cannot be bypassed by configuration alone.

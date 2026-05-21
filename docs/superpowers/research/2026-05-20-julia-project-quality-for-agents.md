@@ -201,6 +201,9 @@ Agent implication:
   behavior remains executable in the same package test loop.
 - Cover documented public mutation contracts by calling the `!` API in package
   tests, so in-place behavior is not only described in prose.
+- Cover public safety or performance evidence contracts by calling the unsafe
+  owner API in package tests, so risky implementation choices stay executable
+  in `Pkg.test`.
 - Prefer type-stable helper boundaries and function barriers over scattered
   local annotations.
 - Use `@inbounds`, `ccall`, `eval`, process execution, and unsafe operations
@@ -227,6 +230,9 @@ Harness implication:
 - Testset shape facts should flag nested loops plus guard branches in package
   tests, because those broad scenario matrices are hard for agents to repair
   one behavior at a time.
+- Unsafe construct facts should connect documented public evidence contracts
+  back to package tests that call the public API, rather than accepting
+  verification prose as enough.
 - Unsafe and escape-like constructs should require explanation and evidence,
   not a silent config disable.
 
@@ -301,10 +307,10 @@ Already implemented or designed:
   public abstract field types, struct field contracts, mutable-struct mutation
   contracts, mutating-method mutation contracts, mutating-method test
   coverage, parser-visible testset scenario-shape advice, unsafe construct
-  evidence contracts, public generic API type coverage, Documenter public API
-  doctest examples, Moshi-optional typed domain modeling advice,
-  external-method type-piracy risk, in-test verification hooks, and internal
-  nested traversal shape.
+  evidence contracts, unsafe evidence test coverage, public generic API type
+  coverage, Documenter public API doctest examples, Moshi-optional typed domain
+  modeling advice, external-method type-piracy risk, in-test verification
+  hooks, and internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.

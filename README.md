@@ -40,6 +40,8 @@ The harness makes important Julia project facts visible before an agent edits:
   calls, and macro-heavy public surfaces;
 - test scenario shape through parser-visible testset control-flow, branch, and
   nested-loop facts;
+- safety/performance evidence contracts for unsafe constructs, plus package
+  tests that call those public APIs;
 - dependency shape through `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`,
   `[extras]`, `[targets]`, `[sources]`, and `[workspace]`;
 - verification duties through package tests, syntax search, docs/doctests,
@@ -88,8 +90,8 @@ Current rule packs are split by intent:
   checks across source, extension, and test scopes.
 - `julia.agent_policy`: advisory repair guidance for agent-friendly Julia APIs,
   tests, docs, data shape, failure contracts, mutation contracts, test scenario
-  shape, unsafe evidence, type coverage, Moshi domain modeling, mutable global
-  state, and type-piracy risk.
+  shape, unsafe evidence coverage, type coverage, Moshi domain modeling,
+  mutable global state, and type-piracy risk.
 
 Advisory does not mean cosmetic. It means the package remains runnable while the
 harness tells the agent what would make the next repair safer.

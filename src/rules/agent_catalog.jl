@@ -232,4 +232,12 @@ julia_agent_policy_rules() = [
         "Split parser-visible package testsets with nested loops and branches into named scenario testsets or helpers so agents can repair one behavior at a time.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R030,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public unsafe evidence contract lacks a test",
+        "Cover documented exported Julia safety or performance evidence contracts with parser-visible package tests that call the public API.",
+        labels("agent-policy"),
+    ),
 ]

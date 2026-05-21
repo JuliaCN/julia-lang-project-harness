@@ -18,6 +18,7 @@ end
 include("project/core.jl")
 include("project/policy.jl")
 include("project/agent_api.jl")
+include("project/unsafe_contracts.jl")
 include("project/return_contracts.jl")
 include("project/global_state.jl")
 include("project/field_types.jl")

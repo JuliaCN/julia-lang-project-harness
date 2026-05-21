@@ -85,6 +85,12 @@ function evaluate_agent_policy_rules(
             function_docs_by_name,
             rules,
         ))
+        append!(findings, public_unsafe_evidence_test_findings(
+            scope,
+            parsed_files,
+            public_names,
+            rules,
+        ))
         append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
         append!(findings, public_method_family_scattering_findings(
             scope,
@@ -102,103 +108,21 @@ function evaluate_agent_policy_rules(
         append!(findings, public_documenter_example_findings(scope, public_names, rules))
         append!(findings, moshi_domain_model_findings(scope, parsed_files, public_names, rules))
         append!(findings, moshi_domain_bridge_findings(scope, parsed_files, public_names, rules))
+        append!(findings, public_method_shape_findings(
+            parsed_files,
+            public_names,
+            function_docs_by_name,
+            rules,
+        ))
     end
     append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
     append!(findings, unsafe_construct_findings(scope, parsed_files, rules))
     append!(findings, external_method_extension_findings(scope, parsed_files, rules))
     append!(findings, mutable_global_state_findings(scope, parsed_files, rules))
-    for parsed in parsed_files
-        parsed.report.is_valid || continue
-        for function_fact in parsed.syntax_facts.functions
-            function_fact.terminal_name in public_names || continue
-            if length(function_fact.positional_args) >= 5
-                push!(
-                    findings,
-                    finding_from_rule(
-                        rules[AGENT_JL_R002];
-                        summary="Exported/public method `$(function_fact.terminal_name)` has $(length(function_fact.positional_args)) positional arguments: $(join(function_fact.positional_args, ", ")).",
-                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                        source_line=source_line(parsed.source, function_fact.line),
-                        label="move optional modes into keywords or a named config surface",
-                    ),
-                )
-            end
-            if length(function_fact.bool_positional_args) >= 2
-                push!(
-                    findings,
-                    finding_from_rule(
-                        rules[AGENT_JL_R003];
-                        summary="Exported/public method `$(function_fact.terminal_name)` has positional Bool flags: $(join(function_fact.bool_positional_args, ", ")).",
-                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                        source_line=source_line(parsed.source, function_fact.line),
-                        label="move Bool flags into keywords or a named options object",
-                    ),
-                )
-            end
-            if !isempty(function_fact.stringly_domain_args)
-                push!(
-                    findings,
-                    finding_from_rule(
-                        rules[AGENT_JL_R004];
-                        summary="Exported/public method `$(function_fact.terminal_name)` exposes stringly domain arguments: $(join(function_fact.stringly_domain_args, ", ")).",
-                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                        source_line=source_line(parsed.source, function_fact.line),
-                        label="replace stringly domain arguments with a named enum, value type, or config carrier",
-                    ),
-                )
-            end
-            if function_fact.kind == "function" &&
-               function_fact.control_flow_depth >= MAX_PUBLIC_METHOD_CONTROL_FLOW_DEPTH
-                push!(
-                    findings,
-                    finding_from_rule(
-                        rules[AGENT_JL_R007];
-                        summary="Exported/public method `$(function_fact.terminal_name)` has control-flow depth $(function_fact.control_flow_depth): $(join(function_fact.control_flow_kinds, ", ")). $(julia_algorithm_shape_summary(function_fact))",
-                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                        source_line=source_line(parsed.source, function_fact.line),
-                        label="extract nested branches and loops into named pipeline steps",
-                    ),
-                )
-            end
-            if function_fact.kind == "function" &&
-               function_fact.body_statement_count >= MAX_PUBLIC_METHOD_BODY_STATEMENTS &&
-               length(function_fact.body_named_calls) < MIN_PUBLIC_METHOD_PIPELINE_STEPS
-                push!(
-                    findings,
-                    finding_from_rule(
-                        rules[AGENT_JL_R008];
-                        summary="Exported/public method `$(function_fact.terminal_name)` has $(function_fact.body_statement_count) top-level body statements but only $(length(function_fact.body_named_calls)) named body calls.",
-                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                        source_line=source_line(parsed.source, function_fact.line),
-                        label="split the broad public body into named pipeline helper functions",
-                    ),
-                )
-            end
-            if function_fact.kind == "function" &&
-               haskey(function_docs_by_name, function_fact.terminal_name) &&
-               function_fact.macro_invocation_count >= MAX_PUBLIC_METHOD_MACRO_INVOCATIONS &&
-               !has_syntax_contract_doc(function_docs_by_name, function_fact.terminal_name)
-                push!(
-                    findings,
-                    finding_from_rule(
-                        rules[AGENT_JL_R010];
-                        summary="Exported/public method `$(function_fact.terminal_name)` uses $(function_fact.macro_invocation_count) macro invocations without a syntax contract doc: $(join(function_fact.macro_invocation_names, ", ")).",
-                        location=SourceLocation(parsed.report.path, function_fact.line, function_fact.column),
-                        source_line=source_line(parsed.source, function_fact.line),
-                        label="document the syntax or macro-expansion contract for this public method",
-                    ),
-                )
-            end
-        end
-    end
     append!(findings, internal_traversal_shape_findings(scope, parsed_files, public_names, rules))
     findings
 end
 
-const MAX_PUBLIC_METHOD_CONTROL_FLOW_DEPTH = 4
-const MAX_PUBLIC_METHOD_BODY_STATEMENTS = 8
-const MIN_PUBLIC_METHOD_PIPELINE_STEPS = 3
-const MAX_PUBLIC_METHOD_MACRO_INVOCATIONS = 3
 const MAX_INTERNAL_TRAVERSAL_CONTROL_FLOW_DEPTH = 4
 const MAX_INTERNAL_TRAVERSAL_LOOP_NESTING_DEPTH = 2
 const MIN_INTERNAL_TRAVERSAL_BRANCH_COUNT = 2

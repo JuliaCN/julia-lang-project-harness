@@ -13,3 +13,8 @@ end
     @test "domain-model: typed domain carriers for stringly branch dispatch behind weakdeps/extensions" in capabilities
     @test "search: agent search and snapshots for Moshi modeling forms" in capabilities
 end
+
+@testset "Moshi extension capability names stay compact for agent surfaces" begin
+    @test JuliaLangProjectHarness.moshi_extension_capability_names() ==
+          ["syntax", "domain-model", "search"]
+end

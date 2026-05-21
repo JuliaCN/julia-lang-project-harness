@@ -455,7 +455,9 @@ Initial advisory rules:
   typed domain model; if Moshi is chosen, it should stay optional through
   `[weakdeps]` and `[extensions]` unless it is core API. The harness self-applies
   this by exposing `JuliaLangProjectHarnessMoshiExt`, which uses Moshi only when
-  the weak dependency is loaded.
+  the weak dependency is loaded. Snapshot and search surfaces should still show
+  the Moshi extension activation state and capability labels from project facts
+  so agents can plan the typed-domain repair before loading the weak dependency.
 - `AGENT-JL-R021`: external method definitions lack a parser-visible
   package-owned dispatch type or a concrete interop/type-piracy contract.
 

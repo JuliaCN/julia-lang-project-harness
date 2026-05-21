@@ -230,6 +230,10 @@ end
     @test occursin("weakdeps=Moshi", snapshot)
     @test occursin("extensions=ExampleMoshiExt=Moshi", snapshot)
     @test occursin("Moshi:", snapshot)
+    @test occursin(
+        "extension=ExampleMoshiExt weakdeps=Moshi activation=missing_test_target capabilities=syntax,domain-model,search",
+        snapshot,
+    )
     @test occursin("ext/ExampleMoshiExt.jl @data=Mode", snapshot)
 end
 

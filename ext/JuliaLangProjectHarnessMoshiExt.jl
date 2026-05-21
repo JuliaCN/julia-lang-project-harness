@@ -11,7 +11,7 @@ using Moshi.Match: @match
 end
 
 function moshi_extension_capability_lines()
-    capabilities = [
+    capabilities = MoshiHarnessCapability.Type[
         MoshiHarnessCapability.SyntaxFacts(
             "native JuliaSyntax facts for Moshi @data/@match/@derive",
         ),

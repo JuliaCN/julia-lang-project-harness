@@ -4,10 +4,12 @@ function owner_search_entries(
     scope::JuliaProjectHarnessScope,
     parsed_files::Vector{ParsedJuliaFile},
 )
-    [
+    entries = [
         owner_search_entry(scope, parsed) for parsed in parsed_files
         if parsed.report.is_valid
     ]
+    append!(entries, moshi_extension_search_entries(scope))
+    entries
 end
 
 function owner_search_entry(scope::JuliaProjectHarnessScope, parsed::ParsedJuliaFile)

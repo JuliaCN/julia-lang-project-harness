@@ -7,14 +7,25 @@
         uuid = "11111111-1111-1111-1111-111111111111"
         version = "0.1.0"
 
+        [weakdeps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+
+        [extensions]
+        ExampleMoshiExt = "Moshi"
+
         [extras]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
         Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
         [targets]
-        test = ["Test"]
+        test = ["Moshi", "Test"]
         """,
     )
     mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "ext"))
     mkpath(joinpath(root, "test"))
     write(
         joinpath(root, "src", "Example.jl"),
@@ -60,6 +71,19 @@
                 end
             end
             total
+        end
+        """,
+    )
+    write(
+        joinpath(root, "ext", "ExampleMoshiExt.jl"),
+        """
+        module ExampleMoshiExt
+        using Example
+        using Moshi.Data: @data
+
+        @data ExtensionMode begin
+            Active
+        end
         end
         """,
     )
@@ -130,6 +154,15 @@
                  "moshi" in entry.tags &&
                  "data" in entry.tags &&
                  occursin("Moshi @data target=Mode", entry.detail),
+        entries,
+    )
+    @test any(
+        entry -> entry.kind == "moshi_extension" &&
+                 occursin("ExampleMoshiExt", entry.name) &&
+                 "agent-capability" in entry.tags &&
+                 "test_target" in entry.tags &&
+                 occursin("activation=test_target", entry.detail) &&
+                 occursin("capabilities=syntax,domain-model,search", entry.detail),
         entries,
     )
     @test any(

@@ -128,4 +128,12 @@ julia_agent_policy_rules() = [
         "Document which arguments or state are mutated when exported Julia methods use the `!` mutating-name convention.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R017,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Unsafe construct lacks an evidence contract",
+        "Document a concrete safety or performance reason and focused verification evidence when non-test Julia code uses `eval`, `ccall`, external process execution, `@eval`, or `@inbounds`.",
+        labels("agent-policy"),
+    ),
 ]

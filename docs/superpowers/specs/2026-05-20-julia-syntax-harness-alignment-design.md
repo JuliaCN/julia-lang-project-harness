@@ -441,9 +441,12 @@ Initial advisory rules:
   processing helpers for agent repair.
 - `AGENT-JL-R016`: exported mutating method lacks a mutation contract note
   explaining which arguments or state are changed.
+- `AGENT-JL-R017`: non-test code uses `eval`, `ccall`, external process
+  execution, `@eval`, or `@inbounds` without a concrete safety/performance
+  reason and focused verification evidence.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R016`. Later advisory rules can land only after the needed
+`AGENT-JL-R017`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

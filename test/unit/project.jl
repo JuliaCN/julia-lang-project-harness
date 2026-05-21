@@ -1025,6 +1025,93 @@ end
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
+@testset "project runner reports unsafe construct contract advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run_safe
+        \"\"\"Run the fixed local probe.\"\"\"
+        function run_safe(values)
+            run(`echo hello`)
+            ccall(:clock, Cint, ())
+            @inbounds values[1]
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R017", rendered)
+    @test occursin("Unsafe construct lacks an evidence contract", rendered)
+    @test occursin("external process", rendered)
+    @test occursin("`ccall`", rendered)
+    @test occursin("`@inbounds`", rendered)
+    @test count(
+        finding -> finding.rule_id == "AGENT-JL-R017",
+        JuliaLangProjectHarness.advisory_findings(report),
+    ) == 3
+end
+
+@testset "project runner accepts unsafe construct evidence contract" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run_safe
+        \"\"\"Run the fixed local probe.
+
+        Safety contract: the command is fixed, the ABI precondition is stable,
+        and focused smoke test evidence verifies the process and bounds path.
+        \"\"\"
+        function run_safe(values)
+            run(`echo hello`)
+            ccall(:clock, Cint, ())
+            @inbounds values[1]
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
+@testset "project runner ignores unsafe constructs in tests" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using Test
+
+        @testset "process smoke" begin
+            run(`echo hello`)
+            @test true
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "project runner reports stringly public domain advice" begin
     root = mktempdir()
     write_project(root, "Example")

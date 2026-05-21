@@ -248,8 +248,8 @@ Already implemented or designed:
 - Advisory rules cover public docs, bool/stringly arguments, exported-name
   conflicts, large owner fanout, public algorithm shape, scattered method
   families, macro-heavy APIs, struct field contracts, mutable-struct mutation
-  contracts, mutating-method mutation contracts, in-test verification hooks, and
-  internal nested traversal shape.
+  contracts, mutating-method mutation contracts, unsafe construct evidence
+  contracts, in-test verification hooks, and internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.
@@ -259,9 +259,6 @@ Already implemented or designed:
 
 Useful next policy slices:
 
-- Unsafe constructs such as `eval`, external process execution, `ccall`,
-  `@inbounds`, and unchecked bounds removal should require a reason and focused
-  evidence in non-test code.
 - Hot owners with `nested-loop`, `branchy`, or `broad-body` search tags should
   receive performance-verification advice when benchmarks or profiling tools
   exist in the project.

@@ -216,7 +216,9 @@ end
 
 function display_binding_syntax(binding::JuliaBindingSyntax)
     type_suffix = isnothing(binding.type_annotation) ? "" : "::$(binding.type_annotation)"
-    "$(binding.kind)=$(binding.name)$(type_suffix)"
+    initializer_suffix = isnothing(binding.initializer_name) ? "" :
+                         " init=$(binding.initializer_name)"
+    "$(binding.kind)=$(binding.name)$(type_suffix)$(initializer_suffix)"
 end
 
 function snapshot_method_lines(scope::JuliaProjectHarnessScope, parsed_files::Vector{ParsedJuliaFile})

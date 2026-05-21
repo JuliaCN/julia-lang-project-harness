@@ -115,28 +115,33 @@ function collect_julia_syntax_facts!(
     node::JuliaSyntax.SyntaxNode,
     source_path::AbstractString,
     parent::Union{Nothing,JuliaSyntax.SyntaxNode}=nothing,
+    local_scope_depth::Int=0,
 )
-    if syntax_kind(node) == "doc"
+    kind = syntax_kind(node)
+    if kind == "doc"
         docstring_fact = docstring_syntax_from_node(node)
         !isnothing(docstring_fact) && push!(collector.docstrings, docstring_fact)
     elseif is_module_node(node)
         push!(collector.modules, module_syntax_from_node(node))
     elseif is_call_named(node, "include")
         push!(collector.includes, include_syntax_from_call(node, source_path))
-    elseif syntax_kind(node) in ("using", "import")
+    elseif kind in ("using", "import")
         append!(collector.imports, import_syntax_from_node(node))
-    elseif syntax_kind(node) in ("export", "public")
+    elseif kind in ("export", "public")
         push!(collector.exports, export_syntax_from_node(node))
-    elseif syntax_kind(node) in ("function", "macro")
+    elseif kind in ("function", "macro")
         function_fact = function_syntax_from_node(node)
         !isnothing(function_fact) && push!(collector.functions, function_fact)
-    elseif syntax_kind(node) in ("struct", "abstract", "primitive")
+    elseif kind in ("struct", "abstract", "primitive")
         type_fact = type_syntax_from_node(node)
         !isnothing(type_fact) && push!(collector.types, type_fact)
-    elseif syntax_kind(node) in ("const", "global")
+    elseif kind in ("const", "global")
         binding_fact = binding_syntax_from_node(node)
         !isnothing(binding_fact) && push!(collector.bindings, binding_fact)
-    elseif syntax_kind(node) == "macrocall"
+    elseif kind == "=" && local_scope_depth == 0 && !is_wrapped_binding_assignment(parent)
+        binding_fact = binding_syntax_from_node(node)
+        !isnothing(binding_fact) && push!(collector.bindings, binding_fact)
+    elseif kind == "macrocall"
         macro_invocation = macro_invocation_syntax_from_node(node)
         if !isnothing(macro_invocation)
             push!(collector.macro_invocations, macro_invocation)
@@ -145,16 +150,32 @@ function collect_julia_syntax_facts!(
             test_fact = test_syntax_from_macro_invocation(node, macro_invocation)
             !isnothing(test_fact) && push!(collector.tests, test_fact)
         end
-    elseif syntax_kind(node) == "call"
+    elseif kind == "call"
         call_fact = call_syntax_from_node(node, parent)
         !isnothing(call_fact) && push!(collector.calls, call_fact)
-    elseif syntax_kind(node) == "Identifier"
+    elseif kind == "Identifier"
         identifier_fact = identifier_syntax_from_node(node, parent)
         !isnothing(identifier_fact) && push!(collector.identifiers, identifier_fact)
     end
-    signature = syntax_kind(node) in ("function", "macro") ? function_signature_node(node) : nothing
+    signature = kind in ("function", "macro") ? function_signature_node(node) : nothing
+    child_local_scope_depth = local_scope_depth + (starts_local_syntax_scope(kind) ? 1 : 0)
     for child in syntax_children(node)
         child === signature && continue
-        collect_julia_syntax_facts!(collector, child, source_path, node)
+        collect_julia_syntax_facts!(
+            collector,
+            child,
+            source_path,
+            node,
+            child_local_scope_depth,
+        )
     end
+end
+
+function starts_local_syntax_scope(kind::AbstractString)
+    kind in ("function", "macro", "struct", "let", "for", "while", "try", "do", "->")
+end
+
+function is_wrapped_binding_assignment(parent::Union{Nothing,JuliaSyntax.SyntaxNode})
+    isnothing(parent) && return false
+    syntax_kind(parent) in ("const", "global", "local")
 end

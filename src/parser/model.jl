@@ -103,6 +103,8 @@ struct JuliaBindingSyntax
     name::String
     terminal_name::String
     type_annotation::Union{Nothing,String}
+    initializer_kind::Union{Nothing,String}
+    initializer_name::Union{Nothing,String}
     is_constant::Bool
     expression::String
 end

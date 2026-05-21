@@ -146,6 +146,8 @@ The parser layer should classify these constructs in the first slice:
 - `const NAME = value` and typed `const NAME::T = value` public bindings
 - `global NAME = value` bindings when they are part of the declared public
   surface
+- package-level `NAME = value` bindings with initializer kind/head facts so
+  policy can identify mutable global state without scanning raw text
 - long-form function definitions
 - short-form function definitions
 - Julia dispatch signature facts for typed positional arguments, return
@@ -481,9 +483,13 @@ Initial advisory rules:
   return/type-stability contract. This keeps agents from adding narrow runtime
   return assertions as cosmetic precision when the public API does not state
   that contract.
+- `AGENT-JL-R024`: package source defines non-const mutable global state
+  through parser-visible binding initializer shape. This pushes agents toward
+  explicit state owners, dependency-injected caches, or documented `const`
+  lifecycle/reset handles instead of hidden package globals.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R023`. Later advisory rules can land only after the needed
+`AGENT-JL-R024`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

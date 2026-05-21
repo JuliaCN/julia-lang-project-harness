@@ -130,19 +130,22 @@ end
 
 function binding_syntax_from_node(node::JuliaSyntax.SyntaxNode)
     kind = syntax_kind(node)
-    kind in ("const", "global") || return nothing
+    kind in ("const", "global", "=") || return nothing
     children = syntax_children(node)
     isempty(children) && return nothing
     name = binding_name_text(first(children))
     isnothing(name) && return nothing
     location = JuliaSyntax.source_location(node)
+    initializer = binding_initializer_node(node)
     JuliaBindingSyntax(
         location[1],
         location[2] - 1,
-        kind,
+        kind == "=" ? "binding" : kind,
         name,
         last(split(name, ".")),
         binding_type_annotation(first(children)),
+        isnothing(initializer) ? nothing : syntax_kind(initializer),
+        isnothing(initializer) ? nothing : binding_initializer_name(initializer),
         kind == "const",
         String(JuliaSyntax.sourcetext(node)),
     )
@@ -253,6 +256,35 @@ function binding_type_annotation(node::JuliaSyntax.SyntaxNode)
         children = syntax_children(node)
         isempty(children) && return nothing
         return binding_type_annotation(first(children))
+    end
+    nothing
+end
+
+function binding_initializer_node(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "="
+        children = syntax_children(node)
+        length(children) >= 2 || return nothing
+        return children[2]
+    elseif kind in ("const", "global", "local")
+        children = syntax_children(node)
+        isempty(children) && return nothing
+        return binding_initializer_node(first(children))
+    end
+    nothing
+end
+
+function binding_initializer_name(node::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(node)
+    if kind == "call"
+        return call_expression_name(node)
+    elseif kind == "ref"
+        children = syntax_children(node)
+        isempty(children) && return "Vector"
+        name = call_name_text(first(children))
+        return isnothing(name) ? "Vector" : "$(name)[]"
+    elseif kind == "vect"
+        return "Vector"
     end
     nothing
 end

@@ -137,9 +137,14 @@ end
     write(
         source,
         """
+        CACHE = Dict{String,Int}()
         const DEFAULT_LIMIT = 8
         const TYPED_LIMIT::Int = 13
         global CACHE = Dict()
+        function local_work()
+            local seen = Set{String}()
+            scratch = Int[]
+        end
         """,
     )
 
@@ -151,11 +156,14 @@ end
             item.name,
             item.terminal_name,
             item.type_annotation,
+            item.initializer_kind,
+            item.initializer_name,
             item.is_constant,
         ) for item in parsed.syntax_facts.bindings
     ] == [
-        ("const", "DEFAULT_LIMIT", "DEFAULT_LIMIT", nothing, true),
-        ("const", "TYPED_LIMIT", "TYPED_LIMIT", "Int", true),
-        ("global", "CACHE", "CACHE", nothing, false),
+        ("binding", "CACHE", "CACHE", nothing, "call", "Dict", false),
+        ("const", "DEFAULT_LIMIT", "DEFAULT_LIMIT", nothing, "Integer", nothing, true),
+        ("const", "TYPED_LIMIT", "TYPED_LIMIT", "Int", "Integer", nothing, true),
+        ("global", "CACHE", "CACHE", nothing, "call", "Dict", false),
     ]
 end

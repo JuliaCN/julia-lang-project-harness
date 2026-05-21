@@ -17,6 +17,8 @@
         end
         \"\"\"Public constant.\"\"\"
         const DEFAULT_PAYLOAD = Payload(1)
+        \"\"\"Shared lookup.\"\"\"
+        LOOKUP = Dict{String,Payload}()
         \"\"\"Shared cache.\"\"\"
         global CACHE = Dict()
         end
@@ -37,6 +39,7 @@
         ),
         ("struct", "Payload", "A named payload."),
         ("const", "DEFAULT_PAYLOAD", "Public constant."),
+        ("binding", "LOOKUP", "Shared lookup."),
         ("global", "CACHE", "Shared cache."),
     ]
 end

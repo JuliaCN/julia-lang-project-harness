@@ -185,6 +185,9 @@ Agent implication:
 
 - Before optimizing, identify the hot owner and record the verification command
   that proves the concern.
+- Avoid non-const mutable globals in package source. Prefer explicit state
+  owners, dependency-injected caches, or `const` handles with documented
+  lifecycle/reset behavior.
 - Prefer type-stable helper boundaries and function barriers over scattered
   local annotations.
 - Use `@inbounds`, `ccall`, `eval`, process execution, and unsafe operations
@@ -198,6 +201,8 @@ Harness implication:
   files, test receipts, JET/profile receipts, explicit hot-owner tags, or
   parser-visible algorithm shapes such as `nested-loop`, `branchy`, and
   `broad-body`.
+- Parser facts should capture package-level binding initializer shape so policy
+  can distinguish local scratch assignments from mutable global state.
 - Unsafe and escape-like constructs should require explanation and evidence,
   not a silent config disable.
 
@@ -267,12 +272,12 @@ Already implemented or designed:
   tags.
 - Advisory rules cover public docs, bool/stringly arguments, exported-name
   conflicts, large owner fanout, public algorithm shape, scattered method
-  families, macro-heavy APIs, public return contracts, struct field contracts,
-  mutable-struct mutation contracts, mutating-method mutation contracts, unsafe
-  construct evidence contracts, public generic API type coverage, Documenter
-  public API doctest examples, Moshi-optional typed domain modeling advice,
-  external-method type-piracy risk, in-test verification hooks, and internal
-  nested traversal shape.
+  families, macro-heavy APIs, public return contracts, mutable global state,
+  struct field contracts, mutable-struct mutation contracts, mutating-method
+  mutation contracts, unsafe construct evidence contracts, public generic API
+  type coverage, Documenter public API doctest examples, Moshi-optional typed
+  domain modeling advice, external-method type-piracy risk, in-test
+  verification hooks, and internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.

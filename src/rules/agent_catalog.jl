@@ -184,4 +184,12 @@ julia_agent_policy_rules() = [
         "Document concrete return annotations on exported Julia methods so agents do not add narrow runtime assertions without understanding the API contract.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R024,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Package source owns mutable global state",
+        "Avoid non-const mutable global bindings in package source; prefer explicit state objects, const handles with reset contracts, or dependency-injected caches.",
+        labels("agent-policy"),
+    ),
 ]

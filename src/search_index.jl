@@ -366,7 +366,9 @@ end
 function display_binding_search_detail(binding_fact::JuliaBindingSyntax)
     type_suffix = isnothing(binding_fact.type_annotation) ? "" :
                   "::$(binding_fact.type_annotation)"
-    "$(binding_fact.kind) $(binding_fact.name)$(type_suffix)"
+    initializer_suffix = isnothing(binding_fact.initializer_name) ? "" :
+                         " init=$(binding_fact.initializer_name)"
+    "$(binding_fact.kind) $(binding_fact.name)$(type_suffix)$(initializer_suffix)"
 end
 
 function display_call_search_detail(call_fact::JuliaCallSyntax)

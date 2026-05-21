@@ -45,10 +45,10 @@ The harness makes important Julia project facts visible before an agent edits:
 - dependency shape through `[deps]`, `[weakdeps]`, `[extensions]`, `[compat]`,
   `[extras]`, `[targets]`, `[sources]`, and `[workspace]`;
 - verification duties through package tests, syntax search, docs/doctests,
-  extension boundaries, project-owned benchmark/perf gates, performance,
-  stress, and chaos task advice;
+  package-owned examples, extension boundaries, project-owned benchmark/perf
+  gates, performance, stress, and chaos task advice;
 - verification duties as searchable agent context, so `search_julia_project`
-  can find benchmark, docs, extension, and receipt-required gates;
+  can find examples, benchmark, docs, extension, and receipt-required gates;
 - policy escape surfaces that require concrete explanations instead of silent
   suppression.
 
@@ -84,7 +84,7 @@ modes when a tool needs structured records.
 
 `--agent-snapshot` also includes a compact `Verification:` section. The search
 index exposes the same task records as `verification` entries, so an agent can
-query for `benchmark`, `docs`, `extension`, or `receipt` duties before it
+query for `example`, `benchmark`, `docs`, `extension`, or `receipt` duties before it
 decides what to edit or test.
 
 ## Rule Packs

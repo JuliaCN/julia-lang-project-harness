@@ -62,6 +62,7 @@ function verification_task_records_for_scope(
     end
     benchmark_records = benchmark_verification_tasks(scope)
     append!(records, benchmark_records)
+    append!(records, example_verification_tasks(scope))
     excluded_inferred_task_kinds = Set{String}(record.kind for record in benchmark_records)
     append!(
         records,

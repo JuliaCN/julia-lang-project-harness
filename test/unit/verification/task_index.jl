@@ -185,3 +185,27 @@ end
     @test occursin("entry=benchmark/runbenchmarks.jl", advice)
     @test occursin("benchmark_command=julia", advice)
 end
+
+@testset "verification task index includes package-owned examples project" begin
+    root = mktempdir()
+    write_example_verification_project(root)
+
+    index = build_julia_verification_task_index(root)
+    example_task = only(record for record in index.records if record.kind == "example_run")
+    rendered = render_julia_verification_task_index(index)
+
+    @test [record.kind for record in index.records] == ["example_run", "pkg_test"]
+    @test example_task.owner_path == joinpath(root, "examples", "runexamples.jl")
+    @test example_task.command == [
+        "julia",
+        "--project=$(joinpath(root, "examples"))",
+        "-e",
+        "cd($(repr(root))) do; include(\"examples/runexamples.jl\"); end",
+    ]
+    @test example_task.evidence["example_project"] == "examples/Project.toml"
+    @test example_task.evidence["entry"] == "examples/runexamples.jl"
+    @test example_task.evidence["activation"] == "examples_project"
+    @test occursin("kind=example_run", rendered)
+    @test occursin("owner=examples/runexamples.jl", rendered)
+    @test occursin("example_command=julia", rendered)
+end

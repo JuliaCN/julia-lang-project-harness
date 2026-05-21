@@ -349,6 +349,10 @@ The first Julia-native task families are:
   package test gate as complete.
 - `docs_build`: run a Documenter docs build, including doctests, when
   `docs/Project.toml` depends on Documenter and `docs/make.jl` exists.
+- `example_run`: run a package-owned examples project when
+  `examples/Project.toml` exists with `runexamples.jl`, `runtests.jl`, or
+  `examples.jl`; this uses the examples environment rather than assuming loose
+  scripts belong to the root package gate.
 - `performance`: run a project-owned benchmark or strict perf entry discovered
   from `benchmark/`, `benchmarks/`, `perf/`, or `test/perf/`. A local benchmark
   `Project.toml` owns activation when present; otherwise the root package

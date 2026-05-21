@@ -58,3 +58,31 @@
     @test first(results).entry.detail == benchmark_entry.detail
     @test all(result -> "verification" in result.entry.tags, results)
 end
+
+@testset "project search index tags examples verification tasks" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ExampleSearch"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "examples"))
+    write(joinpath(root, "src", "ExampleSearch.jl"), "module ExampleSearch\nend\n")
+    write(joinpath(root, "examples", "Project.toml"), "[deps]\n")
+    write(joinpath(root, "examples", "runexamples.jl"), "println(\"example\")\n")
+
+    results = search_julia_project(root, "runexamples"; tags=["verification", "example"], limit=1)
+
+    @test length(results) == 1
+    entry = only(results).entry
+    @test entry.kind == "verification"
+    @test entry.name == "example_run examples/runexamples.jl"
+    @test "example" in entry.tags
+    @test "runnable" in entry.tags
+    @test occursin("example_project=examples/Project.toml", entry.detail)
+    @test occursin("command=julia --project=examples -e", entry.detail)
+end

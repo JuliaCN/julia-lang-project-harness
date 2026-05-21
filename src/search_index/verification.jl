@@ -74,6 +74,7 @@ end
 function verification_search_evidence(record::JuliaVerificationTaskRecord)
     keys = [
         "benchmark_project",
+        "example_project",
         "entry",
         "activation",
         "responsibilities",
@@ -101,8 +102,8 @@ end
 
 function verification_search_evidence_tags(record::JuliaVerificationTaskRecord)
     tags = String[]
-    haskey(record.evidence, "entry") && push!(tags, "benchmark")
     haskey(record.evidence, "benchmark_project") && push!(tags, "benchmark")
+    haskey(record.evidence, "example_project") && push!(tags, "example")
     haskey(record.evidence, "extension") && push!(tags, "extension")
     haskey(record.evidence, "capability_source") &&
         push!(tags, lowercase(record.evidence["capability_source"]))

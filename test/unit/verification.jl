@@ -263,6 +263,38 @@ function write_benchmark_verification_project(root::AbstractString)
     write(joinpath(root, "test", "perf", "runtests.jl"), "println(\"strict perf\")\n")
 end
 
+function write_example_verification_project(root::AbstractString)
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ExampleVerification"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "examples"))
+    write(
+        joinpath(root, "src", "ExampleVerification.jl"),
+        """
+        module ExampleVerification
+        run(value) = value
+        end
+        """,
+    )
+    write(
+        joinpath(root, "examples", "Project.toml"),
+        """
+        [deps]
+        ExampleVerification = "11111111-1111-1111-1111-111111111111"
+
+        [sources]
+        ExampleVerification = {path = ".."}
+        """,
+    )
+    write(joinpath(root, "examples", "runexamples.jl"), "using ExampleVerification\nrun(1)\n")
+end
+
 
 include("verification/task_index.jl")
 include("verification/profile.jl")

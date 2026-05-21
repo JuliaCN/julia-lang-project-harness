@@ -76,6 +76,7 @@ function evaluate_agent_policy_rules(
     end
     append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
     append!(findings, unsafe_construct_findings(scope, parsed_files, rules))
+    append!(findings, external_method_extension_findings(scope, parsed_files, rules))
     for parsed in parsed_files
         parsed.report.is_valid || continue
         for function_fact in parsed.syntax_facts.functions

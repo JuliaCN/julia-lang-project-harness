@@ -258,8 +258,9 @@ Already implemented or designed:
   families, macro-heavy APIs, struct field contracts, mutable-struct mutation
   contracts, mutating-method mutation contracts, unsafe construct evidence
   contracts, public generic API type coverage, Documenter public API doctest
-  examples, Moshi-optional typed domain modeling advice, in-test verification
-  hooks, and internal nested traversal shape.
+  examples, Moshi-optional typed domain modeling advice, external-method
+  type-piracy risk, in-test verification hooks, and internal nested traversal
+  shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.
@@ -273,8 +274,9 @@ Already implemented or designed:
 
 Useful next policy slices:
 
-- External method extension and type-piracy risk should become parser-visible
-  advice when exported/public owners extend methods from undeclared domains.
+- Package extension verification should distinguish optional weakdep extension
+  paths from core API paths and ask agents to run both default and extension
+  activation checks when the project exposes extension owners.
 
 ## Agent Operating Checklist
 

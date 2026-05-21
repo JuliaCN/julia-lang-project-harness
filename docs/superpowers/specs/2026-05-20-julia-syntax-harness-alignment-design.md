@@ -452,9 +452,11 @@ Initial advisory rules:
 - `AGENT-JL-R020`: exported stringly domain methods with branch dispatch lack a
   typed domain model; if Moshi is chosen, it should stay optional through
   `[weakdeps]` and `[extensions]` unless it is core API.
+- `AGENT-JL-R021`: external method definitions lack a parser-visible
+  package-owned dispatch type or a concrete interop/type-piracy contract.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R020`. Later advisory rules can land only after the needed
+`AGENT-JL-R021`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

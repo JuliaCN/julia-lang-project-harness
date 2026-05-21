@@ -1422,6 +1422,73 @@ end
     @test occursin("AGENT-JL-R004", rendered)
 end
 
+@testset "project runner reports external method type piracy risk" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        Base.show(io::IO, value::Int) = print(io, value)
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R021", rendered)
+    @test occursin("External method extension risks type piracy", rendered)
+    @test occursin("Base.show", rendered)
+end
+
+@testset "project runner accepts external method on package-owned type" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        struct Thing
+            value::Int
+        end
+        Base.show(io::IO, value::Thing) = print(io, value.value)
+        Base.hash(value::T, seed::UInt) where {T<:Thing} = hash(value.value, seed)
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test !occursin("AGENT-JL-R021", rendered)
+end
+
+@testset "project runner accepts documented external method type piracy contract" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        \"\"\"Type piracy contract: deliberate interop hook for compact Int display in this package boundary.\"\"\"
+        Base.show(io::IO, value::Int) = print(io, value)
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test !occursin("AGENT-JL-R021", rendered)
+end
+
 @testset "project runner reports stringly public domain advice" begin
     root = mktempdir()
     write_project(root, "Example")

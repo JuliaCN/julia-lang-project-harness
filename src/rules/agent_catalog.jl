@@ -160,4 +160,12 @@ julia_agent_policy_rules() = [
         "When exported Julia methods branch over stringly domains, prefer a typed carrier; if Moshi ADTs or pattern matching are chosen, keep Moshi optional through `[weakdeps]` and `[extensions]` unless it is core API.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R021,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "External method extension risks type piracy",
+        "Extending an external Julia function should dispatch on at least one package-owned type, or carry a concrete interop/type-piracy contract for why the foreign-function/foreign-type method is intentional.",
+        labels("agent-policy"),
+    ),
 ]

@@ -83,3 +83,9 @@ end
     @test occursin("FindingGroups:", rendered)
     @test occursin("JULIA-MOD-R003 count=1", rendered)
 end
+
+@testset "agent snapshot rejects missing project root" begin
+    missing = joinpath(mktempdir(), "missing")
+
+    @test_throws ErrorException render_julia_project_harness_agent_snapshot(missing)
+end

@@ -208,4 +208,12 @@ julia_agent_policy_rules() = [
         "Document failure, exception, assertion, or precondition behavior when exported Julia methods throw errors or use parser-visible assertions.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R027,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public failure contract lacks a test",
+        "Cover documented exported Julia failure contracts with parser-visible `@test_throws` tests so invalid-input behavior stays executable in `Pkg.test`.",
+        labels("agent-policy"),
+    ),
 ]

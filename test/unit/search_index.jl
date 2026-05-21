@@ -342,3 +342,11 @@ end
     @test length(results) == 1
     @test only(results).entry.name == "answer"
 end
+
+@testset "search index rejects invalid inputs" begin
+    missing = joinpath(mktempdir(), "missing")
+
+    @test_throws ErrorException julia_lang_search_index([missing])
+    @test_throws ErrorException julia_project_search_index(missing)
+    @test_throws ErrorException search_julia_index(JuliaSearchIndexEntry[], "run"; limit=-1)
+end

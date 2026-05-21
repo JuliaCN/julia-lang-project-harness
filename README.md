@@ -29,7 +29,7 @@ The harness makes important Julia project facts visible before an agent edits:
 - public data-shape quality through typed fields and broad abstract field
   annotations;
 - public failure contracts when exported methods throw errors or use
-  assertions;
+  assertions, plus `@test_throws` coverage for those contracts;
 - mutable global state through parser-visible non-const package bindings and
   their initializer shape;
 - project ownership through Pkg entry files, local source dependencies,

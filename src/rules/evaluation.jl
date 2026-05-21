@@ -70,6 +70,13 @@ function evaluate_agent_policy_rules(
             function_docs_by_name,
             rules,
         ))
+        append!(findings, public_failure_test_findings(
+            scope,
+            parsed_files,
+            public_names,
+            function_docs_by_name,
+            rules,
+        ))
         append!(findings, public_api_owner_conflict_findings(scope, parsed_files, public_names, rules))
         append!(findings, public_method_family_scattering_findings(
             scope,

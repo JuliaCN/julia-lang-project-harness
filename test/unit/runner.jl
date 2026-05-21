@@ -27,3 +27,10 @@ end
     @test occursin("Julia source does not parse", rendered)
     @test occursin("Contract:", rendered)
 end
+
+@testset "runner rejects missing roots" begin
+    missing = joinpath(mktempdir(), "missing")
+
+    @test_throws ErrorException run_julia_lang_harness([missing])
+    @test_throws ErrorException run_julia_project_harness(missing)
+end

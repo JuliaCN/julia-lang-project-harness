@@ -487,9 +487,12 @@ Initial advisory rules:
   through parser-visible binding initializer shape. This pushes agents toward
   explicit state owners, dependency-injected caches, or documented `const`
   lifecycle/reset handles instead of hidden package globals.
+- `AGENT-JL-R025`: public structs expose `Any`, `Function`, or broad abstract
+  field annotations. This pushes agents toward concrete fields or type
+  parameters that keep the public data contract inferable.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R024`. Later advisory rules can land only after the needed
+`AGENT-JL-R025`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

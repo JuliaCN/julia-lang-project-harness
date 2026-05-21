@@ -176,7 +176,7 @@ end
         struct Payload
             id::Int
             data::Vector{String}
-            metadata::Dict{Symbol,Any}
+            metadata::Dict{Symbol,String}
         end
         end
         """,
@@ -201,7 +201,7 @@ end
         struct Payload
             id::Int
             mode::String
-            category::AbstractString
+            category::String
             payload_type::Union{Nothing,String}
         end
         end

@@ -188,6 +188,9 @@ Agent implication:
 - Avoid non-const mutable globals in package source. Prefer explicit state
   owners, dependency-injected caches, or `const` handles with documented
   lifecycle/reset behavior.
+- Avoid `Any`, `Function`, and broad abstract field types in public structs.
+  Use concrete fields or type parameters so public data contracts stay
+  inferable.
 - Prefer type-stable helper boundaries and function barriers over scattered
   local annotations.
 - Use `@inbounds`, `ccall`, `eval`, process execution, and unsafe operations
@@ -203,6 +206,8 @@ Harness implication:
   `broad-body`.
 - Parser facts should capture package-level binding initializer shape so policy
   can distinguish local scratch assignments from mutable global state.
+- Public field type annotations should feed advisory policy for abstract field
+  risks, not just missing-field-type checks.
 - Unsafe and escape-like constructs should require explanation and evidence,
   not a silent config disable.
 
@@ -273,11 +278,12 @@ Already implemented or designed:
 - Advisory rules cover public docs, bool/stringly arguments, exported-name
   conflicts, large owner fanout, public algorithm shape, scattered method
   families, macro-heavy APIs, public return contracts, mutable global state,
-  struct field contracts, mutable-struct mutation contracts, mutating-method
-  mutation contracts, unsafe construct evidence contracts, public generic API
-  type coverage, Documenter public API doctest examples, Moshi-optional typed
-  domain modeling advice, external-method type-piracy risk, in-test
-  verification hooks, and internal nested traversal shape.
+  public abstract field types, struct field contracts, mutable-struct mutation
+  contracts, mutating-method mutation contracts, unsafe construct evidence
+  contracts, public generic API type coverage, Documenter public API doctest
+  examples, Moshi-optional typed domain modeling advice, external-method
+  type-piracy risk, in-test verification hooks, and internal nested traversal
+  shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.

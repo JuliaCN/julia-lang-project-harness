@@ -192,4 +192,12 @@ julia_agent_policy_rules() = [
         "Avoid non-const mutable global bindings in package source; prefer explicit state objects, const handles with reset contracts, or dependency-injected caches.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R025,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public type has broadly abstract fields",
+        "Avoid `Any`, `Function`, and broad abstract field annotations in exported Julia structs; prefer concrete fields or type parameters that preserve the public data contract.",
+        labels("agent-policy"),
+    ),
 ]

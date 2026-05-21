@@ -67,6 +67,7 @@
         "AGENT-JL-R022",
         "AGENT-JL-R023",
         "AGENT-JL-R024",
+        "AGENT-JL-R025",
     ]
 end
 

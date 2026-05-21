@@ -26,6 +26,8 @@ The harness makes important Julia project facts visible before an agent edits:
 - public API intent through docstrings, exports, `public`, and method families;
 - public return contracts when exported methods use concrete return
   annotations;
+- public data-shape quality through typed fields and broad abstract field
+  annotations;
 - mutable global state through parser-visible non-const package bindings and
   their initializer shape;
 - project ownership through Pkg entry files, local source dependencies,
@@ -79,8 +81,8 @@ Current rule packs are split by intent:
 - `julia.modularity`: blocking Project.toml-owned Julia owner and include-graph
   checks across source, extension, and test scopes.
 - `julia.agent_policy`: advisory repair guidance for agent-friendly Julia APIs,
-  tests, docs, mutation contracts, unsafe evidence, type coverage, Moshi domain
-  modeling, mutable global state, and type-piracy risk.
+  tests, docs, data shape, mutation contracts, unsafe evidence, type coverage,
+  Moshi domain modeling, mutable global state, and type-piracy risk.
 
 Advisory does not mean cosmetic. It means the package remains runnable while the
 harness tells the agent what would make the next repair safer.

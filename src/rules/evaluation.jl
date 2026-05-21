@@ -45,6 +45,7 @@ function evaluate_agent_policy_rules(
         append!(findings, public_api_doc_findings(parsed_files, public_names, documented_names, rules))
         append!(findings, public_type_field_shape_findings(parsed_files, public_names, rules))
         append!(findings, public_type_stringly_field_findings(parsed_files, public_names, rules))
+        append!(findings, public_abstract_field_type_findings(parsed_files, public_names, rules))
         append!(findings, public_mutable_type_contract_findings(
             parsed_files,
             public_names,

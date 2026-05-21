@@ -1,4 +1,7 @@
-"""Build a JuliaSyntax search index from explicit source roots."""
+"""Build a JuliaSyntax search index from explicit source roots.
+
+Errors if any requested source root does not exist.
+"""
 function julia_lang_search_index(
     paths::Vector{<:AbstractString};
     config=default_julia_harness_config(),
@@ -10,7 +13,10 @@ function julia_lang_search_index(
     julia_search_index(parsed_files)
 end
 
-"""Build a JuliaSyntax search index for a Project.toml-rooted package."""
+"""Build a JuliaSyntax search index for a Project.toml-rooted package.
+
+Errors if `project_root` does not name an existing package path.
+"""
 function julia_project_search_index(
     project_root::AbstractString;
     config=default_julia_harness_config(),
@@ -50,7 +56,10 @@ function search_julia_project(
     search_julia_index(entries, query; tags, limit)
 end
 
-"""Search prebuilt JuliaSyntax index entries with deterministic ranking."""
+"""Search prebuilt JuliaSyntax index entries with deterministic ranking.
+
+Errors if `limit` is negative.
+"""
 function search_julia_index(
     entries::Vector{JuliaSearchIndexEntry},
     query::AbstractString;

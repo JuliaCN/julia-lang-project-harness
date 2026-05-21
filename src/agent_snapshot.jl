@@ -3,7 +3,10 @@ const MAX_AGENT_SNAPSHOT_BINDINGS_PER_FILE = 12
 const MAX_AGENT_SNAPSHOT_METHODS_PER_FILE = 12
 const MAX_AGENT_SNAPSHOT_TESTSETS_PER_FILE = 8
 
-"""Render a compact agent snapshot for a Project.toml-rooted Julia package."""
+"""Render a compact agent snapshot for a Project.toml-rooted Julia package.
+
+Errors if `project_root` does not name an existing directory.
+"""
 function render_julia_project_harness_agent_snapshot(
     project_root::AbstractString;
     config=default_julia_harness_config(),

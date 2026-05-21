@@ -191,6 +191,9 @@ Agent implication:
 - Avoid `Any`, `Function`, and broad abstract field types in public structs.
   Use concrete fields or type parameters so public data contracts stay
   inferable.
+- Document public failure behavior when exported methods throw, call `error`,
+  or use assertions. Hidden failure paths make agent repair brittle because the
+  input preconditions are not visible at the API boundary.
 - Prefer type-stable helper boundaries and function barriers over scattered
   local annotations.
 - Use `@inbounds`, `ccall`, `eval`, process execution, and unsafe operations
@@ -208,6 +211,8 @@ Harness implication:
   can distinguish local scratch assignments from mutable global state.
 - Public field type annotations should feed advisory policy for abstract field
   risks, not just missing-field-type checks.
+- Public method failure paths should be derived from call and macro facts so
+  `Pkg.test` can remind agents to document errors and preconditions.
 - Unsafe and escape-like constructs should require explanation and evidence,
   not a silent config disable.
 
@@ -277,13 +282,13 @@ Already implemented or designed:
   tags.
 - Advisory rules cover public docs, bool/stringly arguments, exported-name
   conflicts, large owner fanout, public algorithm shape, scattered method
-  families, macro-heavy APIs, public return contracts, mutable global state,
-  public abstract field types, struct field contracts, mutable-struct mutation
-  contracts, mutating-method mutation contracts, unsafe construct evidence
-  contracts, public generic API type coverage, Documenter public API doctest
-  examples, Moshi-optional typed domain modeling advice, external-method
-  type-piracy risk, in-test verification hooks, and internal nested traversal
-  shape.
+  families, macro-heavy APIs, public return contracts, public failure
+  contracts, mutable global state, public abstract field types, struct field
+  contracts, mutable-struct mutation contracts, mutating-method mutation
+  contracts, unsafe construct evidence contracts, public generic API type
+  coverage, Documenter public API doctest examples, Moshi-optional typed domain
+  modeling advice, external-method type-piracy risk, in-test verification
+  hooks, and internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.

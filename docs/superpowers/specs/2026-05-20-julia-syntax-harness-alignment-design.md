@@ -490,9 +490,13 @@ Initial advisory rules:
 - `AGENT-JL-R025`: public structs expose `Any`, `Function`, or broad abstract
   field annotations. This pushes agents toward concrete fields or type
   parameters that keep the public data contract inferable.
+- `AGENT-JL-R026`: exported methods call `error`, `throw`, or `@assert`
+  without documenting the failure, exception, assertion, or precondition
+  contract. This keeps invalid-input behavior visible to agents before they
+  change the public API.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R025`. Later advisory rules can land only after the needed
+`AGENT-JL-R026`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

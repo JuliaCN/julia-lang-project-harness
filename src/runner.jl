@@ -1,6 +1,9 @@
 using Pkg
 
-"""Run the JuliaSyntax harness over explicit Julia source roots."""
+"""Run the JuliaSyntax harness over explicit Julia source roots.
+
+Errors if any requested source root does not exist.
+"""
 function run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_julia_harness_config())
     for path in paths
         ispath(path) || error("harness path does not exist: $(path)")
@@ -8,7 +11,10 @@ function run_julia_lang_harness(paths::Vector{<:AbstractString}; config=default_
     run_paths(abspath.(String.(paths)), config)
 end
 
-"""Run the project harness from a Project.toml root resolved through Pkg facts."""
+"""Run the project harness from a Project.toml root resolved through Pkg facts.
+
+Errors if `project_root` does not name an existing package path.
+"""
 function run_julia_project_harness(project_root::AbstractString; config=default_julia_harness_config())
     ispath(project_root) || error("project path does not exist: $(project_root)")
     scope = julia_project_harness_scope(project_root, config)

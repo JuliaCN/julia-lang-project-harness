@@ -200,4 +200,12 @@ julia_agent_policy_rules() = [
         "Avoid `Any`, `Function`, and broad abstract field annotations in exported Julia structs; prefer concrete fields or type parameters that preserve the public data contract.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R026,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Public failure path lacks a contract",
+        "Document failure, exception, assertion, or precondition behavior when exported Julia methods throw errors or use parser-visible assertions.",
+        labels("agent-policy"),
+    ),
 ]

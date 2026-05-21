@@ -71,6 +71,7 @@ function evaluate_agent_policy_rules(
             public_names,
             rules,
         ))
+        append!(findings, public_documenter_example_findings(scope, public_names, rules))
     end
     append!(findings, module_owner_fanout_findings(scope, parsed_files, rules))
     append!(findings, unsafe_construct_findings(scope, parsed_files, rules))

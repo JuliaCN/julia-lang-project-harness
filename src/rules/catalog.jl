@@ -42,6 +42,7 @@ const AGENT_JL_R015 = "AGENT-JL-R015"
 const AGENT_JL_R016 = "AGENT-JL-R016"
 const AGENT_JL_R017 = "AGENT-JL-R017"
 const AGENT_JL_R018 = "AGENT-JL-R018"
+const AGENT_JL_R019 = "AGENT-JL-R019"
 
 const GENERIC_SOURCE_OWNER_SEGMENTS = Set(["common", "helper", "helpers", "misc", "util", "utils"])
 const MAX_ENTRY_FACADE_NONBLANK_LINES = 120

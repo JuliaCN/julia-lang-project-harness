@@ -1184,6 +1184,101 @@ end
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
+@testset "project runner reports Documenter public API doctest advice" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    mkpath(joinpath(root, "docs", "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        \"\"\"Run a public value.\"\"\"
+        run(value) = value
+        end
+        """,
+    )
+    write(joinpath(root, "test", "runtests.jl"), "using Test\n@test true\n")
+    write(
+        joinpath(root, "docs", "Project.toml"),
+        """
+        [deps]
+        Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+        [compat]
+        Documenter = "1"
+        """,
+    )
+    write(joinpath(root, "docs", "make.jl"), "using Documenter\nmakedocs()\n")
+    write(
+        joinpath(root, "docs", "src", "index.md"),
+        """
+        # Example
+
+        The `run` API returns the provided value.
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("AGENT-JL-R019", rendered)
+    @test occursin("Documenter docs lack public API doctests", rendered)
+    @test occursin("executable public API examples for: run", rendered)
+    @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts Documenter public API doctest examples" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    mkpath(joinpath(root, "docs", "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export run
+        \"\"\"Run a public value.\"\"\"
+        run(value) = value
+        end
+        """,
+    )
+    write(joinpath(root, "test", "runtests.jl"), "using Test\n@test true\n")
+    write(
+        joinpath(root, "docs", "Project.toml"),
+        """
+        [deps]
+        Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+        [compat]
+        Documenter = "1"
+        """,
+    )
+    write(joinpath(root, "docs", "make.jl"), "using Documenter\nmakedocs()\n")
+    write(
+        joinpath(root, "docs", "src", "index.md"),
+        """
+        # Example
+
+        ```jldoctest
+        julia> using Example
+
+        julia> run(1)
+        1
+        ```
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "project runner reports stringly public domain advice" begin
     root = mktempdir()
     write_project(root, "Example")

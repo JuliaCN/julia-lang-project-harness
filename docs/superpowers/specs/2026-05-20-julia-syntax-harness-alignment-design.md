@@ -447,9 +447,11 @@ Initial advisory rules:
 - `AGENT-JL-R018`: exported generic methods with explicit `where` type
   parameters lack parser-visible tests across more than one relevant input
   type.
+- `AGENT-JL-R019`: Documenter docs lack executable `jldoctest`, `@example`,
+  or `@repl` examples for exported/public API names.
 
 The implemented subset currently locked by tests is `AGENT-JL-R001` through
-`AGENT-JL-R018`. Later advisory rules can land only after the needed
+`AGENT-JL-R019`. Later advisory rules can land only after the needed
 JuliaSyntax facts are present and the tests lock the emitted advice.
 
 ## Public API

@@ -68,6 +68,9 @@ Agent implication:
 - Treat `test/`, `docs/`, and `benchmarks/` projects as first-class package
   environments when they have their own `Project.toml`.
 - Prefer compat and resolver facts over arbitrary branch or version pinning.
+- Use `[weakdeps]` plus `[extensions]` for feature-like optional runtime
+  capabilities, and keep docs/test-only dependencies in their own
+  environments.
 
 Harness implication:
 
@@ -76,6 +79,9 @@ Harness implication:
   but it should not force an arbitrary `#main` rev or a generated lockfile.
 - Verification tasks should know whether they are running package tests, docs,
   extension tests, or benchmark/performance checks.
+- Policy should distinguish required runtime dependencies from optional
+  extension, docs, and test dependencies instead of pushing every helper into
+  root `[deps]`.
 
 ### 2. The Entry Module Is A Facade, Not A Dumping Ground
 
@@ -250,8 +256,8 @@ Already implemented or designed:
   conflicts, large owner fanout, public algorithm shape, scattered method
   families, macro-heavy APIs, struct field contracts, mutable-struct mutation
   contracts, mutating-method mutation contracts, unsafe construct evidence
-  contracts, public generic API type coverage, in-test verification hooks, and
-  internal nested traversal shape.
+  contracts, public generic API type coverage, Documenter public API doctest
+  examples, in-test verification hooks, and internal nested traversal shape.
 - Verification profile and receipt surfaces let `Pkg.test` show agents what to
   verify next.
 - Config escape surfaces require explanations.
@@ -261,8 +267,8 @@ Already implemented or designed:
 
 Useful next policy slices:
 
-- Public API examples in Documenter docs should get doctest advice when docs use
-  Documenter but examples are prose-only.
+- External method extension and type-piracy risk should become parser-visible
+  advice when exported/public owners extend methods from undeclared domains.
 
 ## Agent Operating Checklist
 

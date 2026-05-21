@@ -64,85 +64,71 @@ function test_literal_input_types_by_call_name(
 end
 
 function literal_input_type_for_call(call::JuliaCallSyntax)
-    argument = first_call_argument_source(call.expression)
+    argument = first_call_argument_node(call.expression)
     isnothing(argument) && return nothing
     literal_input_type_category(argument)
 end
 
-function first_call_argument_source(expression::AbstractString)
-    source = String(expression)
-    open_index = findfirst(==('('), source)
-    isnothing(open_index) && return nothing
-    depth = 0
-    in_string = false
-    escaped = false
-    argument = IOBuffer()
-    index = nextind(source, open_index)
-    while index <= lastindex(source)
-        char = source[index]
-        if in_string
-            print(argument, char)
-            if escaped
-                escaped = false
-            elseif char == '\\'
-                escaped = true
-            elseif char == '"'
-                in_string = false
-            end
-            index = nextind(source, index)
-            continue
-        end
-        if char == '"'
-            in_string = true
-            print(argument, char)
-        elseif char in ('(', '[', '{')
-            depth += 1
-            print(argument, char)
-        elseif char in (')', ']', '}')
-            if depth == 0
-                return strip(String(take!(argument)))
-            end
-            depth -= 1
-            print(argument, char)
-        elseif char == ',' && depth == 0
-            return strip(String(take!(argument)))
-        else
-            print(argument, char)
-        end
-        index = nextind(source, index)
+function first_call_argument_node(expression::AbstractString)
+    try
+        syntax = JuliaSyntax.parseall(JuliaSyntax.SyntaxNode, String(expression))
+        call_node = first_syntax_node_kind(syntax, "call")
+        isnothing(call_node) && return nothing
+        arguments = call_arguments(call_node)
+        isempty(arguments) && return nothing
+        first(arguments)
+    catch
+        nothing
     end
-    argument_source = strip(String(take!(argument)))
-    isempty(argument_source) ? nothing : argument_source
 end
 
-function literal_input_type_category(argument::AbstractString)
-    value = strip(String(argument))
-    isempty(value) && return nothing
-    startswith(value, "raw\"") && return "String"
-    startswith(value, "\"") && return "String"
-    startswith(value, "'") && return "Char"
-    startswith(value, ":") && return "Symbol"
-    startswith(value, "[") && return "Vector"
-    startswith(value, "(") && return "Tuple"
-    startswith(value, "Dict(") && return "Dict"
-    startswith(value, "Set(") && return "Set"
-    value in ("true", "false") && return "Bool"
-    typed_constructor = literal_type_constructor_category(value)
-    !isnothing(typed_constructor) && return typed_constructor
-    occursin(r"^[+-]?\d+\.\d*([eEfF][+-]?\d+)?$", value) && return "Float64"
-    occursin(r"^[+-]?\d+[eEfF][+-]?\d+$", value) && return "Float64"
-    occursin(r"^[+-]?\d+$", value) && return "Int"
-    nothing
-end
-
-function literal_type_constructor_category(value::AbstractString)
-    for name in ("BigFloat", "BigInt", "Float16", "Float32", "Float64", "Int128",
-                 "Int16", "Int32", "Int64", "Int8", "UInt128", "UInt16", "UInt32",
-                 "UInt64", "UInt8")
-        startswith(value, "$(name)(") && return name
+function first_syntax_node_kind(node::JuliaSyntax.SyntaxNode, kind::AbstractString)
+    syntax_kind(node) == kind && return node
+    for child in syntax_children(node)
+        found = first_syntax_node_kind(child, kind)
+        !isnothing(found) && return found
     end
     nothing
 end
+
+function literal_input_type_category(argument::JuliaSyntax.SyntaxNode)
+    kind = syntax_kind(argument)
+    kind == "Integer" && return "Int"
+    kind == "Float" && return "Float64"
+    kind == "Bool" && return "Bool"
+    kind == "string" && return "String"
+    kind == "char" && return "Char"
+    kind == "quote" && return "Symbol"
+    kind == "vect" && return "Vector"
+    kind == "tuple" && return "Tuple"
+    if kind == "call"
+        name = call_expression_name(argument)
+        isnothing(name) && return nothing
+        terminal = terminal_public_name(name)
+        terminal in TYPE_COVERAGE_LITERAL_CONSTRUCTORS && return terminal
+    end
+    nothing
+end
+
+const TYPE_COVERAGE_LITERAL_CONSTRUCTORS = Set([
+    "BigFloat",
+    "BigInt",
+    "Dict",
+    "Float16",
+    "Float32",
+    "Float64",
+    "Int128",
+    "Int16",
+    "Int32",
+    "Int64",
+    "Int8",
+    "Set",
+    "UInt128",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "UInt8",
+])
 
 function public_generic_type_coverage_summary(
     function_fact::JuliaFunctionSyntax,

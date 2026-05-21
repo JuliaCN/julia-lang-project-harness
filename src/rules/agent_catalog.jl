@@ -144,4 +144,12 @@ julia_agent_policy_rules() = [
         "Exercise exported Julia methods with explicit `where` type parameters against more than one relevant input type when the API claims generic behavior.",
         labels("agent-policy"),
     ),
+    JuliaHarnessRule(
+        AGENT_JL_R019,
+        JULIA_AGENT_POLICY_PACK_ID,
+        Info,
+        "Documenter docs lack public API doctests",
+        "When a Julia package uses Documenter, document exported/public API with executable `jldoctest`, `@example`, or `@repl` examples instead of prose-only references.",
+        labels("agent-policy"),
+    ),
 ]

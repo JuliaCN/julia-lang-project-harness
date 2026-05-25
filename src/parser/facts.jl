@@ -247,6 +247,7 @@ function syntax_identifier_text(node::JuliaSyntax.SyntaxNode)
 end
 
 function terminal_macro_name(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "MacroName" && return lstrip(String(JuliaSyntax.sourcetext(node)), '@')
     names = identifier_texts(node)
     isempty(names) ? nothing : last(names)
 end

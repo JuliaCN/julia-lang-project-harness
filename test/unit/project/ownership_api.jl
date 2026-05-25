@@ -125,7 +125,39 @@ end
     @test occursin("Public API name spans multiple owners", rendered)
     @test occursin("src/api.jl", rendered)
     @test occursin("src/fallbacks.jl", rendered)
+    @test occursin("Document the extension pattern", rendered)
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
+end
+
+@testset "project runner accepts same-owner public type constructor family" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export Payload
+
+        \"\"\"Public payload type.\"\"\"
+        struct Payload
+            value::String
+        end
+
+        \"\"\"Build a payload from any string-like value.
+
+        Dispatch extension pattern: the constructor normalizes accepted input
+        values while the type remains the single public data record.
+        \"\"\"
+        Payload(value::AbstractString) = Payload(String(value))
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
 @testset "project runner reports scattered public method family advice" begin

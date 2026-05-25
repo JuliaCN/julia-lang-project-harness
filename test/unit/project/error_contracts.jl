@@ -81,6 +81,8 @@ end
     @test occursin("AGENT-JL-R027", rendered)
     @test occursin("Public failure contract lacks a test", rendered)
     @test occursin("lacks a parser-visible `@test_throws` call", rendered)
+    @test occursin("Detected covered methods: none", rendered)
+    @test occursin("@test_throws ExceptionType parse_payload(...)", rendered)
     @test length(JuliaLangProjectHarness.advisory_findings(report)) == 1
 end
 
@@ -111,6 +113,48 @@ end
         using Test
         using Example
 
+        @test_throws ArgumentError parse_payload("")
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
+@testset "project runner accepts direct parser-visible failure tests in included files" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    mkpath(joinpath(root, "src"))
+    mkpath(joinpath(root, "test"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export parse_payload
+        \"\"\"Parse the payload text.
+
+        Throws `ArgumentError` when the payload is empty.
+        \"\"\"
+        function parse_payload(text)
+            isempty(text) && throw(ArgumentError("empty payload"))
+            text
+        end
+        end
+        """,
+    )
+    write(
+        joinpath(root, "test", "runtests.jl"),
+        """
+        using Test
+        using Example
+        include("failure_contracts.jl")
+        """,
+    )
+    write(
+        joinpath(root, "test", "failure_contracts.jl"),
+        """
         @test_throws ArgumentError parse_payload("")
         """,
     )

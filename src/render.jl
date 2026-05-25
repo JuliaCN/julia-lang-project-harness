@@ -38,7 +38,24 @@ function render_finding(finding::JuliaHarnessFinding)
     end
     rendered *= "Help: $(finding.summary)\n"
     rendered *= "Contract: $(finding.requirement)\n"
+    visibility = julia_rule_visibility(finding.rule_id)
+    if !isnothing(visibility)
+        rendered *= compact_rule_visibility(visibility)
+    end
     rendered
+end
+
+function compact_rule_visibility(visibility::JuliaRuleVisibility)
+    lines = String[]
+    !isempty(visibility.accepted_ast_shapes) &&
+        push!(lines, "Accepted AST: $(join(visibility.accepted_ast_shapes, " | "))")
+    !isempty(visibility.rejected_ast_shapes) &&
+        push!(lines, "Rejected AST: $(join(visibility.rejected_ast_shapes, " | "))")
+    !isempty(visibility.minimal_examples) &&
+        push!(lines, "Example: $(replace(first(visibility.minimal_examples), '\n' => " "))")
+    !isempty(visibility.repair_notes) &&
+        push!(lines, "Repair note: $(join(visibility.repair_notes, " | "))")
+    isempty(lines) ? "" : join(lines, "\n") * "\n"
 end
 
 function deduplicate_advice(advice::Vector{JuliaHarnessFinding}, blocking::Vector{JuliaHarnessFinding})

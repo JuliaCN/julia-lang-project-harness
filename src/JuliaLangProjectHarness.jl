@@ -4,6 +4,7 @@ module JuliaLangProjectHarness
 include("model.jl")
 include("parser.jl")
 include("rules.jl")
+include("rule_visibility.jl")
 include("render.jl")
 include("runner.jl")
 include("runner/package_paths.jl")
@@ -37,6 +38,7 @@ export JuliaDiagnosticSeverity,
     JuliaHarnessFinding,
     JuliaHarnessReport,
     JuliaHarnessRule,
+    JuliaRuleVisibility,
     JuliaFileReport,
     JuliaSearchIndexEntry,
     JuliaSearchResult,
@@ -62,6 +64,7 @@ export JuliaDiagnosticSeverity,
     julia_project_policy_rules,
     julia_project_search_index,
     julia_rule_pack_descriptors,
+    julia_rule_visibility,
     julia_syntax_rules,
     julia_lang_search_index,
     moshi_extension_capabilities,
@@ -70,6 +73,7 @@ export JuliaDiagnosticSeverity,
     render_julia_project_harness_advice,
     render_julia_project_harness_agent_snapshot,
     render_julia_project_harness_json,
+    render_julia_rule_visibility,
     render_julia_search_results,
     render_julia_verification_pending_advice,
     render_julia_verification_profile,

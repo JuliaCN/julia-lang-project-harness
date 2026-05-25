@@ -235,6 +235,7 @@ function public_api_owner_conflict_findings(
         syntax_families = sort(unique(definition.kind for definition in definitions))
         syntax_families == ["function"] && continue
         length(owner_paths) > 1 || length(syntax_families) > 1 || continue
+        documented_same_owner_constructor_family(definitions) && continue
         first_definition = first(sort(definitions; by=definition -> (
             definition.path,
             definition.line,
@@ -242,22 +243,39 @@ function public_api_owner_conflict_findings(
         )))
         owner_summary = join(display_public_owner_path.(Ref(scope), owner_paths), ", ")
         family_summary = join(syntax_families, ", ")
+        shape_hint = length(owner_paths) == 1 && "struct" in syntax_families && "function" in syntax_families ?
+                     " For same-file `struct` plus outer constructor families, document the constructor with a dispatch or constructor extension pattern." :
+                     " Document the extension pattern on the owning public method or move the family behind one owner file."
         push!(
             findings,
             finding_from_rule(
                 rules[AGENT_JL_R005];
-                summary="Exported/public API `$(name)` spans owners: $(owner_summary); syntax families: $(family_summary).",
+                summary="Exported/public API `$(name)` spans owners: $(owner_summary); syntax families: $(family_summary).$(shape_hint)",
                 location=SourceLocation(
                     first_definition.path,
                     first_definition.line,
                     first_definition.column,
                 ),
                 source_line=first_definition.source_line,
-                label="move the public API family behind one owner file or document the extension pattern",
+                label="move the public API family behind one owner file or document the exact dispatch/constructor extension pattern",
             ),
         )
     end
     findings
+end
+
+function documented_same_owner_constructor_family(definitions::Vector{NamedTuple})
+    owner_paths = unique(definition.path for definition in definitions)
+    length(owner_paths) == 1 || return false
+    syntax_families = Set(definition.kind for definition in definitions)
+    ("struct" in syntax_families && "function" in syntax_families) || return false
+    any(definition -> definition.kind == "function", definitions) || return false
+    any(definition -> definition.kind == "struct", definitions) || return false
+    # The docstring detector already records constructor docs as function docs.
+    # At this stage only the syntax records are available, so accept same-owner
+    # constructor families and rely on R001/R026/R027 to enforce constructor
+    # documentation and tests where needed.
+    true
 end
 
 function public_api_definition_records(

@@ -30,6 +30,15 @@ struct JuliaHarnessRule
     labels::Dict{String,String}
 end
 
+"""Agent-facing visibility contract for one harness rule."""
+struct JuliaRuleVisibility
+    rule_id::String
+    accepted_ast_shapes::Vector{String}
+    rejected_ast_shapes::Vector{String}
+    minimal_examples::Vector{String}
+    repair_notes::Vector{String}
+end
+
 """Concrete harness finding with source evidence and repair guidance."""
 struct JuliaHarnessFinding
     rule_id::String

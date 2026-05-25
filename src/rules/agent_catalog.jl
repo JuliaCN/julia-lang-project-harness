@@ -37,7 +37,7 @@ julia_agent_policy_rules() = [
         JULIA_AGENT_POLICY_PACK_ID,
         Info,
         "Public API name spans multiple owners",
-        "Keep exported Julia API names owned by one file or document a deliberate extension pattern when a public method family spans owners.",
+        "Keep exported Julia API names owned by one file or document a deliberate extension pattern when a public method family spans owners. Same-file struct plus constructor families are accepted when the public API remains owned by one file.",
         labels("agent-policy"),
     ),
     JuliaHarnessRule(
@@ -213,7 +213,7 @@ julia_agent_policy_rules() = [
         JULIA_AGENT_POLICY_PACK_ID,
         Info,
         "Public failure contract lacks a test",
-        "Cover documented exported Julia failure contracts with parser-visible `@test_throws` tests so invalid-input behavior stays executable in `Pkg.test`.",
+        "Cover documented exported Julia failure contracts with direct parser-visible `@test_throws ExceptionType function_name(...)` tests so invalid-input behavior stays executable in `Pkg.test`.",
         labels("agent-policy"),
     ),
     JuliaHarnessRule(

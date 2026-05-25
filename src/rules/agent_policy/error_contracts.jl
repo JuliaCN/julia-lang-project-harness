@@ -69,6 +69,7 @@ function public_failure_test_findings(
     rules::Dict{String,JuliaHarnessRule},
 )
     test_throws_calls = test_throws_call_names_by_public_name(scope, parsed_files)
+    detected_summary = isempty(test_throws_calls) ? "none" : join(sort(collect(test_throws_calls)), ", ")
     findings = JuliaHarnessFinding[]
     for parsed in parsed_files
         parsed.report.is_valid || continue
@@ -84,14 +85,14 @@ function public_failure_test_findings(
                 findings,
                 finding_from_rule(
                     rules[AGENT_JL_R027];
-                    summary="Exported/public method `$(name)` documents a failure contract but lacks a parser-visible `@test_throws` call in tests.",
+                    summary="Exported/public method `$(name)` documents a failure contract but lacks a parser-visible `@test_throws` call in tests. Detected covered methods: $(detected_summary).",
                     location=SourceLocation(
                         parsed.report.path,
                         function_fact.line,
                         function_fact.column,
                     ),
                     source_line=source_line(parsed.source, function_fact.line),
-                    label="add an @test_throws regression for this public failure contract",
+                    label="add a direct parser-visible `@test_throws ExceptionType $(name)(...)` regression in a monitored test file",
                 ),
             )
         end
@@ -152,10 +153,19 @@ function test_throws_call_names(test_fact::JuliaTestSyntax)
         syntax = JuliaSyntax.parseall(JuliaSyntax.SyntaxNode, test_fact.expression)
         names = Set{String}()
         collect_test_throws_call_names!(names, syntax)
+        union!(names, regex_test_throws_call_names(test_fact.expression))
         names
     catch
-        Set{String}()
+        regex_test_throws_call_names(test_fact.expression)
     end
+end
+
+function regex_test_throws_call_names(expression::AbstractString)
+    names = Set{String}()
+    for match in eachmatch(r"@test_throws\s+[A-Za-z0-9_.:{}]+\s+([A-Za-z_][A-Za-z0-9_!.]*)\s*\(", expression)
+        push!(names, terminal_public_name(match.captures[1]))
+    end
+    names
 end
 
 function collect_test_throws_call_names!(names::Set{String}, node::JuliaSyntax.SyntaxNode)

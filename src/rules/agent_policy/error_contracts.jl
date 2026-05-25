@@ -144,6 +144,11 @@ function test_throws_call_names_by_public_name(
             test_fact.kind == "test_throws" || continue
             union!(names, test_throws_call_names(test_fact))
         end
+        for observation in parsed.syntax_facts.source_observations
+            observation.kind == "test_throws" || continue
+            observation.shape == "accepted-direct-public-call" || continue
+            union!(names, observation.names)
+        end
     end
     names
 end
@@ -153,19 +158,10 @@ function test_throws_call_names(test_fact::JuliaTestSyntax)
         syntax = JuliaSyntax.parseall(JuliaSyntax.SyntaxNode, test_fact.expression)
         names = Set{String}()
         collect_test_throws_call_names!(names, syntax)
-        union!(names, regex_test_throws_call_names(test_fact.expression))
         names
     catch
-        regex_test_throws_call_names(test_fact.expression)
+        Set{String}()
     end
-end
-
-function regex_test_throws_call_names(expression::AbstractString)
-    names = Set{String}()
-    for match in eachmatch(r"@test_throws\s+[A-Za-z0-9_.:{}]+\s+([A-Za-z_][A-Za-z0-9_!.]*)\s*\(", expression)
-        push!(names, terminal_public_name(match.captures[1]))
-    end
-    names
 end
 
 function collect_test_throws_call_names!(names::Set{String}, node::JuliaSyntax.SyntaxNode)

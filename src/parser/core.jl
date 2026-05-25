@@ -56,6 +56,7 @@ function empty_julia_native_syntax_facts()
         JuliaDocstringSyntax[],
         JuliaIdentifierSyntax[],
         JuliaTestSyntax[],
+        JuliaSourceObservation[],
     )
 end
 
@@ -74,6 +75,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         JuliaDocstringSyntax[],
         JuliaIdentifierSyntax[],
         JuliaTestSyntax[],
+        JuliaSourceObservation[],
     )
     collect_julia_syntax_facts!(collector, syntax, source_path)
     JuliaNativeSyntaxFacts(
@@ -91,6 +93,7 @@ function julia_native_syntax_facts(syntax::JuliaSyntax.SyntaxNode, source_path::
         collector.docstrings,
         collector.identifiers,
         collector.tests,
+        collector.source_observations,
     )
 end
 
@@ -108,6 +111,7 @@ mutable struct JuliaSyntaxFactCollector
     docstrings::Vector{JuliaDocstringSyntax}
     identifiers::Vector{JuliaIdentifierSyntax}
     tests::Vector{JuliaTestSyntax}
+    source_observations::Vector{JuliaSourceObservation}
 end
 
 function collect_julia_syntax_facts!(
@@ -149,6 +153,8 @@ function collect_julia_syntax_facts!(
             !isnothing(moshi_fact) && push!(collector.moshi, moshi_fact)
             test_fact = test_syntax_from_macro_invocation(node, macro_invocation)
             !isnothing(test_fact) && push!(collector.tests, test_fact)
+            observation = source_observation_from_macro_invocation(node, macro_invocation)
+            !isnothing(observation) && push!(collector.source_observations, observation)
         end
     elseif kind == "call"
         call_fact = call_syntax_from_node(node, parent)

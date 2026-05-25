@@ -170,6 +170,15 @@ struct JuliaTestSyntax
     expression::String
 end
 
+struct JuliaSourceObservation
+    line::Int
+    column::Int
+    kind::String
+    shape::String
+    names::Vector{String}
+    expression::String
+end
+
 struct JuliaSourceMetrics
     line_count::Int
     nonblank_line_count::Int
@@ -190,6 +199,7 @@ struct JuliaNativeSyntaxFacts
     docstrings::Vector{JuliaDocstringSyntax}
     identifiers::Vector{JuliaIdentifierSyntax}
     tests::Vector{JuliaTestSyntax}
+    source_observations::Vector{JuliaSourceObservation}
 end
 
 struct ParsedJuliaFile

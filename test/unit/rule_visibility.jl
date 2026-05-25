@@ -14,6 +14,36 @@
     @test render_julia_rule_visibility("UNKNOWN-RULE") == ""
 end
 
+@testset "native parser observations expose accepted test shapes" begin
+    root = mktempdir()
+    path = joinpath(root, "observed_tests.jl")
+    write(
+        path,
+        """
+        @test_throws ErrorException parse_notebook_html_build_config(["--unknown"])
+        @test_throws ErrorException discover_pluto_notebooks(joinpath(@__DIR__, "missing"))
+        """,
+    )
+    parsed = JuliaLangProjectHarness.parse_julia_file(path)
+    observations = [
+        observation for observation in parsed.syntax_facts.source_observations if observation.kind ==
+        "test_throws"
+    ]
+
+    @test length(observations) == 2
+    @test all(observation -> observation.shape == "accepted-direct-public-call", observations)
+    @test "parse_notebook_html_build_config" in mapreduce(
+        observation -> observation.names,
+        vcat,
+        observations,
+    )
+    @test "discover_pluto_notebooks" in mapreduce(
+        observation -> observation.names,
+        vcat,
+        observations,
+    )
+end
+
 @testset "finding render includes compact rule visibility" begin
     root = mktempdir()
     write_project(root, "Example")

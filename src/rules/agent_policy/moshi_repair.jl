@@ -17,14 +17,7 @@ end
 
 function moshi_extension_repair_shape(scope::JuliaProjectHarnessScope)
     if project_moshi_policy(scope) == "enable"
-        return join(
-            [
-                "[deps].Moshi",
-                "[compat].Moshi",
-                "$(moshi_source_repair_target(scope)) imports Moshi.Data and Moshi.Match",
-            ],
-            " | ",
-        )
+        return moshi_source_repair_shape(scope)
     end
     extension_name = moshi_extension_repair_name(scope)
     join(
@@ -35,6 +28,20 @@ function moshi_extension_repair_shape(scope::JuliaProjectHarnessScope)
             "[extras].Moshi",
             "[targets].test includes Moshi",
             "$(moshi_extension_repair_target(scope))",
+        ],
+        " | ",
+    )
+end
+
+function moshi_source_repair_shape(
+    scope::JuliaProjectHarnessScope;
+    repair_target::AbstractString = moshi_source_repair_target(scope),
+)
+    join(
+        [
+            "[deps].Moshi",
+            "[compat].Moshi",
+            "$(repair_target) imports Moshi.Data and Moshi.Match",
         ],
         " | ",
     )

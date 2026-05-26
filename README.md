@@ -154,6 +154,12 @@ literals. A covered `@data` model should then be wired into real project logic
 with parser-visible `@match` cases or typed methods, so agents use Moshi as a
 domain bridge rather than as an unused policy token.
 
+Downstream packages that set `[tool.JuliaLangProjectHarness] moshi = "enable"`
+are declaring Moshi as a source-level modeling practice, not as a test-only
+experiment. The harness therefore requires `Moshi` in `[deps]` and uses native
+Julia parser facts to point agents at the nearest stringly branch domain that
+should be converted into a parser-visible Moshi model.
+
 ## Documentation Map
 
 Start here:

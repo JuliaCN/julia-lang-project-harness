@@ -37,7 +37,7 @@ function evaluate_agent_policy_rules(
     rules = rules_by_id()
     findings = verification_test_profile_findings(scope, parsed_files, rules)
     append!(findings, test_control_flow_shape_findings(scope, parsed_files, rules))
-    append!(findings, moshi_policy_findings(scope, rules))
+    append!(findings, moshi_policy_findings(scope, parsed_files, rules))
     public_names = package_public_names(parsed_files)
     function_docs_by_name = Dict{String,Vector{String}}()
     if !isempty(public_names)

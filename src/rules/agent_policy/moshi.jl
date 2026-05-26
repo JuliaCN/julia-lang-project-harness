@@ -2,23 +2,24 @@ const MOSHI_DOMAIN_BRANCH_THRESHOLD = 2
 
 function moshi_policy_findings(
     scope::JuliaProjectHarnessScope,
+    parsed_files::Vector{ParsedJuliaFile},
     rules::Dict{String,JuliaHarnessRule},
 )
     project_moshi_policy(scope) == "enable" || return JuliaHarnessFinding[]
     haskey(scope.direct_dependencies, "Moshi") && return JuliaHarnessFinding[]
+    application = moshi_nearest_application(scope, parsed_files)
+    repair_target = isnothing(application) ?
+                    moshi_source_repair_target(scope) :
+                    slash_path(relpath(application.path, scope.project_root))
+    summary_suffix = isnothing(application) ? "" :
+                     " Nearest parser-visible application: `$(application.function_name)` at $(repair_target):$(application.line) with branch literals $(join(application.branch_literals, ", "))."
     [
         finding_from_rule(
             rules[AGENT_JL_R020];
-            summary="Project.toml enables Moshi support through `[tool.JuliaLangProjectHarness]`, but Moshi is not a direct package dependency available to `src/`.",
+            summary="Project.toml enables Moshi support through `[tool.JuliaLangProjectHarness]`, but Moshi is not a direct package dependency available to `src/`.$(summary_suffix)",
             location=SourceLocation(scope.project_toml_path, 1, 0),
-            label="declare Moshi in `[deps]` and model the domain in package source",
-            extra_labels=Dict(
-                "capability_source" => "Moshi",
-                "configured_policy" => "enable",
-                "moshi_extension_state" => moshi_extension_repair_state(scope),
-                "moshi_repair_shape" => moshi_extension_repair_shape(scope),
-                "moshi_repair_target" => moshi_source_repair_target(scope),
-            ),
+            label="declare Moshi in `[deps]` and model the nearest stringly domain in `$(repair_target)`",
+            extra_labels=moshi_policy_labels(scope, application, repair_target),
         ),
     ]
 end

@@ -219,7 +219,10 @@ end
     @test JuliaLangProjectHarness.is_clean(report)
     @test occursin("AGENT-JL-R020", rendered)
     @test occursin("Stringly branch dispatch lacks a typed domain model", rendered)
-    @test occursin("add it through `[weakdeps]`, `[compat]`, and `[extensions]`", rendered)
+    @test occursin(
+        "add it through `[weakdeps]`, `[compat]`, `[extensions]`, `[extras]`, and the `test` target",
+        rendered,
+    )
     finding = only(
         finding for finding in JuliaLangProjectHarness.advisory_findings(report) if
         finding.rule_id == "AGENT-JL-R020"
@@ -228,6 +231,60 @@ end
     @test finding.labels["capabilities"] == "syntax,domain-model,search"
     @test finding.labels["moshi_extension_state"] == "missing_weakdep"
     @test finding.labels["moshi_extension_target"] == "ext/ExampleMoshiExt.jl"
+    @test occursin("[extensions].ExampleMoshiExt = \"Moshi\"", finding.labels["moshi_repair_shape"])
+end
+
+@testset "project runner advises source Moshi model when Project.toml enables Moshi" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [tool.JuliaLangProjectHarness]
+        moshi = "enable"
+
+        [deps]
+        Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
+
+        [compat]
+        Moshi = "0.3"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "Example.jl"),
+        """
+        module Example
+        export route
+
+        \"\"\"Route a value by mode.\"\"\"
+        function route(value; mode::AbstractString="fast")
+            if mode == "fast"
+                value
+            elseif mode == "safe"
+                value
+            else
+                value
+            end
+        end
+        end
+        """,
+    )
+
+    report = run_julia_project_harness(root)
+    rendered = render_julia_project_harness(report)
+    finding = only(
+        finding for finding in JuliaLangProjectHarness.advisory_findings(report) if
+        finding.rule_id == "AGENT-JL-R020"
+    )
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test occursin("Moshi is a direct dependency because Project.toml enables Moshi", rendered)
+    @test finding.labels["moshi_extension_state"] == "direct_dep_enabled"
+    @test finding.labels["moshi_extension_target"] == "src/Example.jl"
 end
 
 @testset "project runner advises Moshi weakdep extension repair target" begin

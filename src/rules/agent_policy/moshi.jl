@@ -5,17 +5,19 @@ function moshi_policy_findings(
     rules::Dict{String,JuliaHarnessRule},
 )
     project_moshi_policy(scope) == "enable" || return JuliaHarnessFinding[]
-    has_moshi_optional_extension(scope) && moshi_test_target_active(scope) && return JuliaHarnessFinding[]
+    haskey(scope.direct_dependencies, "Moshi") && return JuliaHarnessFinding[]
     [
         finding_from_rule(
             rules[AGENT_JL_R020];
-            summary="Project.toml enables Moshi support through `[tool.JuliaLangProjectHarness]`, but the package does not expose an active Moshi weakdep extension for tests.",
+            summary="Project.toml enables Moshi support through `[tool.JuliaLangProjectHarness]`, but Moshi is not a direct package dependency available to `src/`.",
             location=SourceLocation(scope.project_toml_path, 1, 0),
-            label="declare Moshi in `[weakdeps]`, `[compat]`, `[extensions]`, and the `test` target",
+            label="declare Moshi in `[deps]` and model the domain in package source",
             extra_labels=Dict(
                 "capability_source" => "Moshi",
                 "configured_policy" => "enable",
                 "moshi_extension_state" => moshi_extension_repair_state(scope),
+                "moshi_repair_shape" => moshi_extension_repair_shape(scope),
+                "moshi_repair_target" => moshi_source_repair_target(scope),
             ),
         ),
     ]
@@ -173,6 +175,8 @@ end
 
 function moshi_domain_model_label(scope::JuliaProjectHarnessScope)
     state = moshi_extension_repair_state(scope)
+    state == "direct_dep_enabled" &&
+        return "add Moshi @data/@match domain modeling under `$(moshi_source_repair_target(scope))`"
     state == "extension_without_model" &&
         return "add Moshi @data/@match domain modeling in `$(moshi_extension_repair_target(scope))`"
     state == "weakdep_without_extension" &&
@@ -187,11 +191,11 @@ function moshi_domain_model_repair_path(scope::JuliaProjectHarnessScope)
     if state == "extension_without_model"
         return "Moshi is already configured as an optional extension; add parser-visible `@data` variants that cover the branch literals, plus a `@match` branch surface in `$(moshi_extension_repair_target(scope))` instead of treating the config as the model."
     elseif state == "weakdep_without_extension"
-        return "Moshi is already a weak dependency; add an `[extensions]` entry such as `$(moshi_extension_repair_name(scope))` and place the ADT/pattern-match surface in `$(moshi_extension_repair_target(scope))`."
-    elseif state == "direct_dep_without_extension"
-        return "Moshi is a direct dependency; keep it only if it is core API, otherwise move the modeling surface behind `[weakdeps]` and `[extensions]`."
+        return "Moshi is already a weak dependency; add an `[extensions]` entry such as `$(moshi_extension_repair_name(scope))`, keep Moshi in `[extras]` and the `test` target, and place the ADT/pattern-match surface in `$(moshi_extension_repair_target(scope))`."
+    elseif state == "direct_dep_enabled"
+        return "Moshi is a direct dependency because Project.toml enables Moshi; add parser-visible `@data` variants and `@match` branches under `$(moshi_source_repair_target(scope))`."
     end
-    "If Moshi is chosen, add it through `[weakdeps]`, `[compat]`, and `[extensions]`; otherwise use a package-owned enum, Symbol, or value type."
+    "If Moshi is chosen, add it through `[weakdeps]`, `[compat]`, `[extensions]`, `[extras]`, and the `test` target; otherwise use a package-owned enum, Symbol, or value type."
 end
 
 function moshi_domain_bridge_summary(function_fact::JuliaFunctionSyntax)
@@ -209,7 +213,8 @@ function moshi_domain_model_labels(
         "capability_source" => "Moshi",
         "capabilities" => join(moshi_extension_capability_names(), ","),
         "moshi_extension_state" => moshi_extension_repair_state(scope),
-        "moshi_extension_target" => moshi_extension_repair_target(scope),
+        "moshi_extension_target" => moshi_model_repair_target(scope),
+        "moshi_repair_shape" => moshi_extension_repair_shape(scope),
     )
     if !isempty(function_fact.stringly_branch_literals)
         labels["stringly_branch_literals"] = join(function_fact.stringly_branch_literals, ",")
@@ -332,7 +337,8 @@ function moshi_domain_bridge_labels(
         "capability_source" => "Moshi",
         "capabilities" => join(moshi_extension_capability_names(), ","),
         "moshi_extension_state" => moshi_extension_repair_state(scope),
-        "moshi_extension_target" => moshi_extension_repair_target(scope),
+        "moshi_extension_target" => moshi_model_repair_target(scope),
+        "moshi_repair_shape" => moshi_extension_repair_shape(scope),
         "moshi_model_coverage" => moshi_model_coverage_label(
             function_fact,
             modeling_facts,
@@ -388,21 +394,4 @@ function normalized_domain_token(value::AbstractString)
         end
     end
     String(take!(buffer))
-end
-
-function moshi_extension_repair_state(scope::JuliaProjectHarnessScope)
-    has_moshi_optional_extension(scope) && return "extension_without_model"
-    haskey(scope.weak_dependencies, "Moshi") && return "weakdep_without_extension"
-    haskey(scope.direct_dependencies, "Moshi") && return "direct_dep_without_extension"
-    "missing_weakdep"
-end
-
-function moshi_extension_repair_name(scope::JuliaProjectHarnessScope)
-    entries = moshi_optional_extension_entries(scope)
-    !isempty(entries) && return first(first(entries))
-    "$(something(scope.package_name, "<PackageName>"))MoshiExt"
-end
-
-function moshi_extension_repair_target(scope::JuliaProjectHarnessScope)
-    "ext/$(moshi_extension_repair_name(scope)).jl"
 end

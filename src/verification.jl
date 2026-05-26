@@ -3,7 +3,8 @@ function build_julia_verification_task_index(
     project_root::AbstractString;
     config=default_julia_harness_config(),
 )
-    verification_task_index_from_context(project_policy_context(project_root, config), config)
+    context = project_policy_context(project_root, config)
+    verification_task_index_from_context(context, context.config)
 end
 
 """Build the in-test verification profile that agents should keep green."""
@@ -12,9 +13,9 @@ function build_julia_project_verification_profile(
     config=default_julia_harness_config(),
 )
     context = project_policy_context(project_root, config)
-    report = harness_report_from_project_context(context, config)
-    task_index = verification_task_index_from_context(context, config)
-    profile_index = verification_profile_index_from_context(context, config)
+    report = harness_report_from_project_context(context, context.config)
+    task_index = verification_task_index_from_context(context, context.config)
+    profile_index = verification_profile_index_from_context(context, context.config)
     receipt_reviews = review_julia_project_verification_receipts(task_index)
     JuliaVerificationProfile(report, task_index, profile_index, receipt_reviews)
 end
@@ -26,8 +27,9 @@ function assert_julia_project_harness_test_profile_clean(
     advice_io::Union{Nothing,IO}=stdout,
 )
     profile = build_julia_project_verification_profile(project_root; config)
+    effective_config = project_policy_context(project_root, config).config
     has_blocking = !is_clean(profile.report)
-    has_advice = !has_agent_advice_allow_explanation(config) &&
+    has_advice = !has_agent_advice_allow_explanation(effective_config) &&
                  !isempty(advisory_findings(profile.report))
     has_receipt_failures = any(
         review -> !is_julia_verification_receipt_review_clean(review),

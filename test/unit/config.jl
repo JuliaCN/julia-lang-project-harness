@@ -202,6 +202,37 @@ end
     @test occursin("without a concrete explanation", rendered)
 end
 
+@testset "Project.toml report advice policy applies to test profile gate" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ConfigExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [tool.JuliaLangProjectHarness]
+        advice = "report"
+        advice_explanation = "stage public docs while activating package policy"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "ConfigExample.jl"),
+        """
+        module ConfigExample
+        export public_value
+        public_value() = 1
+        end
+        """,
+    )
+
+    profile = assert_julia_project_harness_test_profile_clean(root; advice_io = nothing)
+
+    @test JuliaLangProjectHarness.is_clean(profile.report)
+    @test !isempty(JuliaLangProjectHarness.advisory_findings(profile.report))
+end
+
 @testset "Project.toml advice policy defaults to gate" begin
     root = mktempdir()
     write_config_project(root)

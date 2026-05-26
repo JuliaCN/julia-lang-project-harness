@@ -65,10 +65,7 @@ function merge_project_harness_tool_config(
                 base_config.test_path_exclusion_explanations,
             ),
         ),
-        optional_string(
-            get(table, "agent_advice_allow_explanation", base_config.agent_advice_allow_explanation),
-            "agent_advice_allow_explanation",
-        ),
+        project_advice_policy_explanation(table, base_config.agent_advice_allow_explanation),
     )
 end
 
@@ -95,6 +92,23 @@ function optional_string(value, name::AbstractString)
     isnothing(value) && return nothing
     value isa AbstractString || throw(ArgumentError("`$(name)` must be a string"))
     String(value)
+end
+
+function project_advice_policy_explanation(
+    table::Dict{String,Any},
+    default_explanation::Union{Nothing,String},
+)
+    policy = lowercase(strip(string(get(table, "advice", "gate"))))
+    policy == "gate" && return default_explanation
+    if policy == "report"
+        explanation = optional_string(
+            get(table, "advice_explanation", nothing),
+            "advice_explanation",
+        )
+        isnothing(explanation) && return ""
+        return explanation
+    end
+    throw(ArgumentError("`advice` must be \"gate\" or \"report\""))
 end
 
 function severity_set(value)

@@ -159,6 +159,9 @@ are declaring Moshi as a source-level modeling practice, not as a test-only
 experiment. The harness therefore requires `Moshi` in `[deps]` and uses native
 Julia parser facts to point agents at the nearest stringly branch domain that
 should be converted into a parser-visible Moshi model.
+The parser follows Moshi's public ADT and match shapes, including singleton
+variants, call-style variants, named `struct` variants, and `@match` cases that
+combine multiple patterns with `||`.
 
 ## Documentation Map
 

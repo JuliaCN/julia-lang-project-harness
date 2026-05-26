@@ -90,6 +90,47 @@ end
     ]
 end
 
+@testset "parser Moshi syntax facts follow upstream ADT and pattern shapes" begin
+    temp = mktempdir()
+    source = joinpath(temp, "moshi_upstream_shape.jl")
+    write(
+        source,
+        """
+        module MoshiUpstreamShape
+        using Moshi.Data: @data
+        using Moshi.Match: @match
+
+        @data Message begin
+            Quit
+            struct Move
+                x::Int
+                y::Int
+            end
+            Write(String)
+        end
+
+        function label(value)
+            @match value begin
+                Message.Quit() || Message.Write(text) => text
+                Message.Move(x, y) => (x, y)
+                _ => nothing
+            end
+        end
+        end
+        """,
+    )
+
+    parsed = parse_julia_file(source)
+    facts = parsed.syntax_facts.moshi
+
+    @test facts[1].kind == "data"
+    @test facts[1].target_name == "Message"
+    @test facts[1].variant_names == ["Quit", "Move", "Write"]
+    @test facts[2].kind == "match"
+    @test facts[2].case_names == ["Quit", "Write", "Move"]
+    @test facts[2].case_patterns == ["Message.Quit", "Message.Write", "Message.Move"]
+end
+
 @testset "parser include facts" begin
     temp = mktempdir()
     source = joinpath(temp, "entry.jl")

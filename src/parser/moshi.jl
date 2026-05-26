@@ -34,11 +34,12 @@ function moshi_macro_case_names(node::JuliaSyntax.SyntaxNode, kind::AbstractStri
     names = String[]
     seen = Set{String}()
     for member in syntax_children(body)
-        name = moshi_match_case_name(member)
-        isnothing(name) && continue
-        name in seen && continue
-        push!(seen, name)
-        push!(names, name)
+        member_names = moshi_match_case_names_for_node(member)
+        for name in member_names
+            name in seen && continue
+            push!(seen, name)
+            push!(names, name)
+        end
     end
     names
 end
@@ -50,11 +51,12 @@ function moshi_macro_case_patterns(node::JuliaSyntax.SyntaxNode, kind::AbstractS
     patterns = String[]
     seen = Set{String}()
     for member in syntax_children(body)
-        pattern = moshi_match_case_pattern(member)
-        isnothing(pattern) && continue
-        pattern in seen && continue
-        push!(seen, pattern)
-        push!(patterns, pattern)
+        member_patterns = moshi_match_case_patterns_for_node(member)
+        for pattern in member_patterns
+            pattern in seen && continue
+            push!(seen, pattern)
+            push!(patterns, pattern)
+        end
     end
     patterns
 end
@@ -78,6 +80,8 @@ function moshi_data_variant_name(node::JuliaSyntax.SyntaxNode)
         children = syntax_children(node)
         isempty(children) && return nothing
         return call_name_text(first(children))
+    elseif kind == "struct"
+        return first_identifier_text(node)
     elseif kind in ("::", "=")
         children = syntax_children(node)
         isempty(children) && return nothing
@@ -87,19 +91,29 @@ function moshi_data_variant_name(node::JuliaSyntax.SyntaxNode)
 end
 
 function moshi_match_case_name(node::JuliaSyntax.SyntaxNode)
-    syntax_kind(node) == "call" || return nothing
+    names = moshi_match_case_names_for_node(node)
+    isempty(names) ? nothing : first(names)
+end
+
+function moshi_match_case_names_for_node(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "call" || return String[]
     children = syntax_children(node)
-    length(children) >= 3 || return nothing
-    moshi_case_arrow_operator(children[2]) || return nothing
-    moshi_match_pattern_name(first(children))
+    length(children) >= 3 || return String[]
+    moshi_case_arrow_operator(children[2]) || return String[]
+    moshi_match_pattern_names(first(children))
 end
 
 function moshi_match_case_pattern(node::JuliaSyntax.SyntaxNode)
-    syntax_kind(node) == "call" || return nothing
+    patterns = moshi_match_case_patterns_for_node(node)
+    isempty(patterns) ? nothing : first(patterns)
+end
+
+function moshi_match_case_patterns_for_node(node::JuliaSyntax.SyntaxNode)
+    syntax_kind(node) == "call" || return String[]
     children = syntax_children(node)
-    length(children) >= 3 || return nothing
-    moshi_case_arrow_operator(children[2]) || return nothing
-    moshi_match_pattern_text(first(children))
+    length(children) >= 3 || return String[]
+    moshi_case_arrow_operator(children[2]) || return String[]
+    moshi_match_pattern_texts(first(children))
 end
 
 function moshi_case_arrow_operator(node::JuliaSyntax.SyntaxNode)
@@ -107,36 +121,58 @@ function moshi_case_arrow_operator(node::JuliaSyntax.SyntaxNode)
 end
 
 function moshi_match_pattern_name(node::JuliaSyntax.SyntaxNode)
+    names = moshi_match_pattern_names(node)
+    isempty(names) ? nothing : first(names)
+end
+
+function moshi_match_pattern_names(node::JuliaSyntax.SyntaxNode)
     kind = syntax_kind(node)
-    if kind == "call"
+    if kind == "||"
+        names = String[]
+        for child in syntax_children(node)
+            append!(names, moshi_match_pattern_names(child))
+        end
+        return names
+    elseif kind == "call"
         children = syntax_children(node)
-        isempty(children) && return nothing
-        return moshi_match_pattern_name(first(children))
+        isempty(children) && return String[]
+        return moshi_match_pattern_names(first(children))
     elseif kind == "."
         names = identifier_texts(node)
-        length(names) >= 2 && return last(names)
+        length(names) >= 2 && return [last(names)]
     elseif kind == "Identifier"
         name = String(JuliaSyntax.sourcetext(node))
-        name == "_" && return nothing
-        return name
+        name == "_" && return String[]
+        return [name]
     end
-    nothing
+    String[]
 end
 
 function moshi_match_pattern_text(node::JuliaSyntax.SyntaxNode)
+    patterns = moshi_match_pattern_texts(node)
+    isempty(patterns) ? nothing : first(patterns)
+end
+
+function moshi_match_pattern_texts(node::JuliaSyntax.SyntaxNode)
     kind = syntax_kind(node)
-    if kind == "call"
+    if kind == "||"
+        patterns = String[]
+        for child in syntax_children(node)
+            append!(patterns, moshi_match_pattern_texts(child))
+        end
+        return patterns
+    elseif kind == "call"
         children = syntax_children(node)
-        isempty(children) && return nothing
-        return moshi_match_pattern_text(first(children))
+        isempty(children) && return String[]
+        return moshi_match_pattern_texts(first(children))
     elseif kind == "."
         names = identifier_texts(node)
-        isempty(names) && return nothing
-        return join(names, ".")
+        isempty(names) && return String[]
+        return [join(names, ".")]
     elseif kind == "Identifier"
         name = String(JuliaSyntax.sourcetext(node))
-        name == "_" && return nothing
-        return name
+        name == "_" && return String[]
+        return [name]
     end
-    nothing
+    String[]
 end

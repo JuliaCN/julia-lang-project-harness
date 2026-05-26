@@ -1,5 +1,26 @@
 const MOSHI_DOMAIN_BRANCH_THRESHOLD = 2
 
+function moshi_policy_findings(
+    scope::JuliaProjectHarnessScope,
+    rules::Dict{String,JuliaHarnessRule},
+)
+    project_moshi_policy(scope) == "enable" || return JuliaHarnessFinding[]
+    has_moshi_optional_extension(scope) && moshi_test_target_active(scope) && return JuliaHarnessFinding[]
+    [
+        finding_from_rule(
+            rules[AGENT_JL_R020];
+            summary="Project.toml enables Moshi support through `[tool.JuliaLangProjectHarness]`, but the package does not expose an active Moshi weakdep extension for tests.",
+            location=SourceLocation(scope.project_toml_path, 1, 0),
+            label="declare Moshi in `[weakdeps]`, `[compat]`, `[extensions]`, and the `test` target",
+            extra_labels=Dict(
+                "capability_source" => "Moshi",
+                "configured_policy" => "enable",
+                "moshi_extension_state" => moshi_extension_repair_state(scope),
+            ),
+        ),
+    ]
+end
+
 function moshi_domain_model_findings(
     scope::JuliaProjectHarnessScope,
     parsed_files::Vector{ParsedJuliaFile},
@@ -93,6 +114,20 @@ end
 function has_moshi_optional_extension(scope::JuliaProjectHarnessScope)
     haskey(scope.weak_dependencies, "Moshi") || return false
     any(dependencies -> "Moshi" in dependencies, values(scope.extensions))
+end
+
+function moshi_test_target_active(scope::JuliaProjectHarnessScope)
+    "Moshi" in get(scope.targets, "test", String[])
+end
+
+function project_moshi_policy(scope::JuliaProjectHarnessScope)
+    isnothing(scope.project_toml_path) && return "auto"
+    table = project_harness_tool_table(scope.project_toml_path)
+    value = get(table, "moshi", "auto")
+    value isa AbstractString || return "invalid"
+    normalized = lowercase(strip(value))
+    normalized in ("auto", "enable") && return normalized
+    "invalid"
 end
 
 function is_stringly_branch_dispatch(function_fact::JuliaFunctionSyntax)

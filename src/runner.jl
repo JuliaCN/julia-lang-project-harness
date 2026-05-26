@@ -1,4 +1,5 @@
 using Pkg
+using TOML
 
 """Run the JuliaSyntax harness over explicit Julia source roots.
 
@@ -17,7 +18,8 @@ Errors if `project_root` does not name an existing package path.
 """
 function run_julia_project_harness(project_root::AbstractString; config=default_julia_harness_config())
     ispath(project_root) || error("project path does not exist: $(project_root)")
-    harness_report_from_project_context(project_policy_context(project_root, config), config)
+    context = project_policy_context(project_root, config)
+    harness_report_from_project_context(context, context.config)
 end
 
 """Run explicit paths and throw when blocking Julia harness findings exist."""

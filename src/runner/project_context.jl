@@ -1,9 +1,10 @@
 function project_policy_context(project_root::AbstractString, config::JuliaHarnessConfig)
-    scope = julia_project_harness_scope(project_root, config)
-    workspace_member_scopes = julia_workspace_member_scopes(scope, config)
+    effective_config = project_toml_harness_config(project_root, config)
+    scope = julia_project_harness_scope(project_root, effective_config)
+    workspace_member_scopes = julia_workspace_member_scopes(scope, effective_config)
     monitored_paths = project_policy_monitored_paths(scope, workspace_member_scopes)
-    parsed_files = parse_julia_files_for_paths(monitored_paths, config)
-    (; scope, workspace_member_scopes, monitored_paths, parsed_files)
+    parsed_files = parse_julia_files_for_paths(monitored_paths, effective_config)
+    (; scope, workspace_member_scopes, monitored_paths, parsed_files, config = effective_config)
 end
 
 function project_policy_monitored_paths(

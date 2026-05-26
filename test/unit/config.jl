@@ -130,3 +130,49 @@ end
     @test occursin("JULIA-PROJ-R014", rendered)
     @test occursin("without a concrete explanation", rendered)
 end
+
+@testset "Project.toml declares JuliaLangProjectHarness policy" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ConfigExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [tool.JuliaLangProjectHarness]
+        include_tests = false
+        source_dir_names = ["lib"]
+        test_dir_names = ["spec"]
+        agent_advice_allow_explanation = "accept advisory findings during policy migration"
+
+        [tool.JuliaLangProjectHarness.source_path_explanations]
+        lib = "package keeps generated source adapters under lib during migration"
+
+        [tool.JuliaLangProjectHarness.rule_severity_overrides]
+        "JULIA-PROJ-R002" = "info"
+
+        [tool.JuliaLangProjectHarness.rule_severity_override_explanations]
+        "JULIA-PROJ-R002" = "temporary package layout migration"
+        """,
+    )
+    mkpath(joinpath(root, "lib"))
+    write(joinpath(root, "lib", "ConfigExample.jl"), "module ConfigExample\nend\n")
+
+    config = JuliaLangProjectHarness.project_toml_harness_config(
+        root,
+        default_julia_harness_config(),
+    )
+
+    @test config.include_tests == false
+    @test config.source_dir_names == ["lib"]
+    @test config.test_dir_names == ["spec"]
+    @test config.blocking_severities ==
+          Set([JuliaLangProjectHarness.Warning, JuliaLangProjectHarness.Error])
+    @test config.rule_severity_overrides["JULIA-PROJ-R002"] == JuliaLangProjectHarness.Info
+    @test config.agent_advice_allow_explanation ==
+          "accept advisory findings during policy migration"
+
+    report = run_julia_project_harness(root)
+    @test JuliaLangProjectHarness.is_clean(report)
+end

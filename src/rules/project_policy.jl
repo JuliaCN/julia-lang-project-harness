@@ -285,7 +285,7 @@ function source_rev_lock_findings(
     rules::Dict{String,JuliaHarnessRule},
 )
     findings = JuliaHarnessFinding[]
-    for (name, source) in sort!(collect(scope.sources))
+    for (name, source) in sort!(collect(scope.sources); by = first)
         source_rev_is_locked(source) && continue
         rev = get(source, "rev", "")
         rev_summary = isempty(rev) ? "does not record a commit `rev`" :

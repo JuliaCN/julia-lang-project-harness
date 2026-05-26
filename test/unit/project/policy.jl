@@ -113,6 +113,36 @@ end
     @test count(finding -> finding.rule_id == "JULIA-PROJ-R010", report.findings) == 1
 end
 
+@testset "project runner sorts source rev findings by source name" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "Example"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [deps]
+        Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
+        ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+
+        [sources]
+        Arrow = {url = "https://github.com/JuliaCN/arrow-julia.git", rev = "main"}
+        ArrowTypes = {url = "https://github.com/JuliaCN/arrow-julia.git", subdir = "src/ArrowTypes", rev = "main"}
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nusing Arrow\nend\n")
+
+    report = run_julia_project_harness(root)
+    source_findings = filter(finding -> finding.rule_id == "JULIA-PROJ-R010", report.findings)
+
+    @test [finding.summary for finding in source_findings] == [
+        "Project source `Arrow` uses moving `rev = \"main\"`.",
+        "Project source `ArrowTypes` uses moving `rev = \"main\"`.",
+    ]
+end
+
 @testset "project runner reports undeclared source imports" begin
     root = mktempdir()
     write_project(root, "Example")

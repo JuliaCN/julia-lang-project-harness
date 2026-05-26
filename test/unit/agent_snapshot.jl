@@ -76,6 +76,35 @@
     @test !occursin("FindingGroups:", rendered)
 end
 
+@testset "agent snapshot sorts source metadata without comparing source tables" begin
+    root = mktempdir()
+    write_project(root, "Example")
+    open(joinpath(root, "Project.toml"), "a") do io
+        write(
+            io,
+            """
+
+        [deps]
+        LocalDep = "22222222-2222-2222-2222-222222222222"
+        RemoteDep = "33333333-3333-3333-3333-333333333333"
+
+        [sources]
+        LocalDep = {path = "deps/LocalDep"}
+        RemoteDep = {rev = "abcdef", subdir = "src/SubPackage", url = "https://example.invalid/repo.git"}
+        """,
+        )
+    end
+    mkpath(joinpath(root, "src"))
+    write(joinpath(root, "src", "Example.jl"), "module Example\nend\n")
+
+    rendered = render_julia_project_harness_agent_snapshot(root)
+
+    @test occursin(
+        "sources=LocalDep(path=deps/LocalDep);RemoteDep(rev=abcdef,subdir=src/SubPackage,url=https://example.invalid/repo.git)",
+        rendered,
+    )
+end
+
 @testset "agent snapshot verification includes benchmark gates" begin
     root = mktempdir()
     write_project(root, "Example")

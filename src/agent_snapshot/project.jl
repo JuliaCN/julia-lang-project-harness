@@ -50,22 +50,24 @@ function compact_project_targets_line(scope::JuliaProjectHarnessScope)
     isempty(scope.targets) && return ""
     target_segments = [
         "$(target)=$(join(sort!(copy(names)), ","))" for
-        (target, names) in sort!(collect(scope.targets))
+        (target, names) in sort!(collect(scope.targets); by = first)
     ]
     "targets=$(join(target_segments, ";"))"
 end
 
 function compact_project_compat_line(scope::JuliaProjectHarnessScope)
     isempty(scope.compat) && return ""
-    compat_segments = ["$(name)=$(value)" for (name, value) in sort!(collect(scope.compat))]
+    compat_segments = [
+        "$(name)=$(value)" for (name, value) in sort!(collect(scope.compat); by = first)
+    ]
     "compat=$(join(compat_segments, ";"))"
 end
 
 function compact_project_sources_line(scope::JuliaProjectHarnessScope)
     isempty(scope.sources) && return ""
     source_segments = String[]
-    for (name, source) in sort!(collect(scope.sources))
-        attrs = ["$(key)=$(value)" for (key, value) in sort!(collect(source))]
+    for (name, source) in sort!(collect(scope.sources); by = first)
+        attrs = ["$(key)=$(value)" for (key, value) in sort!(collect(source); by = first)]
         push!(source_segments, "$(name)($(join(attrs, ",")))")
     end
     "sources=$(join(source_segments, ";"))"
@@ -75,7 +77,7 @@ function compact_project_extensions_line(scope::JuliaProjectHarnessScope)
     isempty(scope.extensions) && return ""
     extension_segments = [
         "$(name)=$(join(sort!(copy(dependencies)), ","))" for
-        (name, dependencies) in sort!(collect(scope.extensions))
+        (name, dependencies) in sort!(collect(scope.extensions); by = first)
     ]
     "extensions=$(join(extension_segments, ";"))"
 end

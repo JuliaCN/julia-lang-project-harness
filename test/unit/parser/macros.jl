@@ -113,6 +113,7 @@ end
             @match value begin
                 Message.Quit() || Message.Write(text) => text
                 Message.Move(x, y) => (x, y)
+                "raw" => value
                 _ => nothing
             end
         end
@@ -127,8 +128,8 @@ end
     @test facts[1].target_name == "Message"
     @test facts[1].variant_names == ["Quit", "Move", "Write"]
     @test facts[2].kind == "match"
-    @test facts[2].case_names == ["Quit", "Write", "Move"]
-    @test facts[2].case_patterns == ["Message.Quit", "Message.Write", "Message.Move"]
+    @test facts[2].case_names == ["Quit", "Write", "Move", "raw"]
+    @test facts[2].case_patterns == ["Message.Quit", "Message.Write", "Message.Move", "raw"]
 end
 
 @testset "parser include facts" begin

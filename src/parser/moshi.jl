@@ -140,6 +140,9 @@ function moshi_match_pattern_names(node::JuliaSyntax.SyntaxNode)
     elseif kind == "."
         names = identifier_texts(node)
         length(names) >= 2 && return [last(names)]
+    elseif kind == "string"
+        value = string_literal_value(node)
+        isnothing(value) || return [value]
     elseif kind == "Identifier"
         name = String(JuliaSyntax.sourcetext(node))
         name == "_" && return String[]
@@ -169,6 +172,9 @@ function moshi_match_pattern_texts(node::JuliaSyntax.SyntaxNode)
         names = identifier_texts(node)
         isempty(names) && return String[]
         return [join(names, ".")]
+    elseif kind == "string"
+        value = string_literal_value(node)
+        isnothing(value) || return [value]
     elseif kind == "Identifier"
         name = String(JuliaSyntax.sourcetext(node))
         name == "_" && return String[]

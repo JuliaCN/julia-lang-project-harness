@@ -157,7 +157,7 @@ julia_agent_policy_rules() = [
         JULIA_AGENT_POLICY_PACK_ID,
         Info,
         "Stringly branch dispatch lacks a typed domain model",
-        "When exported Julia methods branch over stringly domains, prefer a typed carrier; if Moshi ADTs or pattern matching are chosen, keep Moshi optional through `[weakdeps]` and `[extensions]` unless it is core API.",
+        "When exported Julia methods branch over stringly domains, prefer a typed carrier. If `[tool.JuliaLangProjectHarness] moshi = \"enable\"` is configured, Moshi must be a direct source dependency with parser-visible `@data` and `@match`; otherwise optional Moshi experiments should stay behind `[weakdeps]` and `[extensions]`.",
         labels("agent-policy"),
     ),
     JuliaHarnessRule(

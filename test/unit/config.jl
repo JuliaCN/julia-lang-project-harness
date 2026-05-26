@@ -233,6 +233,37 @@ end
     @test !isempty(JuliaLangProjectHarness.advisory_findings(profile.report))
 end
 
+@testset "Project.toml report advice policy applies to pkg test clean gate" begin
+    root = mktempdir()
+    write(
+        joinpath(root, "Project.toml"),
+        """
+        name = "ConfigExample"
+        uuid = "11111111-1111-1111-1111-111111111111"
+        version = "0.1.0"
+
+        [tool.JuliaLangProjectHarness]
+        advice = "report"
+        advice_explanation = "stage public docs while activating package policy"
+        """,
+    )
+    mkpath(joinpath(root, "src"))
+    write(
+        joinpath(root, "src", "ConfigExample.jl"),
+        """
+        module ConfigExample
+        export public_value
+        public_value() = 1
+        end
+        """,
+    )
+
+    report = assert_julia_project_harness_pkg_test_clean(root)
+
+    @test JuliaLangProjectHarness.is_clean(report)
+    @test !isempty(JuliaLangProjectHarness.advisory_findings(report))
+end
+
 @testset "Project.toml advice policy defaults to gate" begin
     root = mktempdir()
     write_config_project(root)

@@ -195,7 +195,7 @@ function moshi_domain_model_repair_path(scope::JuliaProjectHarnessScope)
     elseif state == "direct_dep_enabled"
         return "Moshi is a direct dependency because Project.toml enables Moshi; add parser-visible `@data` variants and `@match` branches under `$(moshi_source_repair_target(scope))`."
     end
-    "If Moshi is chosen, add it through `[weakdeps]`, `[compat]`, `[extensions]`, `[extras]`, and the `test` target; otherwise use a package-owned enum, Symbol, or value type."
+    "If Moshi is chosen as a source policy, set `[tool.JuliaLangProjectHarness] moshi = \"enable\"`, declare Moshi in `[deps]` and `[compat]`, and add parser-visible `@data`/`@match` under `$(moshi_source_repair_target(scope))`. If this is only an optional experiment, keep Moshi behind `[weakdeps]`, `[extensions]`, `[extras]`, and the `test` target. Otherwise use a package-owned enum, Symbol, or value type."
 end
 
 function moshi_domain_bridge_summary(function_fact::JuliaFunctionSyntax)

@@ -40,8 +40,9 @@ function assert_julia_project_harness_pkg_test_clean(
     config=default_julia_harness_config(),
 )
     report = run_julia_project_harness(project_root; config)
+    effective_config = project_policy_context(project_root, config).config
     assert_clean(report)
-    if !has_agent_advice_allow_explanation(config)
+    if !has_agent_advice_allow_explanation(effective_config)
         assert_no_advisory_findings(report)
     end
     report

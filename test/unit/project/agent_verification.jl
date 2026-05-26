@@ -189,7 +189,7 @@ end
     @test isempty(JuliaLangProjectHarness.advisory_findings(report))
 end
 
-@testset "project runner advises typed or optional Moshi domain model" begin
+@testset "project runner advises source or optional Moshi domain model" begin
     root = mktempdir()
     write_project(root, "Example")
     mkpath(joinpath(root, "src"))
@@ -220,9 +220,10 @@ end
     @test occursin("AGENT-JL-R020", rendered)
     @test occursin("Stringly branch dispatch lacks a typed domain model", rendered)
     @test occursin(
-        "add it through `[weakdeps]`, `[compat]`, `[extensions]`, `[extras]`, and the `test` target",
+        "set `[tool.JuliaLangProjectHarness] moshi = \"enable\"",
         rendered,
     )
+    @test occursin("If this is only an optional experiment", rendered)
     finding = only(
         finding for finding in JuliaLangProjectHarness.advisory_findings(report) if
         finding.rule_id == "AGENT-JL-R020"

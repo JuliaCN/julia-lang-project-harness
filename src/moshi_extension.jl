@@ -1,6 +1,6 @@
 const MOSHI_EXTENSION_CAPABILITY_LINES = [
     "syntax: native JuliaSyntax facts for Moshi @data/@match/@derive",
-    "domain-model: typed domain carriers for stringly branch dispatch behind weakdeps/extensions",
+    "domain-model: typed domain carriers for stringly branch dispatch in source deps or optional extensions",
     "search: agent search and snapshots for Moshi modeling forms",
 ]
 
